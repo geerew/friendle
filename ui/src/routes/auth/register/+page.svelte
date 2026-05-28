@@ -30,7 +30,7 @@
 	<AuthRegisterForm
 		submitLabel="Register"
 		submittingLabel="Creating…"
-		{error}
+		bind:error
 		{submitting}
 		onsubmit={handleSubmit}
 	/>

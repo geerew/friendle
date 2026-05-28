@@ -31,6 +31,9 @@
 	"dependencies": {
 		"@fontsource/anton": "^5.2.7",
 		"bits-ui": "^2.18.1",
-		"valibot": "^1.4.1"
+		"clsx": "^2.1.1",
+		"tailwind-merge": "^3.6.0",
+		"valibot": "^1.4.1",
+		"vaul-svelte": "1.0.0-next.7"
 	}
 }

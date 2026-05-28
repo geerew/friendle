@@ -18,7 +18,7 @@
 
 {#if href}
 	<a {href} class={base}>
-		<div class="min-w-0 flex-1">
+		<div class="flex min-w-0 flex-1 flex-col gap-1">
 			<div class="truncate font-semibold">{title}</div>
 			{#if subtitle}
 				<div class="truncate text-sm text-text-muted">{subtitle}</div>
@@ -32,7 +32,7 @@
 	</a>
 {:else}
 	<button type="button" class={base} {onclick}>
-		<div class="min-w-0 flex-1">
+		<div class="flex min-w-0 flex-1 flex-col gap-1">
 			<div class="truncate font-semibold">{title}</div>
 			{#if subtitle}
 				<div class="truncate text-sm text-text-muted">{subtitle}</div>

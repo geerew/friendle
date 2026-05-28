@@ -1,7 +1,8 @@
-type ClassValue = string | false | null | undefined;
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]): string {
-	return inputs.filter(Boolean).join(' ');
+	return twMerge(clsx(inputs));
 }
 
 export function buildQueryString(params: Record<string, string | number | undefined>): string {
@@ -14,4 +15,16 @@ export function buildQueryString(params: Record<string, string | number | undefi
 	}
 
 	return searchParams.toString();
+}
+
+export function isPasswordFieldError(error: string | null): boolean {
+	if (!error) return false;
+
+	const message = error.toLowerCase();
+
+	return (
+		message.includes('passwords do not match') ||
+		message.includes('password must be at least') ||
+		message.includes('all password fields are required')
+	);
 }

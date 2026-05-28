@@ -5,15 +5,22 @@
 	import { AppShell } from '$lib/components';
 	import { Button, Field, Input, RadioGroup } from '$lib/components/ui';
 	import { SelectSiteRoles, type SiteRole } from '$lib/models/admin-user-model';
+	import { isPasswordFieldError } from '$lib/utils';
+
+	const minPasswordLength = 8;
 
 	let username = $state('');
 	let displayName = $state('');
 	let siteRole = $state<SiteRole>('site_user');
 	let password = $state('');
 	let confirmPassword = $state('');
+	let passwordTooShortError = $state(false);
+	let passwordMismatchError = $state(false);
 	let error = $state<string | null>(null);
 	let submitting = $state(false);
 	let previousUsername = $state('');
+	let previousPassword = $state('');
+	let previousConfirmPassword = $state('');
 
 	const submitDisabled = $derived(
 		username === '' || password === '' || confirmPassword === ''
@@ -27,16 +34,47 @@
 		previousUsername = username;
 	});
 
+	$effect(() => {
+		if (
+			passwordMismatchError &&
+			(password !== previousPassword || confirmPassword !== previousConfirmPassword)
+		) {
+			passwordMismatchError = false;
+		}
+
+		if (passwordTooShortError && (password !== previousPassword || confirmPassword !== previousConfirmPassword)) {
+			passwordTooShortError = false;
+		}
+
+		if (
+			isPasswordFieldError(error) &&
+			(password !== previousPassword || confirmPassword !== previousConfirmPassword)
+		) {
+			error = null;
+		}
+
+		previousPassword = password;
+		previousConfirmPassword = confirmPassword;
+	});
+
 	async function handleCreate(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 
+		passwordTooShortError = false;
+		passwordMismatchError = false;
+		error = null;
+
+		if (password.length < minPasswordLength) {
+			passwordTooShortError = true;
+			return;
+		}
+
 		if (password !== confirmPassword) {
-			error = 'Passwords do not match';
+			passwordMismatchError = true;
 			return;
 		}
 
 		submitting = true;
-		error = null;
 
 		try {
 			await createUser({
@@ -81,6 +119,14 @@
 		<Field label="Confirm password">
 			<Input password bind:value={confirmPassword} autocomplete="new-password" required />
 		</Field>
+
+		{#if passwordTooShortError}
+			<p class="text-sm text-error">Password must be at least 8 characters</p>
+		{/if}
+
+		{#if passwordMismatchError}
+			<p class="text-sm text-error">Passwords do not match</p>
+		{/if}
 
 		{#if error}
 			<p class="text-sm text-error">{error}</p>

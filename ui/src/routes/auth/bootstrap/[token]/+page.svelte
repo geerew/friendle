@@ -33,7 +33,7 @@
 	<AuthRegisterForm
 		submitLabel="Create admin"
 		submittingLabel="Creating…"
-		{error}
+		bind:error
 		{submitting}
 		onsubmit={handleSubmit}
 	/>

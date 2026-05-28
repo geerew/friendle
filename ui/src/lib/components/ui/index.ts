@@ -4,4 +4,5 @@ export { default as Input } from './input.svelte';
 export { default as RadioGroup } from './radio-group.svelte';
 export { default as Select } from './select.svelte';
 
+export * as Drawer from './drawer';
 export * as Dropdown from './dropdown';

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
-	import { deleteUser, listUsers } from '$lib/api/admin-api';
-	import { AppShell, ListRow, Pagination } from '$lib/components';
+	import { listUsers } from '$lib/api/admin-api';
+	import { AppShell, DeleteUser, ListRow, Pagination } from '$lib/components';
 	import { Button } from '$lib/components/ui';
-	import type { AdminUserModel } from '$lib/models/admin-user-model';
+	import { formatSiteRole, type AdminUserModel } from '$lib/models/admin-user-model';
 
 	let users = $state<AdminUserModel[]>([]);
 	let page = $state(1);
@@ -11,6 +11,8 @@
 	let totalItems = $state(0);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let deleteOpen = $state(false);
+	let userToDelete = $state<AdminUserModel | null>(null);
 
 	$effect(() => {
 		page;
@@ -33,22 +35,25 @@
 		}
 	}
 
-	async function handleDeleteUser(user: AdminUserModel): Promise<void> {
-		if (!confirm(`Delete user ${user.username}?`)) return;
+	function openDeleteUser(user: AdminUserModel): void {
+		error = null;
+		userToDelete = user;
+		deleteOpen = true;
+	}
 
-		try {
-			await deleteUser(user.id);
-			const remainingTotal = totalItems - 1;
-			const totalPages = Math.max(1, Math.ceil(remainingTotal / perPage));
+	async function handleDeleteSuccess(): Promise<void> {
+		const remainingTotal = totalItems - 1;
+		const totalPages = Math.max(1, Math.ceil(remainingTotal / perPage));
 
-			if (page > totalPages) {
-				page = totalPages;
-			} else {
-				await loadUsers();
-			}
-		} catch (err) {
-			error = err instanceof ApiError ? err.message : 'Failed to delete user';
+		if (page > totalPages) {
+			page = totalPages;
+		} else {
+			await loadUsers();
 		}
+	}
+
+	function handleDeleteError(message: string): void {
+		error = message;
 	}
 </script>
 
@@ -70,14 +75,17 @@
 				<p class="text-sm text-error">{error}</p>
 			{/if}
 
-			<div class="flex flex-col gap-2">
+			<div class="flex flex-col gap-3">
 				{#if users.length === 0}
 					<p class="text-sm text-text-muted">No users.</p>
 				{:else}
 					{#each users as user (user.id)}
-						<ListRow title={user.displayName} subtitle="{user.username} · {user.siteRole}">
+						<ListRow
+							title={user.displayName}
+							subtitle="{user.username} · {formatSiteRole(user.siteRole)}"
+						>
 							{#snippet trailing()}
-								<Button variant="destructive" size="inline" onclick={() => handleDeleteUser(user)}>
+								<Button variant="destructive" size="inline" onclick={() => openDeleteUser(user)}>
 									Delete
 								</Button>
 							{/snippet}
@@ -96,4 +104,11 @@
 			/>
 		{/if}
 	</div>
+
+	<DeleteUser
+		bind:open={deleteOpen}
+		user={userToDelete}
+		onSuccess={handleDeleteSuccess}
+		onError={handleDeleteError}
+	/>
 </AppShell>

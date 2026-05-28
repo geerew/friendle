@@ -10,6 +10,10 @@ export const SelectSiteRoles = [
 	{ value: 'site_admin', label: 'Admin' }
 ];
 
+export function formatSiteRole(role: SiteRole): string {
+	return SelectSiteRoles.find((item) => item.value === role)?.label ?? role;
+}
+
 export const AdminUserSchema = object({
 	id: string(),
 	username: string(),

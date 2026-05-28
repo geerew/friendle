@@ -8,6 +8,7 @@
 	import { AppShell, ListRow } from '$lib/components';
 	import { Button, Input } from '$lib/components/ui';
 	import type { Group } from '$lib/types/group';
+	import { isPasswordFieldError } from '$lib/utils';
 
 	const minPasswordLength = 8;
 
@@ -21,6 +22,9 @@
 	let newPassword = $state('');
 	let confirmPassword = $state('');
 	let savingPassword = $state(false);
+	let previousCurrentPassword = $state('');
+	let previousNewPassword = $state('');
+	let previousConfirmPassword = $state('');
 
 	let isDeletingAccount = $state(false);
 	let deletePassword = $state('');
@@ -54,6 +58,22 @@
 		if (!isEditingDisplayName && auth.user?.displayName) {
 			displayName = auth.user.displayName;
 		}
+	});
+
+	$effect(() => {
+		if (
+			isEditingPassword &&
+			isPasswordFieldError(error) &&
+			(currentPassword !== previousCurrentPassword ||
+				newPassword !== previousNewPassword ||
+				confirmPassword !== previousConfirmPassword)
+		) {
+			error = null;
+		}
+
+		previousCurrentPassword = currentPassword;
+		previousNewPassword = newPassword;
+		previousConfirmPassword = confirmPassword;
 	});
 
 	function clearFeedback(): void {

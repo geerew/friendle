@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button, Field, Input } from '$lib/components/ui';
+	import { isPasswordFieldError } from '$lib/utils';
 
 	type Props = {
 		submitLabel: string;
@@ -12,7 +13,7 @@
 	let {
 		submitLabel,
 		submittingLabel,
-		error = null,
+		error = $bindable<string | null>(null),
 		submitting = false,
 		onsubmit
 	}: Props = $props();
@@ -35,8 +36,15 @@
 			passwordMismatchError = false;
 		}
 
-		if (passwordTooShortError && password !== previousPassword) {
+		if (passwordTooShortError && (password !== previousPassword || confirmPassword !== previousConfirmPassword)) {
 			passwordTooShortError = false;
+		}
+
+		if (
+			isPasswordFieldError(error) &&
+			(password !== previousPassword || confirmPassword !== previousConfirmPassword)
+		) {
+			error = null;
 		}
 
 		previousPassword = password;
