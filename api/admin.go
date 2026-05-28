@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/gofiber/fiber/v2"
@@ -10,6 +11,8 @@ func (r *Router) initAdminRoutes() {
 	a := r.apiGroup("admin")
 	a.Get("/users", r.requireAuth, r.requireSiteAdmin, r.adminListUsers)
 	a.Get("/groups", r.requireAuth, r.requireSiteAdmin, r.adminListGroups)
+	a.Delete("/users/:id", r.requireAuth, r.requireSiteAdmin, r.adminDeleteUser)
+	a.Delete("/groups/:id", r.requireAuth, r.requireSiteAdmin, r.adminDeleteGroup)
 }
 
 func (r *Router) adminListUsers(c *fiber.Ctx) error {
@@ -17,17 +20,19 @@ func (r *Router) adminListUsers(c *fiber.Ctx) error {
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
-	users, err := r.appDao.ListUsers(ctx, dao.NewOptions())
+
+	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
+	users, err := r.appDao.ListUsers(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
-	var out []fiber.Map
-	for _, u := range users {
-		out = append(out, fiber.Map{
-			"id": u.ID, "username": u.Username, "displayName": u.DisplayName, "siteRole": u.SiteRole,
-		})
+
+	pResult, err := dbOpts.Pagination.BuildResult(userResponseHelper(users))
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
-	return c.JSON(out)
+
+	return c.JSON(pResult)
 }
 
 func (r *Router) adminListGroups(c *fiber.Ctx) error {
@@ -35,15 +40,55 @@ func (r *Router) adminListGroups(c *fiber.Ctx) error {
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
-	groups, err := r.appDao.ListAllGroups(ctx)
+
+	dbOpts := dao.NewOptions().
+		WithOrderBy("name asc").
+		WithPagination(paginationFromCtx(c))
+	groups, err := r.appDao.ListAdminGroups(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
-	var out []fiber.Map
-	for _, g := range groups {
-		out = append(out, fiber.Map{"id": g.ID, "name": g.Name})
+
+	pResult, err := dbOpts.Pagination.BuildResult(adminGroupResponseHelper(groups))
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
-	return c.JSON(out)
+
+	return c.JSON(pResult)
 }
 
-var _ = models.Group{}
+func (r *Router) adminDeleteUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	_, ctx, err := principalCtx(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: id})
+	if err := r.appDao.DeleteUsers(ctx, dbOpts); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting user", err)
+	}
+
+	if err := r.sessionManager.DeleteUserSessions(id); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting user sessions", err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (r *Router) adminDeleteGroup(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	_, ctx, err := principalCtx(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})
+	if err := r.appDao.DeleteGroups(ctx, dbOpts); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting group", err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}

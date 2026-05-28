@@ -30,6 +30,7 @@
 	},
 	"dependencies": {
 		"@fontsource/anton": "^5.2.7",
-		"bits-ui": "^2.18.1"
+		"bits-ui": "^2.18.1",
+		"valibot": "^1.4.1"
 	}
 }

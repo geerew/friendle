@@ -1,22 +1,73 @@
-import { apiFetch, parseJson } from './fetch';
-import type { PaginatedGroups, PaginatedUsers } from '$lib/types/admin';
+import { ApiError, apiFetch } from './fetch';
+import { buildQueryString } from '$lib/utils';
+import { safeParse } from 'valibot';
+import {
+	AdminGroupPaginationSchema,
+	type AdminGroupPaginationModel,
+	type AdminGroupReqParams
+} from '$lib/models/admin-group-model';
+import {
+	AdminUserPaginationSchema,
+	type AdminUserPaginationModel,
+	type AdminUserReqParams
+} from '$lib/models/admin-user-model';
 
-export async function listUsers(): Promise<PaginatedUsers> {
-	const response = await apiFetch('/api/admin/users');
-	return parseJson(response);
+export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserPaginationModel> {
+	const qs = params ? buildQueryString(params) : '';
+	const response = await apiFetch('/api/admin/users' + (qs ? `?${qs}` : ''));
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(AdminUserPaginationSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
-export async function listGroups(): Promise<PaginatedGroups> {
-	const response = await apiFetch('/api/admin/groups');
-	return parseJson(response);
+export async function listGroups(params?: AdminGroupReqParams): Promise<AdminGroupPaginationModel> {
+	const qs = params ? buildQueryString(params) : '';
+	const response = await apiFetch('/api/admin/groups' + (qs ? `?${qs}` : ''));
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(AdminGroupPaginationSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
 export async function deleteUser(userId: string): Promise<void> {
 	const response = await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
-	await parseJson(response);
+
+	if (response.ok || response.status === 204) {
+		return;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
 export async function deleteAdminGroup(groupId: string): Promise<void> {
 	const response = await apiFetch(`/api/admin/groups/${groupId}`, { method: 'DELETE' });
-	await parseJson(response);
+
+	if (response.ok || response.status === 204) {
+		return;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
 }

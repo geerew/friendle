@@ -40,6 +40,13 @@ type GroupJoinRequest struct {
 	Status  JoinRequestStatus `db:"status"`
 }
 
+// AdminGroupListRow is a groups row enriched for the site admin list
+type AdminGroupListRow struct {
+	ID          string `db:"id"`
+	Name        string `db:"name"`
+	MemberCount int    `db:"member_count"`
+}
+
 const ROUND_TABLE = "rounds"
 
 type RoundStatus string

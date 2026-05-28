@@ -56,3 +56,20 @@ type selfUpdateRequest struct {
 type selfDeleteRequest struct {
 	CurrentPassword string `json:"currentPassword"`
 }
+
+type adminGroupResponse struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	MemberCount int    `json:"memberCount"`
+}
+
+func adminGroupResponseHelper(groups []*models.AdminGroupListRow) []*adminGroupResponse {
+	responses := make([]*adminGroupResponse, 0, len(groups))
+	for _, g := range groups {
+		responses = append(responses, &adminGroupResponse{
+			ID: g.ID, Name: g.Name, MemberCount: g.MemberCount,
+		})
+	}
+
+	return responses
+}

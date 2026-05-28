@@ -36,6 +36,22 @@ func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Grou
 		WithColumns(groupColumns()...).SetDbOpts(dbOpts))
 }
 
+// ListAdminGroups returns groups with member counts for the site admin list
+func (dao *DAO) ListAdminGroups(ctx context.Context, dbOpts *Options) ([]*models.AdminGroupListRow, error) {
+	g := models.GROUP_TABLE
+	gm := models.GROUP_MEMBER_TABLE
+
+	return listGeneric[models.AdminGroupListRow](ctx, dao, *newBuilderOptions(g).
+		WithColumns(
+			g+"."+models.BASE_ID+" AS id",
+			g+".name AS name",
+			"COUNT("+gm+".id) AS member_count",
+		).
+		WithLeftJoin(gm, gm+".group_id = "+g+"."+models.BASE_ID).
+		WithGroupBy(g+"."+models.BASE_ID, g+".name").
+		SetDbOpts(dbOpts))
+}
+
 func (dao *DAO) SearchGroups(ctx context.Context, q string) ([]*models.Group, error) {
 	like := "%" + q + "%"
 	return listGeneric[models.Group](ctx, dao, *newBuilderOptions(models.GROUP_TABLE).
@@ -323,6 +339,21 @@ ORDER BY total_score DESC`
 
 func (dao *DAO) ListAllGroups(ctx context.Context) ([]*models.Group, error) {
 	return dao.ListGroups(ctx, NewOptions())
+}
+
+// DeleteGroups deletes records from the groups table
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteGroups(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
+		return utils.ErrWhere
+	}
+
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).SetDbOpts(dbOpts)
+	sqlStr, args, _ := deleteBuilder(*builderOpts)
+
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
+	return err
 }
 
 // PickNextPicker returns member with minimum times_picked (random tie-break done in service)
