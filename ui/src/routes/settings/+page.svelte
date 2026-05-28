@@ -152,7 +152,7 @@
 </script>
 
 {#if auth.user}
-	<AppShell title="Settings" backHref="/">
+	<AppShell title="Settings" showHome={true}>
 		<div class="flex flex-col gap-5">
 			{#if message}
 				<p class="text-sm text-tile-correct">{message}</p>
@@ -280,7 +280,6 @@
 							type="button"
 							variant="destructive"
 							size="inline"
-							class="bg-transparent text-error hover:bg-error/20 hover:text-error hover:brightness-100"
 							onclick={startDeletingAccount}
 						>
 							Delete

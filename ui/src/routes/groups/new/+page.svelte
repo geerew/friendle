@@ -27,7 +27,7 @@
 	}
 </script>
 
-<AppShell title="New Group" backHref="/">
+<AppShell title="Create Group" showHome={true}>
 	<form class="flex flex-col gap-4" onsubmit={handleSubmit}>
 		<Field label="Group name">
 			<Input bind:value={name} required maxlength={64} />

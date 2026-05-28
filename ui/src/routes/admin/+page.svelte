@@ -59,7 +59,7 @@
 	}
 </script>
 
-<AppShell title="Admin" backHref="/">
+<AppShell title="Admin" showHome={true}>
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else}
@@ -68,12 +68,7 @@
 			{#each users as user (user.id)}
 				<ListRow title={user.displayName} subtitle="{user.username} · {user.role}">
 					{#snippet trailing()}
-						<Button
-							variant="destructive"
-							size="inline"
-							class="bg-transparent text-error hover:bg-error/20 hover:text-error hover:brightness-100"
-							onclick={() => handleDeleteUser(user)}
-						>
+						<Button variant="destructive" size="inline" onclick={() => handleDeleteUser(user)}>
 							Delete
 						</Button>
 					{/snippet}
@@ -86,12 +81,7 @@
 			{#each groups as group (group.id)}
 				<ListRow title={group.name} subtitle="{group.memberCount} members">
 					{#snippet trailing()}
-						<Button
-							variant="destructive"
-							size="inline"
-							class="bg-transparent text-error hover:bg-error/20 hover:text-error hover:brightness-100"
-							onclick={() => handleDeleteGroup(group)}
-						>
+						<Button variant="destructive" size="inline" onclick={() => handleDeleteGroup(group)}>
 							Delete
 						</Button>
 					{/snippet}

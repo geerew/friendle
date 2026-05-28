@@ -30,7 +30,7 @@
 	}: Props = $props();
 
 	const base =
-		'inline-flex shrink-0 cursor-pointer items-center justify-center rounded text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+		'inline-flex shrink-0 cursor-pointer items-center justify-center rounded text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50';
 
 	const sizes: Record<Size, string> = {
 		default: 'w-full px-4 py-3 font-semibold tracking-wide uppercase',
@@ -38,14 +38,24 @@
 		icon: 'h-9 w-9 min-w-9 p-0 font-semibold uppercase'
 	};
 
-	const variants: Record<Variant, string> = {
-		primary: 'bg-button-primary text-white hover:brightness-110',
-		secondary: 'bg-button-secondary text-white hover:brightness-110',
-		ghost: 'bg-transparent text-text-muted hover:bg-bg-secondary hover:text-text',
-		destructive: 'bg-error text-white hover:brightness-110'
-	};
+	const variantClasses = $derived.by(() => {
+		switch (variant) {
+			case 'primary':
+				return 'bg-button-primary text-white hover:brightness-110';
+			case 'secondary':
+				return 'bg-button-secondary text-white hover:brightness-110';
+			case 'ghost':
+				return 'bg-transparent text-text-muted hover:text-text';
+			case 'destructive':
+				if (size === 'inline') {
+					return 'bg-transparent text-error-fg hover:bg-error-bg hover:text-text';
+				}
 
-	const classes = $derived(cn(base, sizes[size], variants[variant], className));
+				return 'bg-error-bg text-text hover:bg-error-bg-hover';
+		}
+	});
+
+	const classes = $derived(cn(base, sizes[size], variantClasses, className));
 </script>
 
 {#if href}

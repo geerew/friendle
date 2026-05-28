@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { logout } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
-	import { LeftChevronIcon, SettingsIcon } from '$lib/components/icons';
+	import { HomeIcon, LeftChevronIcon, SettingsIcon } from '$lib/components/icons';
 	import Logo from '$lib/components/logo.svelte';
 	import { Dropdown } from '$lib/components/ui';
 	import type { Snippet } from 'svelte';
@@ -10,6 +10,7 @@
 	type Props = {
 		title?: string;
 		backHref?: string;
+		showHome?: boolean;
 		showBack?: boolean;
 		showMenu?: boolean;
 		children: Snippet;
@@ -18,10 +19,14 @@
 	let {
 		title,
 		backHref = '/',
-		showBack = true,
+		showHome = false,
+		showBack = false,
 		showMenu = true,
 		children
 	}: Props = $props();
+
+	const headerLabel = $derived(title ?? 'Friendle');
+	const headerHref = $derived(title ? undefined : '/');
 
 	async function handleLogout(): Promise<void> {
 		await logout();
@@ -42,11 +47,19 @@
 					>
 						<LeftChevronIcon class="h-6 w-6 stroke-2" />
 					</a>
+				{:else if showHome}
+					<a
+						href="/"
+						class="inline-flex h-10 w-10 items-center justify-center rounded text-text-muted hover:text-text"
+						aria-label="Go home"
+					>
+						<HomeIcon class="h-6 w-6 stroke-2" />
+					</a>
 				{/if}
 			</div>
 
-			<div class="flex min-w-0 flex-1 justify-center">
-				<Logo href="/" variant="header" />
+			<div class="flex min-w-0 flex-1 justify-center px-2">
+				<Logo text={headerLabel} href={headerHref} variant="header" />
 			</div>
 
 			<div class="flex w-10 shrink-0 justify-end">
@@ -70,10 +83,6 @@
 	</header>
 
 	<main class="page-content">
-		{#if title}
-			<h1 class="mb-6 text-lg font-semibold text-text-muted">{title}</h1>
-		{/if}
-
 		{@render children()}
 	</main>
 </div>

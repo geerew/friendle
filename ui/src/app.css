@@ -17,6 +17,9 @@
 	--button-primary: #538d4e;
 	--button-secondary: #565758;
 	--error: #ff4444;
+	--error-fg: hsl(5, 70%, 45%);
+	--error-bg: hsl(5, 100%, 21%);
+	--error-bg-hover: hsl(5, 100%, 25%);
 }
 
 @theme {
@@ -36,6 +39,9 @@
 	--color-button-primary: var(--button-primary);
 	--color-button-secondary: var(--button-secondary);
 	--color-error: var(--error);
+	--color-error-fg: var(--error-fg);
+	--color-error-bg: var(--error-bg);
+	--color-error-bg-hover: var(--error-bg-hover);
 
 	--animate-shake: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 	--animate-pop: pop 0.1s ease-in-out;

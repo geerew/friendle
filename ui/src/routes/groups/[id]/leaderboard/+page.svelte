@@ -30,7 +30,7 @@
 	}
 </script>
 
-<AppShell title="Leaderboard" backHref="/groups/{groupId}/">
+<AppShell title="Leaderboard" showBack={true} backHref="/groups/{groupId}/">
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else if error}

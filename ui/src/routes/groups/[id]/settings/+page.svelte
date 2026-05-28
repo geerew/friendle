@@ -77,7 +77,7 @@
 	}
 </script>
 
-<AppShell title="Group Settings" backHref="/groups/{groupId}/">
+<AppShell title="Group Settings" showBack={true} backHref="/groups/{groupId}/">
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else}

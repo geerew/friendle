@@ -34,7 +34,7 @@
 
 <AppShell
 	title={group?.name ?? 'Group'}
-	backHref="/"
+	showHome={true}
 >
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>

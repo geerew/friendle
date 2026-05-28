@@ -64,7 +64,7 @@
 	}
 </script>
 
-<AppShell title="Pick Word" backHref="/groups/{groupId}/">
+<AppShell title="Pick Word" showBack={true} backHref="/groups/{groupId}/">
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else if !canPick}

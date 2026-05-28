@@ -138,7 +138,7 @@
 
 <svelte:window onkeydown={handlePhysicalKeyboard} />
 
-<AppShell title="Play" backHref="/groups/{groupId}/">
+<AppShell title="Play" showBack={true} backHref="/groups/{groupId}/">
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else if !roundActive}
