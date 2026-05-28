@@ -13,7 +13,7 @@
 	let { href, onclick, title, subtitle, trailing }: Props = $props();
 
 	const base =
-		'flex w-full items-center gap-3 rounded border border-border bg-bg-secondary px-4 py-3 text-left transition-colors hover:border-text-muted';
+		'flex w-full cursor-pointer items-center gap-3 rounded border border-border bg-bg-secondary px-4 py-3 text-left transition-colors hover:border-text-muted';
 </script>
 
 {#if href}

@@ -91,6 +91,14 @@
 	textarea {
 		font: inherit;
 	}
+
+	button:not(:disabled) {
+		cursor: pointer;
+	}
+
+	button:disabled {
+		cursor: not-allowed;
+	}
 }
 
 @layer components {
@@ -108,10 +116,5 @@
 
 	.section-title {
 		@apply text-sm font-semibold tracking-wide text-text-muted uppercase;
-	}
-
-	.logo {
-		font-family: 'Anton', sans-serif;
-		@apply text-4xl font-normal tracking-[0.2em] uppercase text-text;
 	}
 }

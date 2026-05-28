@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { logout } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
 	import { LeftChevronIcon, SettingsIcon } from '$lib/components/icons';
+	import Logo from '$lib/components/logo.svelte';
 	import { Dropdown } from '$lib/components/ui';
 	import type { Snippet } from 'svelte';
 
 	type Props = {
-		title: string;
+		title?: string;
 		backHref?: string;
 		showBack?: boolean;
 		showMenu?: boolean;
@@ -20,12 +22,18 @@
 		showMenu = true,
 		children
 	}: Props = $props();
+
+	async function handleLogout(): Promise<void> {
+		await logout();
+		auth.clear();
+		await goto('/auth/login/');
+	}
 </script>
 
 <div class="app-shell">
 	<header class="sticky top-0 z-10 border-b border-border bg-bg">
 		<div class="flex items-center justify-between px-3 py-3">
-			<div class="w-10">
+			<div class="flex w-10 shrink-0">
 				{#if showBack}
 					<a
 						href={backHref}
@@ -37,9 +45,11 @@
 				{/if}
 			</div>
 
-			<h1 class="truncate text-center text-base font-semibold">{title}</h1>
+			<div class="flex min-w-0 flex-1 justify-center">
+				<Logo href="/" variant="header" />
+			</div>
 
-			<div class="flex w-10 justify-end">
+			<div class="flex w-10 shrink-0 justify-end">
 				{#if showMenu}
 					<Dropdown.Root>
 						<Dropdown.Trigger aria-label="Menu">
@@ -51,6 +61,7 @@
 							{#if auth.isAdmin}
 								<Dropdown.Item onSelect={() => goto('/admin/')}>Admin</Dropdown.Item>
 							{/if}
+							<Dropdown.Item onSelect={handleLogout}>Logout</Dropdown.Item>
 						</Dropdown.Content>
 					</Dropdown.Root>
 				{/if}
@@ -59,6 +70,10 @@
 	</header>
 
 	<main class="page-content">
+		{#if title}
+			<h1 class="mb-6 text-lg font-semibold text-text-muted">{title}</h1>
+		{/if}
+
 		{@render children()}
 	</main>
 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
 	import { EyeIcon, EyeOffIcon } from '$lib/components/icons';
+	import Button from '$lib/components/ui/button.svelte';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
 	type Props = HTMLInputAttributes & {
@@ -38,9 +39,11 @@
 			{...restProps}
 		/>
 
-		<button
+		<Button
 			type="button"
-			class="absolute top-1/2 right-2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-text-muted transition-colors hover:text-text"
+			variant="ghost"
+			size="icon"
+			class="absolute top-1/2 right-2 h-8 w-8 min-w-8 -translate-y-1/2 normal-case"
 			aria-label={visible ? 'Hide password' : 'Show password'}
 			onclick={toggleVisibility}
 		>
@@ -49,7 +52,7 @@
 			{:else}
 				<EyeOffIcon class="size-5 stroke-[1.5]" />
 			{/if}
-		</button>
+		</Button>
 	</div>
 {:else}
 	<input bind:value bind:this={ref} type={inputType} class={cn('field', className)} {...restProps} />

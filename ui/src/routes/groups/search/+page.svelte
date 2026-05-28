@@ -63,14 +63,15 @@
 		{#each searchResults as group (group.id)}
 			<ListRow title={group.name} subtitle="{group.memberCount ?? 0} members">
 				{#snippet trailing()}
-					<button
+					<Button
 						type="button"
-						class="inline-flex h-9 w-9 items-center justify-center rounded bg-button-primary text-white"
+						variant="primary"
+						size="icon"
 						aria-label="Join {group.name}"
 						onclick={() => handleJoin(group)}
 					>
 						<PlusIcon class="size-5 stroke-2" />
-					</button>
+					</Button>
 				{/snippet}
 			</ListRow>
 		{/each}

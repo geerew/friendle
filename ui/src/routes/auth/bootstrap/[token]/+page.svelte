@@ -4,7 +4,7 @@
 	import { ApiError } from '$lib/api';
 	import { bootstrap } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
-	import { AuthRegisterForm, Logo } from '$lib/components';
+	import { AuthHeader, AuthRegisterForm } from '$lib/components';
 
 	const token = $derived(page.params.token ?? '');
 
@@ -28,10 +28,7 @@
 </script>
 
 <div class="app-shell page-content justify-center gap-6 py-10">
-	<div class="text-center">
-		<Logo />
-		<p class="mt-2 text-text-muted">Create the first administrator account</p>
-	</div>
+	<AuthHeader subtitle="Create the first administrator account" />
 
 	<AuthRegisterForm
 		submitLabel="Create admin"

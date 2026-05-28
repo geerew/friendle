@@ -1,113 +1,313 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { ApiError } from '$lib/api';
-	import { deleteMe, logout, updateMe } from '$lib/api/auth-api';
+	import { deleteMe, updateMe } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
 	import { AppShell } from '$lib/components';
-	import { Button, Field, Input } from '$lib/components/ui';
+	import { Button, Input } from '$lib/components/ui';
 
-	let displayName = $state(auth.user?.displayName ?? '');
+	const minPasswordLength = 8;
+
+	let isEditingDisplayName = $state(false);
+	let displayName = $state('');
+	let originalDisplayName = $state('');
+	let savingDisplayName = $state(false);
+
+	let isEditingPassword = $state(false);
 	let currentPassword = $state('');
 	let newPassword = $state('');
-	let saving = $state(false);
-	let loggingOut = $state(false);
+	let confirmPassword = $state('');
+	let savingPassword = $state(false);
+
+	let isDeletingAccount = $state(false);
+	let deletePassword = $state('');
+	let deletingAccount = $state(false);
+
 	let error = $state<string | null>(null);
 	let message = $state<string | null>(null);
 
 	$effect(() => {
-		displayName = auth.user?.displayName ?? '';
+		if (!isEditingDisplayName && auth.user?.displayName) {
+			displayName = auth.user.displayName;
+		}
 	});
 
-	async function handleSave(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		saving = true;
+	function clearFeedback(): void {
 		error = null;
 		message = null;
+	}
+
+	function startEditingDisplayName(): void {
+		clearFeedback();
+		originalDisplayName = auth.user?.displayName ?? '';
+		displayName = originalDisplayName;
+		isEditingDisplayName = true;
+	}
+
+	function cancelEditingDisplayName(): void {
+		displayName = originalDisplayName;
+		isEditingDisplayName = false;
+	}
+
+	async function saveDisplayName(): Promise<void> {
+		const trimmed = displayName.trim();
+		if (!trimmed || trimmed === auth.user?.displayName) {
+			cancelEditingDisplayName();
+			return;
+		}
+
+		savingDisplayName = true;
+		clearFeedback();
 
 		try {
-			const user = await updateMe({
-				displayName,
-				password: newPassword || undefined,
-				currentPassword: currentPassword || undefined
-			});
+			const user = await updateMe({ displayName: trimmed });
 			auth.setUser(user);
-			currentPassword = '';
-			newPassword = '';
-			message = 'Profile updated';
+			isEditingDisplayName = false;
+			message = 'Display name updated';
 		} catch (err) {
-			error = err instanceof ApiError ? err.message : 'Failed to update profile';
+			error = err instanceof ApiError ? err.message : 'Failed to update display name';
+			displayName = originalDisplayName;
 		} finally {
-			saving = false;
+			savingDisplayName = false;
 		}
 	}
 
-	async function handleLogout(): Promise<void> {
-		loggingOut = true;
+	function startEditingPassword(): void {
+		clearFeedback();
+		currentPassword = '';
+		newPassword = '';
+		confirmPassword = '';
+		isEditingPassword = true;
+	}
+
+	function cancelEditingPassword(): void {
+		currentPassword = '';
+		newPassword = '';
+		confirmPassword = '';
+		isEditingPassword = false;
+	}
+
+	async function savePassword(): Promise<void> {
+		if (!currentPassword || !newPassword || !confirmPassword) {
+			error = 'All password fields are required';
+			return;
+		}
+
+		if (newPassword.length < minPasswordLength) {
+			error = 'Password must be at least 8 characters';
+			return;
+		}
+
+		if (newPassword !== confirmPassword) {
+			error = 'Passwords do not match';
+			return;
+		}
+
+		savingPassword = true;
+		clearFeedback();
 
 		try {
-			await logout();
-			auth.clear();
-			await goto('/auth/login/');
+			await updateMe({ currentPassword, password: newPassword });
+			cancelEditingPassword();
+			message = 'Password updated';
 		} catch (err) {
-			error = err instanceof ApiError ? err.message : 'Logout failed';
+			error = err instanceof ApiError ? err.message : 'Failed to update password';
 		} finally {
-			loggingOut = false;
+			savingPassword = false;
 		}
+	}
+
+	function startDeletingAccount(): void {
+		clearFeedback();
+		deletePassword = '';
+		isDeletingAccount = true;
+	}
+
+	function cancelDeletingAccount(): void {
+		deletePassword = '';
+		isDeletingAccount = false;
 	}
 
 	async function handleDeleteAccount(): Promise<void> {
-		if (!currentPassword) {
+		if (!deletePassword) {
 			error = 'Enter your current password to delete your account';
 			return;
 		}
 
 		if (!confirm('Delete your account permanently?')) return;
 
+		deletingAccount = true;
+		clearFeedback();
+
 		try {
-			await deleteMe({ currentPassword });
+			await deleteMe({ currentPassword: deletePassword });
 			auth.clear();
 			await goto('/auth/login/');
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Failed to delete account';
+		} finally {
+			deletingAccount = false;
 		}
 	}
 </script>
 
-<AppShell title="Settings" backHref="/">
-	<form class="flex flex-col gap-4" onsubmit={handleSave}>
-		<Field label="Username">
-			<Input value={auth.user?.username ?? ''} disabled />
-		</Field>
+{#if auth.user}
+	<AppShell title="Settings" backHref="/">
+		<div class="flex flex-col gap-5">
+			{#if message}
+				<p class="text-sm text-tile-correct">{message}</p>
+			{/if}
 
-		<Field label="Display name">
-			<Input bind:value={displayName} required />
-		</Field>
+			{#if error}
+				<p class="text-sm text-error">{error}</p>
+			{/if}
 
-		<Field label="Current password">
-			<Input password bind:value={currentPassword} autocomplete="current-password" />
-		</Field>
+			<section class="flex flex-col gap-3">
+				<h2 class="section-title">Username</h2>
+				<p class="text-2xl text-button-primary">{auth.user.username}</p>
+			</section>
 
-		<Field label="New password">
-			<Input password bind:value={newPassword} autocomplete="new-password" />
-		</Field>
+			<div class="h-px shrink-0 bg-border"></div>
 
-		{#if message}
-			<p class="text-sm text-tile-correct">{message}</p>
-		{/if}
+			<section class="flex flex-col gap-3">
+				<div class="flex items-center justify-between gap-3">
+					<h2 class="section-title">Display name</h2>
+					{#if isEditingDisplayName}
+						<Button
+							type="button"
+							variant="ghost"
+							size="inline"
+							onclick={cancelEditingDisplayName}
+						>
+							Cancel
+						</Button>
+					{:else}
+						<Button type="button" variant="ghost" size="inline" onclick={startEditingDisplayName}>
+							Edit
+						</Button>
+					{/if}
+				</div>
 
-		{#if error}
-			<p class="text-sm text-error">{error}</p>
-		{/if}
+				{#if isEditingDisplayName}
+					<div class="flex flex-col gap-2">
+						<Input bind:value={displayName} required />
+						<Button
+							type="button"
+							variant="primary"
+							size="inline"
+							class="w-36 uppercase tracking-wide"
+							disabled={!displayName.trim() ||
+								displayName.trim() === auth.user.displayName ||
+								savingDisplayName}
+							onclick={saveDisplayName}
+						>
+							{savingDisplayName ? 'Saving…' : 'Save'}
+						</Button>
+					</div>
+				{:else}
+					<p class="text-2xl text-button-primary">{auth.user.displayName}</p>
+				{/if}
+			</section>
 
-		<Button type="submit" variant="primary" disabled={saving}>
-			{saving ? 'Saving…' : 'Save profile'}
-		</Button>
-	</form>
+			<div class="h-px shrink-0 bg-border"></div>
 
-	<div class="mt-auto flex flex-col gap-3 pt-6">
-		<Button variant="secondary" onclick={handleLogout} disabled={loggingOut}>
-			{loggingOut ? 'Signing out…' : 'Sign out'}
-		</Button>
-		<Button variant="danger" onclick={handleDeleteAccount}>Delete account</Button>
-	</div>
-</AppShell>
+			<section class="flex flex-col gap-3">
+				<div class="flex items-center justify-between gap-3">
+					<h2 class="section-title">Password</h2>
+					{#if isEditingPassword}
+						<Button
+							type="button"
+							variant="ghost"
+							size="inline"
+							onclick={cancelEditingPassword}
+						>
+							Cancel
+						</Button>
+					{:else}
+						<Button type="button" variant="ghost" size="inline" onclick={startEditingPassword}>
+							Edit
+						</Button>
+					{/if}
+				</div>
+
+				{#if isEditingPassword}
+					<div class="flex flex-col gap-3">
+						<div class="flex flex-col gap-2">
+							<span class="text-sm text-text-muted">Current password</span>
+							<Input password bind:value={currentPassword} autocomplete="current-password" />
+						</div>
+						<div class="flex flex-col gap-2">
+							<span class="text-sm text-text-muted">New password</span>
+							<Input password bind:value={newPassword} autocomplete="new-password" />
+						</div>
+						<div class="flex flex-col gap-2">
+							<span class="text-sm text-text-muted">Confirm password</span>
+							<Input password bind:value={confirmPassword} autocomplete="new-password" />
+						</div>
+						<Button
+							type="button"
+							variant="primary"
+							size="inline"
+							class="w-36 uppercase tracking-wide"
+							disabled={!currentPassword ||
+								!newPassword ||
+								!confirmPassword ||
+								savingPassword}
+							onclick={savePassword}
+						>
+							{savingPassword ? 'Saving…' : 'Save'}
+						</Button>
+					</div>
+				{/if}
+			</section>
+
+			<div class="h-px shrink-0 bg-border"></div>
+
+			<section class="flex flex-col gap-1">
+				<div class="flex items-center justify-between gap-3">
+					<h2 class="section-title">Delete account</h2>
+					{#if isDeletingAccount}
+						<Button
+							type="button"
+							variant="ghost"
+							size="inline"
+							onclick={cancelDeletingAccount}
+						>
+							Cancel
+						</Button>
+					{:else}
+						<Button
+							type="button"
+							variant="destructive"
+							size="inline"
+							class="bg-transparent text-error hover:bg-error/20 hover:text-error hover:brightness-100"
+							onclick={startDeletingAccount}
+						>
+							Delete
+						</Button>
+					{/if}
+				</div>
+				<p class="text-sm text-text-muted">Permanently delete your Friendle account</p>
+
+				{#if isDeletingAccount}
+					<div class="mt-2 flex flex-col gap-3">
+						<div class="flex flex-col gap-2">
+							<span class="text-sm text-text-muted">Current password</span>
+							<Input password bind:value={deletePassword} autocomplete="current-password" />
+						</div>
+						<Button
+							type="button"
+							variant="destructive"
+							size="inline"
+							class="w-36 uppercase tracking-wide"
+							disabled={!deletePassword || deletingAccount}
+							onclick={handleDeleteAccount}
+						>
+							{deletingAccount ? 'Deleting…' : 'Delete account'}
+						</Button>
+					</div>
+				{/if}
+			</section>
+		</div>
+	</AppShell>
+{/if}

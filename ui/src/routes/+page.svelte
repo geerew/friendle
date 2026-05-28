@@ -29,7 +29,7 @@
 	}
 </script>
 
-<AppShell title="Friendle" showBack={false}>
+<AppShell showBack={false}>
 	<section class="flex flex-col gap-3">
 		<h2 class="section-title">My Groups</h2>
 

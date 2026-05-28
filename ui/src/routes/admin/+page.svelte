@@ -68,13 +68,14 @@
 			{#each users as user (user.id)}
 				<ListRow title={user.displayName} subtitle="{user.username} · {user.role}">
 					{#snippet trailing()}
-						<button
-							type="button"
-							class="rounded px-2 py-1 text-xs text-error"
+						<Button
+							variant="destructive"
+							size="inline"
+							class="bg-transparent text-error hover:bg-error/20 hover:text-error hover:brightness-100"
 							onclick={() => handleDeleteUser(user)}
 						>
 							Delete
-						</button>
+						</Button>
 					{/snippet}
 				</ListRow>
 			{/each}
@@ -85,13 +86,14 @@
 			{#each groups as group (group.id)}
 				<ListRow title={group.name} subtitle="{group.memberCount} members">
 					{#snippet trailing()}
-						<button
-							type="button"
-							class="rounded px-2 py-1 text-xs text-error"
+						<Button
+							variant="destructive"
+							size="inline"
+							class="bg-transparent text-error hover:bg-error/20 hover:text-error hover:brightness-100"
 							onclick={() => handleDeleteGroup(group)}
 						>
 							Delete
-						</button>
+						</Button>
 					{/snippet}
 				</ListRow>
 			{/each}

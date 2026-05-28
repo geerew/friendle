@@ -3,7 +3,7 @@
 	import { ApiError } from '$lib/api';
 	import { getSignupStatus, login } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
-	import { Logo } from '$lib/components';
+	import { AuthHeader } from '$lib/components';
 	import { Button, Field, Input } from '$lib/components/ui';
 
 	let username = $state('');
@@ -44,12 +44,10 @@
 </script>
 
 <div class="app-shell page-content justify-center gap-6 py-10">
-	<div class="text-center">
-		<Logo />
-	</div>
+	<AuthHeader subtitle="Sign in to your account" />
 
 	{#if loading}
-		<p class="text-center text-text-muted">Loading…</p>
+		<p class="text-center text-sm text-text-muted">Loading…</p>
 	{:else}
 		<form class="flex flex-col gap-4" onsubmit={handleSubmit}>
 			<Field label="Username">

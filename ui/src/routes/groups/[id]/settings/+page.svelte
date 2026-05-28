@@ -118,7 +118,7 @@
 				<Button type="submit" variant="primary" disabled={saving}>
 					{saving ? 'Saving…' : 'Save changes'}
 				</Button>
-				<Button type="button" variant="danger" onclick={handleDelete}>Delete group</Button>
+				<Button type="button" variant="destructive" onclick={handleDelete}>Delete group</Button>
 			{/if}
 
 			<Button type="button" variant="ghost" onclick={handleLeave}>Leave group</Button>
