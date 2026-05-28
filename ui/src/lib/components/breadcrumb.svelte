@@ -28,7 +28,10 @@
 		<span class="shrink-0 text-text-muted" aria-hidden="true">/</span>
 
 		{#if item.href}
-			<a href={item.href} class="truncate text-text-muted transition-colors hover:text-text">
+			<a
+				href={item.href}
+				class="truncate tracking-wide text-text-muted uppercase transition-colors hover:text-text"
+			>
 				{item.label}
 			</a>
 		{:else}

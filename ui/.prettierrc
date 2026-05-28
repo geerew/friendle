@@ -12,5 +12,5 @@
 			}
 		}
 	],
-	"tailwindAttributes": ["triggerClass", "contentClass", "itemClass"]
+	"tailwindAttributes": ["triggerClass", "contentClass", "itemClass", "rootClass", "itemRowClass", "labelClass"]
 }

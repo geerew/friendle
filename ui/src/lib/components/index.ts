@@ -4,6 +4,7 @@ export { default as AuthHeader } from './auth-header.svelte';
 export { default as AuthRegisterForm } from './auth-register-form.svelte';
 export { default as Keyboard } from './keyboard.svelte';
 export { default as ListRow } from './list-row.svelte';
+export { default as Pagination } from './pagination.svelte';
 export { default as TileGrid } from './tile-grid.svelte';
 export { default as Logo } from './logo.svelte';
 export * from './icons';
