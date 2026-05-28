@@ -4,6 +4,7 @@
 	import { AppShell, ListRow, PlusIcon } from '$lib/components';
 	import { Button, Input } from '$lib/components/ui';
 	import type { Group } from '$lib/types/group';
+	import { formatMemberCount } from '$lib/utils';
 
 	let searchQuery = $state('');
 	let searchResults = $state<Group[]>([]);
@@ -61,7 +62,7 @@
 
 	<div class="flex flex-col gap-2">
 		{#each searchResults as group (group.id)}
-			<ListRow title={group.name} subtitle="{group.memberCount ?? 0} members">
+			<ListRow title={group.name} subtitle={formatMemberCount(group.memberCount ?? 0)}>
 				{#snippet trailing()}
 					<Button
 						type="button"

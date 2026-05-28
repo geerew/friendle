@@ -28,3 +28,7 @@ export function isPasswordFieldError(error: string | null): boolean {
 		message.includes('all password fields are required')
 	);
 }
+
+export function formatMemberCount(count: number): string {
+	return count === 1 ? '1 member' : `${count} members`;
+}

@@ -8,7 +8,7 @@
 	import { AppShell, ListRow } from '$lib/components';
 	import { Button, Input } from '$lib/components/ui';
 	import type { Group } from '$lib/types/group';
-	import { isPasswordFieldError } from '$lib/utils';
+	import { isPasswordFieldError, formatMemberCount } from '$lib/utils';
 
 	const minPasswordLength = 8;
 
@@ -322,7 +322,7 @@
 							<ListRow
 								href="/groups/{group.id}/"
 								title={group.name}
-								subtitle="{group.memberCount ?? 0} members"
+								subtitle={formatMemberCount(group.memberCount ?? 0)}
 							/>
 						{/each}
 					</div>

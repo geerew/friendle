@@ -6,6 +6,7 @@
 	import { AppShell, ListRow } from '$lib/components';
 	import { Button } from '$lib/components/ui';
 	import type { Group } from '$lib/types/group';
+	import { formatMemberCount } from '$lib/utils';
 
 	let groups = $state<Group[]>([]);
 	let loadingGroups = $state(true);
@@ -42,7 +43,11 @@
 		{:else}
 			<div class="flex flex-col gap-2">
 				{#each groups as group (group.id)}
-					<ListRow href="/groups/{group.id}/" title={group.name} subtitle="{group.memberCount ?? 0} members" />
+					<ListRow
+						href="/groups/{group.id}/"
+						title={group.name}
+						subtitle={formatMemberCount(group.memberCount ?? 0)}
+					/>
 				{/each}
 			</div>
 		{/if}

@@ -5,6 +5,7 @@
 	import { AppShell, ListRow } from '$lib/components';
 	import { Button } from '$lib/components/ui';
 	import type { GroupDetail } from '$lib/types/group';
+	import { formatMemberCount } from '$lib/utils';
 
 	const groupId = $derived(page.params.id ?? '');
 
@@ -39,7 +40,7 @@
 		<p class="text-error">{error}</p>
 	{:else if group}
 		<div class="rounded border border-border bg-bg-secondary px-4 py-3 text-sm text-text-muted">
-			<p>{group.memberCount ?? group.members?.length ?? 0} members</p>
+			<p>{formatMemberCount(group.memberCount ?? group.members?.length ?? 0)}</p>
 			<p>Round every {group.intervalHours}h ({group.timezone})</p>
 			{#if round}
 				<p class="mt-2 capitalize">Today: {round.status.replace('_', ' ')}</p>
