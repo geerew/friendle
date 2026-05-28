@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { ApiError } from '$lib/api';
+	import { getGroup } from '$lib/api/groups-api';
 	import { getLeaderboard } from '$lib/api/leaderboard-api';
 	import { AppShell, ListRow } from '$lib/components';
 	import type { LeaderboardEntry } from '$lib/types/leaderboard';
@@ -8,6 +9,7 @@
 	const groupId = $derived(page.params.id ?? '');
 
 	let entries = $state<LeaderboardEntry[]>([]);
+	let groupName = $state('Group');
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
@@ -20,7 +22,8 @@
 		error = null;
 
 		try {
-			const data = await getLeaderboard(groupId);
+			const [data, group] = await Promise.all([getLeaderboard(groupId), getGroup(groupId)]);
+			groupName = group.name;
 			entries = data.entries ?? [];
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Failed to load leaderboard';
@@ -30,7 +33,12 @@
 	}
 </script>
 
-<AppShell title="Leaderboard" showBack={true} backHref="/groups/{groupId}/">
+<AppShell
+	breadcrumb={[
+		{ label: groupName, href: `/groups/${groupId}/` },
+		{ label: 'Leaderboard' }
+	]}
+>
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else if error}

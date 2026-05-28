@@ -152,7 +152,7 @@
 </script>
 
 {#if auth.user}
-	<AppShell title="Settings" showHome={true}>
+	<AppShell title="Settings">
 		<div class="flex flex-col gap-5">
 			{#if message}
 				<p class="text-sm text-tile-correct">{message}</p>

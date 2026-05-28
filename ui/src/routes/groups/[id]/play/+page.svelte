@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { ApiError } from '$lib/api';
+	import { getGroup } from '$lib/api/groups-api';
 	import { getCurrentRound, getMyGuess, revealWord, submitGuess } from '$lib/api/rounds-api';
 	import { AppShell, Keyboard, TileGrid } from '$lib/components';
 	import type { Guess, GuessRow } from '$lib/types/round';
@@ -19,6 +20,7 @@
 	let error = $state<string | null>(null);
 	let reveal = $state<string | null>(null);
 	let roundActive = $state(false);
+	let groupName = $state('Group');
 
 	const letterStates = $derived(buildLetterStates(rows));
 
@@ -31,7 +33,8 @@
 		error = null;
 
 		try {
-			const round = await getCurrentRound(groupId);
+			const [round, group] = await Promise.all([getCurrentRound(groupId), getGroup(groupId)]);
+			groupName = group.name;
 			roundActive = round?.status === 'active';
 
 			if (!roundActive) {
@@ -138,7 +141,12 @@
 
 <svelte:window onkeydown={handlePhysicalKeyboard} />
 
-<AppShell title="Play" showBack={true} backHref="/groups/{groupId}/">
+<AppShell
+	breadcrumb={[
+		{ label: groupName, href: `/groups/${groupId}/` },
+		{ label: 'Play' }
+	]}
+>
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else if !roundActive}

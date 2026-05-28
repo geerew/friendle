@@ -59,7 +59,7 @@
 	}
 </script>
 
-<AppShell title="Admin" showHome={true}>
+<AppShell title="Admin">
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else}

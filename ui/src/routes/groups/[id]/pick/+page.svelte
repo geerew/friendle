@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { ApiError } from '$lib/api';
+	import { getGroup } from '$lib/api/groups-api';
 	import { getCurrentRound, submitWord } from '$lib/api/rounds-api';
 	import { normalizeWord } from '$lib/wordle';
 	import { AppShell } from '$lib/components';
@@ -14,6 +15,7 @@
 	let submitting = $state(false);
 	let error = $state<string | null>(null);
 	let canPick = $state(false);
+	let groupName = $state('Group');
 
 	$effect(() => {
 		loadRound();
@@ -24,7 +26,8 @@
 		error = null;
 
 		try {
-			const round = await getCurrentRound(groupId);
+			const [round, group] = await Promise.all([getCurrentRound(groupId), getGroup(groupId)]);
+			groupName = group.name;
 			canPick = round?.status === 'awaiting_word' && Boolean(round.isPicker);
 			if (round && !canPick) {
 				error = 'You are not the picker for this round.';
@@ -64,7 +67,12 @@
 	}
 </script>
 
-<AppShell title="Pick Word" showBack={true} backHref="/groups/{groupId}/">
+<AppShell
+	breadcrumb={[
+		{ label: groupName, href: `/groups/${groupId}/` },
+		{ label: 'Pick Word' }
+	]}
+>
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else if !canPick}

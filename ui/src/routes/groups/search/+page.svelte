@@ -39,7 +39,7 @@
 	}
 </script>
 
-<AppShell title="Search Groups" showHome={true}>
+<AppShell title="Search Groups">
 	<div class="flex flex-col gap-2">
 		<Input
 			placeholder="Search by name"

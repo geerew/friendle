@@ -77,7 +77,12 @@
 	}
 </script>
 
-<AppShell title="Group Settings" showBack={true} backHref="/groups/{groupId}/">
+<AppShell
+	breadcrumb={[
+		{ label: name || 'Group', href: `/groups/${groupId}/` },
+		{ label: 'Group Settings' }
+	]}
+>
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else}

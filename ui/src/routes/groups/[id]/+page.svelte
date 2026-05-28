@@ -32,10 +32,7 @@
 	const round = $derived(group?.currentRound ?? null);
 </script>
 
-<AppShell
-	title={group?.name ?? 'Group'}
-	showHome={true}
->
+<AppShell title={group?.name ?? 'Group'}>
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>
 	{:else if error}
