@@ -97,6 +97,22 @@ func (dao *DAO) ListUsers(ctx context.Context, dbOpts *Options) ([]*models.User,
 	return listGeneric[models.User](ctx, dao, *builderOpts)
 }
 
+// ListAdminUsers returns users for the site admin list
+func (dao *DAO) ListAdminUsers(ctx context.Context, dbOpts *Options) ([]*models.AdminUserListRow, error) {
+	u := models.USER_TABLE
+
+	applyDefaultOrderBy(dbOpts, defaultUsersListOrderBy)
+
+	return listGeneric[models.AdminUserListRow](ctx, dao, *newBuilderOptions(u).
+		WithColumns(
+			u+"."+models.BASE_ID+" AS id",
+			u+"."+models.USER_USERNAME+" AS username",
+			u+"."+models.USER_DISPLAY_NAME+" AS display_name",
+			u+"."+models.USER_SITE_ROLE+" AS site_role",
+		).
+		SetDbOpts(dbOpts))
+}
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // UpdateUser updates a user record

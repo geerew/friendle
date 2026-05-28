@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { listGroups } from '$lib/api/admin-api';
-	import { AppShell, DeleteGroup, ListRow, Pagination } from '$lib/components';
+	import { AppShell, DeleteGroup, ListRow, Pagination, RightChevronIcon, TrashIcon } from '$lib/components';
 	import { Button } from '$lib/components/ui';
 	import type { AdminGroupModel } from '$lib/models/admin-group-model';
 	import { formatMemberCount } from '$lib/utils';
@@ -83,9 +83,25 @@
 					{#each groups as group (group.id)}
 						<ListRow title={group.name} subtitle={formatMemberCount(group.memberCount)}>
 							{#snippet trailing()}
-								<Button variant="destructive" size="inline" onclick={() => openDeleteGroup(group)}>
-									Delete
-								</Button>
+								<div class="flex items-center gap-1">
+									<Button
+										href="/groups/{group.id}/"
+										variant="ghost"
+										size="icon"
+										aria-label="View {group.name}"
+									>
+										<RightChevronIcon class="h-5 w-5 stroke-2" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="text-error-fg hover:bg-error-bg hover:text-text"
+										aria-label="Delete {group.name}"
+										onclick={() => openDeleteGroup(group)}
+									>
+										<TrashIcon class="h-5 w-5 stroke-2" />
+									</Button>
+								</div>
 							{/snippet}
 						</ListRow>
 					{/each}

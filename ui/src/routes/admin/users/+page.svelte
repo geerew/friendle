@@ -4,6 +4,7 @@
 	import { AppShell, DeleteUser, ListRow, Pagination } from '$lib/components';
 	import { Button } from '$lib/components/ui';
 	import { formatSiteRole, type AdminUserModel } from '$lib/models/admin-user-model';
+	import { formatGroupCount } from '$lib/utils';
 
 	let users = $state<AdminUserModel[]>([]);
 	let page = $state(1);
@@ -82,7 +83,7 @@
 					{#each users as user (user.id)}
 						<ListRow
 							title={user.displayName}
-							subtitle="{user.username} · {formatSiteRole(user.siteRole)}"
+							subtitle="{user.username} · {formatSiteRole(user.siteRole)} · {formatGroupCount(user.groupCount)}"
 						>
 							{#snippet trailing()}
 								<Button variant="destructive" size="inline" onclick={() => openDeleteUser(user)}>

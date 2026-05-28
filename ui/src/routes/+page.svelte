@@ -5,10 +5,10 @@
 	import { auth } from '$lib/auth.svelte';
 	import { AppShell, ListRow } from '$lib/components';
 	import { Button } from '$lib/components/ui';
-	import type { Group } from '$lib/types/group';
+	import type { UserGroupSummaryModel } from '$lib/models/user-group-summary-model';
 	import { formatMemberCount } from '$lib/utils';
 
-	let groups = $state<Group[]>([]);
+	let groups = $state<UserGroupSummaryModel[]>([]);
 	let loadingGroups = $state(true);
 	let error = $state<string | null>(null);
 
@@ -41,12 +41,12 @@
 		{:else if groups.length === 0}
 			<p class="text-center text-xs text-text-muted">No groups</p>
 		{:else}
-			<div class="flex flex-col gap-2">
+			<div class="flex flex-col gap-3">
 				{#each groups as group (group.id)}
 					<ListRow
 						href="/groups/{group.id}/"
 						title={group.name}
-						subtitle={formatMemberCount(group.memberCount ?? 0)}
+						subtitle={formatMemberCount(group.memberCount)}
 					/>
 				{/each}
 			</div>

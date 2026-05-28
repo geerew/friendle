@@ -42,3 +42,11 @@ func UserColumns() []string {
 		fmt.Sprintf("%s AS %s", USER_TABLE_SITE_ROLE, USER_SITE_ROLE),
 	}
 }
+
+// AdminUserListRow is a user row enriched for the site admin list
+type AdminUserListRow struct {
+	ID          string         `db:"id"`
+	Username    string         `db:"username"`
+	DisplayName string         `db:"display_name"`
+	SiteRole    types.SiteRole `db:"site_role"`
+}

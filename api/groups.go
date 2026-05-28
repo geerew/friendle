@@ -53,19 +53,13 @@ func (r *Router) listMyGroups(c *fiber.Ctx) error {
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
-	memberships, err := r.appDao.ListGroupsForUser(ctx, principal.UserID)
+
+	rows, err := r.appDao.ListUserGroupSummariesForUserIDs(ctx, []string{principal.UserID})
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to list groups", err)
 	}
-	out := make([]fiber.Map, 0)
-	for _, m := range memberships {
-		g, err := r.appDao.GetGroup(ctx, m.GroupID)
-		if err != nil || g == nil {
-			continue
-		}
-		out = append(out, groupResponse(g, m.GroupRole))
-	}
-	return c.JSON(out)
+
+	return c.JSON(userGroupSummaryResponsesFromRows(rows))
 }
 
 func (r *Router) searchGroups(c *fiber.Ctx) error {

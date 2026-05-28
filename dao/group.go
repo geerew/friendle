@@ -11,6 +11,8 @@ import (
 
 // ensure types import used
 
+var defaultAdminGroupsListOrderBy = []string{models.GROUP_TABLE + "." + models.BASE_CREATED_AT + " desc"}
+
 func (dao *DAO) CreateGroup(ctx context.Context, g *models.Group) error {
 	if g.ID == "" {
 		g.RefreshId()
@@ -40,6 +42,8 @@ func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Grou
 func (dao *DAO) ListAdminGroups(ctx context.Context, dbOpts *Options) ([]*models.AdminGroupListRow, error) {
 	g := models.GROUP_TABLE
 	gm := models.GROUP_MEMBER_TABLE
+
+	applyDefaultOrderBy(dbOpts, defaultAdminGroupsListOrderBy)
 
 	return listGeneric[models.AdminGroupListRow](ctx, dao, *newBuilderOptions(g).
 		WithColumns(
@@ -107,6 +111,30 @@ func (dao *DAO) ListGroupsForUser(ctx context.Context, userID string) ([]*models
 	return listGeneric[models.GroupMember](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithColumns(memberColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"user_id": userID})))
+}
+
+// ListUserGroupSummariesForUserIDs returns group summaries for the given user IDs, ordered by
+// user then group name
+func (dao *DAO) ListUserGroupSummariesForUserIDs(ctx context.Context, userIDs []string) ([]*models.UserGroupSummaryRow, error) {
+	if len(userIDs) == 0 {
+		return []*models.UserGroupSummaryRow{}, nil
+	}
+
+	gm := models.GROUP_MEMBER_TABLE
+	g := models.GROUP_TABLE
+
+	return listGeneric[models.UserGroupSummaryRow](ctx, dao, *newBuilderOptions(gm).
+		WithColumns(
+			gm+".user_id AS user_id",
+			g+"."+models.BASE_ID+" AS id",
+			g+".name AS name",
+			gm+".group_role AS group_role",
+			"(SELECT COUNT(*) FROM "+gm+" gm_count WHERE gm_count.group_id = "+g+"."+models.BASE_ID+") AS member_count",
+		).
+		WithJoin(g, g+"."+models.BASE_ID+" = "+gm+".group_id").
+		SetDbOpts(NewOptions().
+			WithWhere(squirrel.Eq{gm + ".user_id": userIDs}).
+			WithOrderBy(gm+".user_id ASC", g+".name ASC")))
 }
 
 func (dao *DAO) DeleteGroupMember(ctx context.Context, groupID, userID string) error {

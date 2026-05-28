@@ -5,3 +5,4 @@ export { default as LeftChevronIcon } from './left-chevron.svelte';
 export { default as PlusIcon } from './plus.svelte';
 export { default as RightChevronIcon } from './right-chevron.svelte';
 export { default as SettingsIcon } from './settings.svelte';
+export { default as TrashIcon } from './trash.svelte';

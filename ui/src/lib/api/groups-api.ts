@@ -1,4 +1,9 @@
-import { apiFetch, parseJson } from './fetch';
+import { ApiError, apiFetch, parseJson } from './fetch';
+import { array, safeParse } from 'valibot';
+import {
+	UserGroupSummarySchema,
+	type UserGroupSummaryModel
+} from '$lib/models/user-group-summary-model';
 import type {
 	CreateGroupRequest,
 	Group,
@@ -7,11 +12,16 @@ import type {
 	UpdateGroupRequest
 } from '$lib/types/group';
 
-export async function listMyGroups(): Promise<Group[]> {
+export async function listMyGroups(): Promise<UserGroupSummaryModel[]> {
 	const response = await apiFetch('/api/groups/');
-	const data = await parseJson<{ items?: Group[] } | Group[] | null>(response);
-	if (data == null) return [];
-	return Array.isArray(data) ? data : (data.items ?? []);
+	const data = await parseJson<unknown>(response);
+	const result = safeParse(array(UserGroupSummarySchema), data);
+
+	if (!result.success) {
+		throw new ApiError('Invalid response from the server', response.status);
+	}
+
+	return result.output;
 }
 
 export async function searchGroups(query: string): Promise<Group[]> {

@@ -32,6 +32,70 @@ func userResponseHelper(users []*models.User) []*userResponse {
 	return responses
 }
 
+type adminUserResponse struct {
+	ID          string                     `json:"id"`
+	Username    string                     `json:"username"`
+	DisplayName string                     `json:"displayName"`
+	SiteRole    types.SiteRole             `json:"siteRole"`
+	GroupCount  int                        `json:"groupCount"`
+	Groups      []*userGroupSummaryResponse `json:"groups"`
+}
+
+func adminUserResponseHelper(
+	users []*models.AdminUserListRow,
+	groupsByUser map[string][]*models.UserGroupSummaryRow,
+) []*adminUserResponse {
+	responses := make([]*adminUserResponse, 0, len(users))
+	for _, user := range users {
+		groupRows := groupsByUser[user.ID]
+		groups := userGroupSummaryResponsesFromRows(groupRows)
+		responses = append(responses, &adminUserResponse{
+			ID:          user.ID,
+			Username:    user.Username,
+			DisplayName: user.DisplayName,
+			SiteRole:    user.SiteRole,
+			GroupCount:  len(groups),
+			Groups:      groups,
+		})
+	}
+
+	return responses
+}
+
+type userGroupSummaryResponse struct {
+	ID          string          `json:"id"`
+	Name        string          `json:"name"`
+	MemberCount int             `json:"memberCount"`
+	GroupRole   types.GroupRole `json:"groupRole,omitempty"`
+}
+
+func userGroupSummaryResponsesFromRows(rows []*models.UserGroupSummaryRow) []*userGroupSummaryResponse {
+	if len(rows) == 0 {
+		return []*userGroupSummaryResponse{}
+	}
+
+	responses := make([]*userGroupSummaryResponse, 0, len(rows))
+	for _, row := range rows {
+		responses = append(responses, &userGroupSummaryResponse{
+			ID:          row.ID,
+			Name:        row.Name,
+			MemberCount: row.MemberCount,
+			GroupRole:   row.GroupRole,
+		})
+	}
+
+	return responses
+}
+
+func userGroupSummariesByUserID(rows []*models.UserGroupSummaryRow) map[string][]*models.UserGroupSummaryRow {
+	byUser := make(map[string][]*models.UserGroupSummaryRow)
+	for _, row := range rows {
+		byUser[row.UserID] = append(byUser[row.UserID], row)
+	}
+
+	return byUser
+}
+
 type signupStatusResponse struct {
 	Enabled bool `json:"enabled"`
 }

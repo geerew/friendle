@@ -47,6 +47,15 @@ type AdminGroupListRow struct {
 	MemberCount int    `db:"member_count"`
 }
 
+// UserGroupSummaryRow is a group summary for a user's memberships
+type UserGroupSummaryRow struct {
+	UserID      string          `db:"user_id"`
+	ID          string          `db:"id"`
+	Name        string          `db:"name"`
+	MemberCount int             `db:"member_count"`
+	GroupRole   types.GroupRole `db:"group_role"`
+}
+
 const ROUND_TABLE = "rounds"
 
 type RoundStatus string

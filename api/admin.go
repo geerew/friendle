@@ -22,12 +22,24 @@ func (r *Router) adminListUsers(c *fiber.Ctx) error {
 	}
 
 	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
-	users, err := r.appDao.ListUsers(ctx, dbOpts)
+	users, err := r.appDao.ListAdminUsers(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
 
-	pResult, err := dbOpts.Pagination.BuildResult(userResponseHelper(users))
+	userIDs := make([]string, len(users))
+	for i, user := range users {
+		userIDs[i] = user.ID
+	}
+
+	groupRows, err := r.appDao.ListUserGroupSummariesForUserIDs(ctx, userIDs)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
+	}
+
+	pResult, err := dbOpts.Pagination.BuildResult(
+		adminUserResponseHelper(users, userGroupSummariesByUserID(groupRows)),
+	)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -41,9 +53,7 @@ func (r *Router) adminListGroups(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
-	dbOpts := dao.NewOptions().
-		WithOrderBy("name asc").
-		WithPagination(paginationFromCtx(c))
+	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
 	groups, err := r.appDao.ListAdminGroups(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
