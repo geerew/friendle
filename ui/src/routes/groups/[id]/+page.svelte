@@ -35,8 +35,6 @@
 <AppShell
 	title={group?.name ?? 'Group'}
 	backHref="/"
-	showSettings={true}
-	settingsHref="/groups/{groupId}/settings/"
 >
 	{#if loading}
 		<p class="text-text-muted">Loading…</p>

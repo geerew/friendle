@@ -1,21 +1,23 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { auth } from '$lib/auth.svelte';
+	import { LeftChevronIcon, SettingsIcon } from '$lib/components/icons';
+	import { Dropdown } from '$lib/components/ui';
 	import type { Snippet } from 'svelte';
 
 	type Props = {
 		title: string;
 		backHref?: string;
-		settingsHref?: string;
 		showBack?: boolean;
-		showSettings?: boolean;
+		showMenu?: boolean;
 		children: Snippet;
 	};
 
 	let {
 		title,
 		backHref = '/',
-		settingsHref = '/settings/',
 		showBack = true,
-		showSettings = false,
+		showMenu = true,
 		children
 	}: Props = $props();
 </script>
@@ -30,29 +32,27 @@
 						class="inline-flex h-10 w-10 items-center justify-center rounded text-text-muted hover:text-text"
 						aria-label="Go back"
 					>
-						<svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M15 18l-6-6 6-6" />
-						</svg>
+						<LeftChevronIcon class="h-6 w-6 stroke-2" />
 					</a>
 				{/if}
 			</div>
 
 			<h1 class="truncate text-center text-base font-semibold">{title}</h1>
 
-			<div class="w-10">
-				{#if showSettings}
-					<a
-						href={settingsHref}
-						class="inline-flex h-10 w-10 items-center justify-center rounded text-text-muted hover:text-text"
-						aria-label="Settings"
-					>
-						<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
-							<circle cx="12" cy="12" r="3" />
-							<path
-								d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
-							/>
-						</svg>
-					</a>
+			<div class="flex w-10 justify-end">
+				{#if showMenu}
+					<Dropdown.Root>
+						<Dropdown.Trigger aria-label="Menu">
+							<SettingsIcon class="h-5 w-5 stroke-2" />
+						</Dropdown.Trigger>
+
+						<Dropdown.Content>
+							<Dropdown.Item onSelect={() => goto('/settings/')}>Settings</Dropdown.Item>
+							{#if auth.isAdmin}
+								<Dropdown.Item onSelect={() => goto('/admin/')}>Admin</Dropdown.Item>
+							{/if}
+						</Dropdown.Content>
+					</Dropdown.Root>
 				{/if}
 			</div>
 		</div>

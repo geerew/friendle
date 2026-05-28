@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { joinGroup, searchGroups } from '$lib/api/groups-api';
-	import { AppShell, ListRow } from '$lib/components';
+	import { AppShell, ListRow, PlusIcon } from '$lib/components';
 	import { Button, Input } from '$lib/components/ui';
 	import type { Group } from '$lib/types/group';
 
@@ -65,11 +65,11 @@
 				{#snippet trailing()}
 					<button
 						type="button"
-						class="inline-flex h-9 w-9 items-center justify-center rounded bg-button-primary text-xl font-bold text-white"
+						class="inline-flex h-9 w-9 items-center justify-center rounded bg-button-primary text-white"
 						aria-label="Join {group.name}"
 						onclick={() => handleJoin(group)}
 					>
-						+
+						<PlusIcon class="size-5 stroke-2" />
 					</button>
 				{/snippet}
 			</ListRow>

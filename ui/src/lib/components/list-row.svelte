@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { RightChevronIcon } from '$lib/components/icons';
 	import type { Snippet } from 'svelte';
 
 	type Props = {
@@ -26,9 +27,7 @@
 		{#if trailing}
 			<div class="shrink-0">{@render trailing()}</div>
 		{:else}
-			<svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-text-muted" fill="none" stroke="currentColor" stroke-width="2">
-				<path d="M9 18l6-6-6-6" />
-			</svg>
+			<RightChevronIcon class="h-5 w-5 shrink-0 stroke-2 text-text-muted" />
 		{/if}
 	</a>
 {:else}

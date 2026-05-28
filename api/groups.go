@@ -57,7 +57,7 @@ func (r *Router) listMyGroups(c *fiber.Ctx) error {
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to list groups", err)
 	}
-	var out []fiber.Map
+	out := make([]fiber.Map, 0)
 	for _, m := range memberships {
 		g, err := r.appDao.GetGroup(ctx, m.GroupID)
 		if err != nil || g == nil {

@@ -9,14 +9,16 @@ import type {
 
 export async function listMyGroups(): Promise<Group[]> {
 	const response = await apiFetch('/api/groups/');
-	const data = await parseJson<{ items?: Group[] } | Group[]>(response);
+	const data = await parseJson<{ items?: Group[] } | Group[] | null>(response);
+	if (data == null) return [];
 	return Array.isArray(data) ? data : (data.items ?? []);
 }
 
 export async function searchGroups(query: string): Promise<Group[]> {
 	const params = new URLSearchParams({ q: query });
 	const response = await apiFetch(`/api/groups/search?${params.toString()}`);
-	const data = await parseJson<{ items?: Group[] } | Group[]>(response);
+	const data = await parseJson<{ items?: Group[] } | Group[] | null>(response);
+	if (data == null) return [];
 	return Array.isArray(data) ? data : (data.items ?? []);
 }
 
