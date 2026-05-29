@@ -80,13 +80,13 @@ func New(ctx context.Context, config *Config) (*App, error) {
 		fs = filesystem.New(afero.NewOsFs())
 	}
 
-	dbConfig := &database.DatabaseManagerConfig{
+	dbConfig := &database.SQLiteConfig{
 		DataDir: config.DataDir,
 		FS:      fs,
 		Testing: config.AppMode == AppModeTest,
 	}
 
-	dbManager, err := database.NewSQLiteManager(dbConfig)
+	dbManager, err := database.NewSQLite(dbConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create database manager: %w", err)
 	}

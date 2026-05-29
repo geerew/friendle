@@ -89,7 +89,7 @@ func verifyAdminUser(username, dataDir string) error {
 	ctx := context.Background()
 	fs := filesystem.New(afero.NewOsFs())
 
-	dbManager, err := database.NewSQLiteManager(&database.DatabaseManagerConfig{
+	dbManager, err := database.NewSQLite(&database.SQLiteConfig{
 		DataDir: dataDir,
 		FS:      fs,
 		Testing: false,

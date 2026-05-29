@@ -17,10 +17,9 @@ import (
 func setup(tb testing.TB) (*DAO, context.Context) {
 	tb.Helper()
 
-	// DB
-	dbManager, err := database.NewSQLiteManager(&database.DatabaseManagerConfig{
+	dbManager, err := database.NewSQLite(&database.SQLiteConfig{
 		DataDir: "./oc_data",
-		FS:   filesystem.New(afero.NewMemMapFs()),
+		FS:      filesystem.New(afero.NewMemMapFs()),
 		Testing: true,
 	})
 
@@ -29,19 +28,18 @@ func setup(tb testing.TB) (*DAO, context.Context) {
 
 	dao := &DAO{db: dbManager.DataDb}
 
-	// User
 	user := &models.User{
 		Username:     "test-user",
 		DisplayName:  "Test User",
 		PasswordHash: "test-password",
-		SiteRole:         types.SiteRoleAdmin,
+		SiteRole:     types.SiteRoleAdmin,
 	}
 	require.NoError(tb, dao.CreateUser(context.Background(), user))
 
 	ctx := context.Background()
 	principal := types.Principal{
-		UserID: user.ID,
-		SiteRole:   user.SiteRole,
+		UserID:   user.ID,
+		SiteRole: user.SiteRole,
 	}
 	ctx = context.WithValue(ctx, types.PrincipalContextKey, principal)
 

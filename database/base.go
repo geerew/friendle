@@ -4,61 +4,32 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/geerew/friendle/utils/filesystem"
 	"github.com/jmoiron/sqlx"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Database represents the database interface
+// Database is the driver-agnostic data access contract used by the DAO layer
 type Database interface {
-	// Querier methods
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 	GetContext(ctx context.Context, dest any, query string, args ...any) error
 	SelectContext(ctx context.Context, dest any, query string, args ...any) error
-
-	// Transaction methods
 	RunInTransaction(ctx context.Context, fn func(context.Context) error) error
-
-	// DB methods
 	DB() *sqlx.DB
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// txKey is the context key used to carry an active transaction
-type txKey struct{}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// txFromContext returns the *sqlx.Tx stored in ctx, or nil
-func txFromContext(ctx context.Context) *sqlx.Tx {
-	if tx, ok := ctx.Value(txKey{}).(*sqlx.Tx); ok {
-		return tx
-	}
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// DatabaseManagerConfig represents the settings needed to create a DatabaseManager
-type DatabaseManagerConfig struct {
-	// Where to write data.db
-	DataDir string
-
-	// The application file system
-	FS *filesystem.FS
-
-	// Whether to use an in-memory database
-	Testing bool
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// DatabaseManager manages the application database
+// DatabaseManager holds the application data store
 type DatabaseManager struct {
 	DataDb Database
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NewManager wraps a Database implementation for use by the application
+func NewManager(dataDb Database) *DatabaseManager {
+	return &DatabaseManager{DataDb: dataDb}
 }

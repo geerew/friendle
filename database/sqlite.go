@@ -21,10 +21,10 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const (
-	migrateDirData = "data"
-	modeReadWrite  = "rwc"
-	modeReadOnly   = "ro"
-	dsnData        = "data.db"
+	migrateDirData        = "data"
+	modeReadWrite         = "rwc"
+	modeReadOnly          = "ro"
+	dsnData               = "data.db"
 	defaultMaxLockRetries = 5
 )
 
@@ -47,90 +47,64 @@ var (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// sqliteConfig defines the configuration for a sqlite database
-type sqliteConfig struct {
-	// The directory where the database files are stored
+// SQLiteConfig holds settings for opening the SQLite data database
+type SQLiteConfig struct {
 	DataDir string
-
-	// The name of the database file (ie data.db)
-	DSN string
-
-	// The directory where the migration files are stored
-	MigrateDir string
-
-	// The application file system
-	FS *filesystem.FS
-
-	// The database mode (ie read-only or read-write)
-	Mode string
-
-	// Whether to use an in-memory database (this is only used for testing)
+	FS      *filesystem.FS
 	Testing bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewSQLiteManager returns a DatabaseManager
-func NewSQLiteManager(config *DatabaseManagerConfig) (*DatabaseManager, error) {
-	manager := &DatabaseManager{}
+// NewSQLite opens the data database with separate read and write pools
+func NewSQLite(config *SQLiteConfig) (*DatabaseManager, error) {
+	dsnName := dsnName(dsnData, config.Testing)
 
-	dsnName := getDSNName(dsnData, config.Testing)
-
-	writeCfg := &sqliteConfig{
+	writeDb, err := openSQLite(&sqliteConfig{
 		DataDir:    config.DataDir,
 		DSN:        dsnName,
 		MigrateDir: migrateDirData,
-		FS:      config.FS,
+		FS:         config.FS,
 		Testing:    config.Testing,
 		Mode:       modeReadWrite,
-	}
-
-	writeDb, err := newSqliteConn(writeCfg)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create write database: %w", err)
 	}
 
-	configureConnectionPool(writeDb, 1, 1)
+	configurePool(writeDb, 1, 1)
 
-	readCfg := &sqliteConfig{
-		DataDir:    config.DataDir,
-		DSN:        dsnName,
-		MigrateDir: "",
+	readDb, err := openSQLite(&sqliteConfig{
+		DataDir: config.DataDir,
+		DSN:     dsnName,
 		FS:      config.FS,
-		Testing:    config.Testing,
-		Mode:       modeReadOnly,
-	}
-
-	readDb, err := newSqliteConn(readCfg)
+		Testing: config.Testing,
+		Mode:    modeReadOnly,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create read database: %w", err)
 	}
 
-	configureConnectionPool(readDb, 10, 5)
+	configurePool(readDb, 10, 5)
 
-	manager.DataDb = &SqliteDB{
+	return NewManager(&sqliteDB{
 		read:  readDb,
 		write: writeDb,
-	}
-
-	return manager, nil
+	}), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SqliteDB represents a SQLite database connection with separate read and
-// write pools
-type SqliteDB struct {
+// sqliteDB wraps separate SQLite read and write pools
+type sqliteDB struct {
 	read  *sqlx.DB
 	write *sqlx.DB
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ExecContext executes a non-query SQL statement
-//
-// It uses the write connection, supports transactions and retry logic for SQLite lock contention
-func (db *SqliteDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+// ExecContext executes a non-query SQL statement on the write pool with lock retries
+func (db *sqliteDB) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	if tx := txFromContext(ctx); tx != nil {
 		return tx.ExecContext(ctx, query, args...)
 	}
@@ -163,7 +137,7 @@ func (db *SqliteDB) ExecContext(ctx context.Context, query string, args ...any) 
 		select {
 		case <-ctx.Done():
 			return res, ctx.Err()
-		case <-time.After(getRetryInterval(attempt)):
+		case <-time.After(retryInterval(attempt)):
 		}
 	}
 
@@ -172,10 +146,8 @@ func (db *SqliteDB) ExecContext(ctx context.Context, query string, args ...any) 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// QueryContext executes a query that returns sql.Rows
-//
-// It uses the read connection and supports transactions
-func (db *SqliteDB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+// QueryContext executes a query on the read pool, or the active transaction when present
+func (db *sqliteDB) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	if tx := txFromContext(ctx); tx != nil {
 		return tx.QueryContext(ctx, query, args...)
 	}
@@ -185,10 +157,8 @@ func (db *SqliteDB) QueryContext(ctx context.Context, query string, args ...any)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// QueryRowContext executes a query that returns a single sql.Row
-//
-// It uses the read connection and supports transactions
-func (db *SqliteDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+// QueryRowContext executes a single-row query on the read pool, or the active transaction
+func (db *sqliteDB) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
 	if tx := txFromContext(ctx); tx != nil {
 		return tx.QueryRowContext(ctx, query, args...)
 	}
@@ -198,10 +168,8 @@ func (db *SqliteDB) QueryRowContext(ctx context.Context, query string, args ...a
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetContext retrieves a single row and automatically scans it into 'dest'
-//
-// It uses the read connection and supports transactions
-func (db *SqliteDB) GetContext(ctx context.Context, dest any, query string, args ...any) error {
+// GetContext loads one row into dest from the read pool, or the active transaction
+func (db *sqliteDB) GetContext(ctx context.Context, dest any, query string, args ...any) error {
 	if tx := txFromContext(ctx); tx != nil {
 		return tx.GetContext(ctx, dest, query, args...)
 	}
@@ -211,10 +179,8 @@ func (db *SqliteDB) GetContext(ctx context.Context, dest any, query string, args
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SelectContext retrieves multiple rows and automatically scans them into 'dest'
-//
-// It uses the read connection and supports transactions
-func (db *SqliteDB) SelectContext(ctx context.Context, dest any, query string, args ...any) error {
+// SelectContext loads rows into dest from the read pool, or the active transaction
+func (db *sqliteDB) SelectContext(ctx context.Context, dest any, query string, args ...any) error {
 	if tx := txFromContext(ctx); tx != nil {
 		return tx.SelectContext(ctx, dest, query, args...)
 	}
@@ -224,12 +190,8 @@ func (db *SqliteDB) SelectContext(ctx context.Context, dest any, query string, a
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// RunInTransaction runs the given function inside a transaction with automatic retry
-// logic for SQLite lock errors
-//
-// Note: If the context already carries a transaction the function is executed directly
-func (db *SqliteDB) RunInTransaction(ctx context.Context, fn func(context.Context) error) error {
-	// Just run 'fn' when already in a transaction
+// RunInTransaction runs fn inside a write transaction with lock retries
+func (db *sqliteDB) RunInTransaction(ctx context.Context, fn func(context.Context) error) error {
 	if txFromContext(ctx) != nil {
 		return fn(ctx)
 	}
@@ -246,13 +208,17 @@ func (db *SqliteDB) RunInTransaction(ctx context.Context, fn func(context.Contex
 			if !isLockError(err) {
 				return err
 			}
+
 			lastErr = err
+
 			if attempt < defaultMaxLockRetries {
-				if err := sleepWithContext(ctx, getRetryInterval(attempt)); err != nil {
+				if err := sleepWithContext(ctx, retryInterval(attempt)); err != nil {
 					return err
 				}
+
 				continue
 			}
+
 			break
 		}
 
@@ -262,15 +228,20 @@ func (db *SqliteDB) RunInTransaction(ctx context.Context, fn func(context.Contex
 		if err == nil {
 			if commitErr := sqlxTx.Commit(); commitErr != nil {
 				sqlxTx.Rollback()
+
 				if isLockError(commitErr) && attempt < defaultMaxLockRetries {
 					lastErr = commitErr
-					if err := sleepWithContext(ctx, getRetryInterval(attempt)); err != nil {
+
+					if err := sleepWithContext(ctx, retryInterval(attempt)); err != nil {
 						return err
 					}
+
 					continue
 				}
+
 				return commitErr
 			}
+
 			return nil
 		}
 
@@ -281,7 +252,7 @@ func (db *SqliteDB) RunInTransaction(ctx context.Context, fn func(context.Contex
 			return err
 		}
 
-		if err := sleepWithContext(ctx, getRetryInterval(attempt)); err != nil {
+		if err := sleepWithContext(ctx, retryInterval(attempt)); err != nil {
 			return err
 		}
 	}
@@ -291,15 +262,43 @@ func (db *SqliteDB) RunInTransaction(ctx context.Context, fn func(context.Contex
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DB returns the underlying *sqlx.DB for the write pool.
-func (db *SqliteDB) DB() *sqlx.DB {
+// DB returns the underlying write pool
+func (db *sqliteDB) DB() *sqlx.DB {
 	return db.write
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// newSqliteConn bootstraps a single SQLite connection
-func newSqliteConn(config *sqliteConfig) (*sqlx.DB, error) {
+// txKey is the context key used to carry an active transaction
+type txKey struct{}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// sqliteConfig holds settings for opening one SQLite pool
+type sqliteConfig struct {
+	DataDir    string
+	DSN        string
+	MigrateDir string
+	FS         *filesystem.FS
+	Mode       string
+	Testing    bool
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// txFromContext returns the active transaction stored in ctx, or nil
+func txFromContext(ctx context.Context) *sqlx.Tx {
+	if tx, ok := ctx.Value(txKey{}).(*sqlx.Tx); ok {
+		return tx
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// openSQLite opens a SQLite pool, runs migrations when configured, and verifies connectivity
+func openSQLite(config *sqliteConfig) (*sqlx.DB, error) {
 	if err := config.FS.MkdirAll(config.DataDir, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -319,8 +318,8 @@ func newSqliteConn(config *sqliteConfig) (*sqlx.DB, error) {
 	}
 
 	pragma := strings.Join(pragmaParts, "&")
-
 	dsn := fmt.Sprintf("file:%s?%s", filepath.Join(config.DataDir, config.DSN), pragma)
+
 	if config.Testing {
 		dsn += "&mode=memory"
 	}
@@ -338,7 +337,6 @@ func newSqliteConn(config *sqliteConfig) (*sqlx.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	// Run migrations if configured
 	if config.MigrateDir != "" {
 		if err := migrate(conn, config.MigrateDir); err != nil {
 			conn.Close()
@@ -351,7 +349,7 @@ func newSqliteConn(config *sqliteConfig) (*sqlx.DB, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// migrate runs the migrations for the given db, via goose
+// migrate runs goose migrations for the given directory
 func migrate(db *sqlx.DB, migrateDir string) error {
 	gooseOnce.Do(func() {
 		goose.SetLogger(goose.NopLogger())
@@ -370,19 +368,20 @@ func migrate(db *sqlx.DB, migrateDir string) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// isLockError returns true for any SQLite "locked" error
+// isLockError reports whether err is a SQLite lock contention error
 func isLockError(err error) bool {
 	if err == nil {
 		return false
 	}
 
 	s := err.Error()
+
 	return strings.Contains(s, "database is locked") || strings.Contains(s, "table is locked")
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// sleepWithContext sleeps for the given duration, respecting context cancellation
+// sleepWithContext waits for duration or until ctx is cancelled
 func sleepWithContext(ctx context.Context, duration time.Duration) error {
 	select {
 	case <-ctx.Done():
@@ -394,8 +393,8 @@ func sleepWithContext(ctx context.Context, duration time.Duration) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getRetryInterval picks a delay for the Nth retry
-func getRetryInterval(attempt int) time.Duration {
+// retryInterval returns the backoff delay for the given attempt
+func retryInterval(attempt int) time.Duration {
 	if attempt < 0 || attempt >= len(defaultRetryIntervals) {
 		return defaultRetryIntervals[len(defaultRetryIntervals)-1]
 	}
@@ -405,11 +404,8 @@ func getRetryInterval(attempt int) time.Duration {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getDSNName returns the name of the database file
-//
-// When testing is true, the database file name will be suffixed with a random string
-// to avoid conflicts with other test cases
-func getDSNName(baseName string, testing bool) string {
+// dsnName returns the database file name, randomised in tests to avoid collisions
+func dsnName(baseName string, testing bool) string {
 	if testing {
 		return fmt.Sprintf("%s_memdb_%s", strings.TrimSuffix(baseName, ".db"), security.PseudorandomString(8))
 	}
@@ -419,8 +415,8 @@ func getDSNName(baseName string, testing bool) string {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// configureConnectionPool configures the connection pool for the sqlite database
-func configureConnectionPool(db *sqlx.DB, maxOpen, maxIdle int) {
+// configurePool sets connection pool limits on db
+func configurePool(db *sqlx.DB, maxOpen, maxIdle int) {
 	db.SetMaxOpenConns(maxOpen)
 	db.SetMaxIdleConns(maxIdle)
 	db.SetConnMaxLifetime(time.Hour)

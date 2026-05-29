@@ -11,61 +11,70 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func setupSqliteDB(t *testing.T) *DatabaseManager {
-	t.Helper()
+func TestNewSQLite(t *testing.T) {
+	// Test successfully opening the database manager
+	t.Run("success", func(t *testing.T) {
+		fs := filesystem.New(afero.NewMemMapFs())
 
-	fs := filesystem.New(afero.NewMemMapFs())
+		dbManager, err := NewSQLite(&SQLiteConfig{
+			DataDir: "./oc_data",
+			FS:      fs,
+			Testing: true,
+		})
 
-	dbManager, err := NewSQLiteManager(&DatabaseManagerConfig{
-		DataDir: "./oc_data",
-		FS:   fs,
-		Testing: true,
+		require.NoError(t, err)
+		require.NotNil(t, dbManager)
 	})
 
-	require.NoError(t, err)
-	require.NotNil(t, dbManager)
+	// Test error due to being unable to create data.db
+	t.Run("write error", func(t *testing.T) {
+		fs := filesystem.New(afero.NewReadOnlyFs(afero.NewMemMapFs()))
 
-	// Create a test table
-	_, err = dbManager.DataDb.ExecContext(context.Background(), "CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-	require.NoError(t, err)
+		dbManager, err := NewSQLite(&SQLiteConfig{
+			DataDir: "./oc_data",
+			FS:      fs,
+			Testing: true,
+		})
 
-	return dbManager
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "failed to create write database")
+		require.Contains(t, err.Error(), "operation not permitted")
+		require.Nil(t, dbManager)
+	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSqliteDb_Bootstrap(t *testing.T) {
-	// Test successfully creating a sqlite connection
+func TestOpenSQLite(t *testing.T) {
+	// Test successfully opening a sqlite connection
 	t.Run("success", func(t *testing.T) {
-
 		fs := filesystem.New(afero.NewMemMapFs())
 
-		db, err := newSqliteConn(&sqliteConfig{
+		db, err := openSQLite(&sqliteConfig{
 			DataDir:    "./oc_data",
 			DSN:        "data.db",
 			MigrateDir: "data",
-			FS:   fs,
+			FS:         fs,
 			Testing:    true,
 		})
 
 		require.NoError(t, err)
 		require.NotNil(t, db)
-
 	})
 
 	// Test error due to being unable to create data.db
-	t.Run("error creating data.db", func(t *testing.T) {
+	t.Run("write error", func(t *testing.T) {
 		fs := filesystem.New(afero.NewReadOnlyFs(afero.NewMemMapFs()))
 
-		db, err := newSqliteConn(&sqliteConfig{
+		db, err := openSQLite(&sqliteConfig{
 			DataDir:    "./oc_data",
 			DSN:        "data.db",
 			MigrateDir: "data",
-			FS:   fs,
+			FS:         fs,
 			Testing:    true,
 		})
 
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.EqualError(t, err, "operation not permitted")
 		require.Nil(t, db)
 	})
@@ -74,15 +83,15 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 	t.Run("invalid migration", func(t *testing.T) {
 		fs := filesystem.New(afero.NewMemMapFs())
 
-		db, err := newSqliteConn(&sqliteConfig{
+		db, err := openSQLite(&sqliteConfig{
 			DataDir:    "./oc_data",
 			DSN:        "data.db",
 			MigrateDir: "test",
-			FS:   fs,
+			FS:         fs,
 			Testing:    true,
 		})
 
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to run migrations in test")
 		require.Contains(t, err.Error(), "test directory does not exist")
 		require.Nil(t, db)
@@ -91,10 +100,10 @@ func TestSqliteDb_Bootstrap(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSqliteDb_QueryContext(t *testing.T) {
+func TestQueryContext(t *testing.T) {
 	// Test successfully querying multiple rows
 	t.Run("simple", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		_, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test')")
@@ -113,14 +122,12 @@ func TestSqliteDb_QueryContext(t *testing.T) {
 			require.Equal(t, "test", name)
 		}
 
-		require.Nil(t, rows.Err())
+		require.NoError(t, rows.Err())
 	})
-
-	//
 
 	// Test successfully querying multiple rows in a transaction
 	t.Run("transaction", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		_, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test')")
@@ -135,12 +142,13 @@ func TestSqliteDb_QueryContext(t *testing.T) {
 				return err
 			}
 			defer rows.Close()
+
 			for rows.Next() {
 				err = rows.Scan(&id, &name)
 				require.NoError(t, err)
 			}
 
-			return nil
+			return rows.Err()
 		})
 
 		require.NoError(t, err)
@@ -150,10 +158,10 @@ func TestSqliteDb_QueryContext(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSqliteDb_QueryRowContext(t *testing.T) {
+func TestQueryRowContext(t *testing.T) {
 	// Test successfully querying a single row
 	t.Run("simple", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		_, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test')")
@@ -169,7 +177,7 @@ func TestSqliteDb_QueryRowContext(t *testing.T) {
 
 	// Test successfully querying a single row in a transaction
 	t.Run("transaction", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		_, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test')")
@@ -189,10 +197,10 @@ func TestSqliteDb_QueryRowContext(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSqliteDb_ExecContext(t *testing.T) {
+func TestExecContext(t *testing.T) {
 	// Test successfully executing a non-query SQL statement
 	t.Run("simple", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		result, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test')")
@@ -205,18 +213,14 @@ func TestSqliteDb_ExecContext(t *testing.T) {
 
 	// Test successfully executing a non-query SQL statement in a transaction
 	t.Run("transaction", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		err := dbManager.DataDb.RunInTransaction(ctx, func(txCtx context.Context) error {
 			_, err := dbManager.DataDb.ExecContext(txCtx, "INSERT INTO test (name) VALUES ('test')")
-			if err != nil {
-				return err
-			}
 
-			return nil
+			return err
 		})
-
 		require.NoError(t, err)
 
 		var count int
@@ -228,10 +232,10 @@ func TestSqliteDb_ExecContext(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSqliteDb_GetContext(t *testing.T) {
+func TestGetContext(t *testing.T) {
 	// Test successfully getting a single record
 	t.Run("simple", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		_, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test1'), ('test2')")
@@ -250,7 +254,7 @@ func TestSqliteDb_GetContext(t *testing.T) {
 
 	// Test successfully getting a single record in a transaction
 	t.Run("transaction", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		_, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test1'), ('test2')")
@@ -273,10 +277,10 @@ func TestSqliteDb_GetContext(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func TestSqliteDb_SelectContext(t *testing.T) {
+func TestSelectContext(t *testing.T) {
 	// Test successfully selecting multiple records
 	t.Run("simple", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		records := []*struct {
@@ -298,7 +302,7 @@ func TestSqliteDb_SelectContext(t *testing.T) {
 
 	// Test successfully selecting multiple records in a transaction
 	t.Run("transaction", func(t *testing.T) {
-		dbManager := setupSqliteDB(t)
+		dbManager := setupTestDB(t)
 		ctx := context.Background()
 
 		_, err := dbManager.DataDb.ExecContext(ctx, "INSERT INTO test (name) VALUES ('test'), ('test2')")
@@ -320,4 +324,26 @@ func TestSqliteDb_SelectContext(t *testing.T) {
 		require.Equal(t, 2, records[1].Id)
 		require.Equal(t, "test2", records[1].Name)
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// setupTestDB opens an in-memory manager and creates a simple test table
+func setupTestDB(t *testing.T) *DatabaseManager {
+	t.Helper()
+
+	fs := filesystem.New(afero.NewMemMapFs())
+
+	dbManager, err := NewSQLite(&SQLiteConfig{
+		DataDir: "./oc_data",
+		FS:      fs,
+		Testing: true,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, dbManager)
+
+	_, err = dbManager.DataDb.ExecContext(context.Background(), "CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+	require.NoError(t, err)
+
+	return dbManager
 }
