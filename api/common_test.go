@@ -144,6 +144,7 @@ func setTestPrincipal(t *testing.T, router *Router, userID string, role types.Us
 	router.SetTestMiddleware(
 		func(r *Router) fiber.Handler { return requestLoggingMiddleware(r.logger) },
 		func(r *Router) fiber.Handler { return corsMiddleWare() },
+		func(r *Router) fiber.Handler { return requestPathMiddleware(r) },
 		func(r *Router) fiber.Handler { return bootstrapMiddleware(r) },
 		func(r *Router) fiber.Handler {
 			return func(c *fiber.Ctx) error {

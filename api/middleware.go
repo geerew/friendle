@@ -4,8 +4,6 @@ package api
 //   1) error on submit or
 //   2) redirect to the login page on refresh
 
-// TODO Tidy the middleware code, it is a bit messy
-
 import (
 	"strings"
 	"time"
@@ -16,6 +14,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const requestPathLocalsKey = "request_path"
+
+// requestPathInfo classifies the incoming path once per request
+type requestPathInfo struct {
+	uiAsset bool
+	authUI  bool
+	api     bool
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -95,6 +104,22 @@ func requestLoggingMiddleware(log *logger.Logger) fiber.Handler {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// requestPathMiddleware classifies the request path and stores it on the context
+func requestPathMiddleware(r *Router) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		path := c.Path()
+		c.Locals(requestPathLocalsKey, requestPathInfo{
+			uiAsset: r.isUIAsset(path),
+			authUI:  strings.HasPrefix(path, "/auth/"),
+			api:     strings.HasPrefix(path, "/api/"),
+		})
+
+		return c.Next()
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // bootstrapMiddleware checks if the app is bootstrapped. If not, it redirects
 // to /auth/bootstrap
 //
@@ -103,44 +128,41 @@ func requestLoggingMiddleware(log *logger.Logger) fiber.Handler {
 func bootstrapMiddleware(r *Router) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		path := c.Path()
+		pathInfo := requestPath(c)
 
-		// If not bootstrapped, force everything through /auth/bootstrap or
-		// /api/auth/bootstrap
+		// If not bootstrapped, force everything through /auth/bootstrap and /api/auth/bootstrap
 		if !r.app.IsBootstrapped() {
-			if r.isDevUIPath(path) || r.isProdUIPath(path) || r.isStaticPath(path) {
+			if pathInfo.uiAsset {
 				return c.Next()
 			}
 
 			// API check
-			if strings.HasPrefix(path, "/api/") {
+			if pathInfo.api {
 				if strings.HasPrefix(path, "/api/auth/bootstrap/") {
 					c.Locals("bootstrapping", true)
 					return c.Next()
-				} else {
-					return errorResponse(c, fiber.StatusForbidden, "app is not bootstrapped", nil)
 				}
+
+				return errorResponse(c, fiber.StatusForbidden, "app is not bootstrapped", nil)
 			}
 
 			// UI check
 			if strings.HasPrefix(path, "/auth/bootstrap") {
 				c.Locals("bootstrapping", true)
 				return c.Next()
-			} else {
-				return c.Redirect("/auth/bootstrap")
 			}
+
+			return c.Redirect("/auth/bootstrap")
 		}
 
 		// If bootstrapped and someone accesses bootstrap URL, redirect appropriately
 		if strings.HasPrefix(path, "/auth/bootstrap/") {
-			// Check if user is logged in
 			session, err := r.sessionManager.Get(c)
 
 			if err != nil || session.Fresh() {
-				// Error getting session or session is fresh (no valid cookie), redirect to login
 				return c.Redirect("/auth/login")
 			}
 
-			// Logged in (session exists and is not fresh), redirect to home
 			return c.Redirect("/")
 		}
 
@@ -150,19 +172,15 @@ func bootstrapMiddleware(r *Router) fiber.Handler {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// authMiddleware authenticates the request
-func authMiddleware(r *Router) fiber.Handler {
+// sessionMiddleware loads the session and sets the principal when the caller is logged in
+func sessionMiddleware(r *Router) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		path := c.Path()
-
 		if bootstrapping, _ := c.Locals("bootstrapping").(bool); bootstrapping {
 			return c.Next()
 		}
 
-		isLogout := strings.HasPrefix(path, "/api/auth/logout")
-		isAuthUI := strings.HasPrefix(path, "/auth/")
-
-		if r.isDevUIPath(path) || r.isProdUIPath(path) || r.isStaticPath(path) || isLogout {
+		pathInfo := requestPath(c)
+		if pathInfo.uiAsset || strings.HasPrefix(c.Path(), "/api/auth/logout") {
 			return c.Next()
 		}
 
@@ -171,20 +189,49 @@ func authMiddleware(r *Router) fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		sessionFresh := session.Fresh()
+		if session.Fresh() {
+			return c.Next()
+		}
 
-		if sessionFresh {
-			// Is API request
-			if strings.HasPrefix(path, "/api/") {
-				if strings.HasPrefix(path, "/api/auth/login") || (r.app.Config.EnableSignup && strings.HasPrefix(path, "/api/auth/register")) ||
-					strings.HasPrefix(path, "/api/auth/signup-status") || strings.HasPrefix(path, "/api/admin/recovery") {
-					return c.Next()
-				}
-				return c.SendStatus(fiber.StatusForbidden)
-			}
+		userID, ok1 := session.Get("id").(string)
+		userRole, ok2 := session.Get("role").(string)
+		if !ok1 || !ok2 || userID == "" || userRole == "" {
+			return c.Next()
+		}
 
-			if isAuthUI {
-				if !r.app.Config.EnableSignup && strings.HasPrefix(path, "/auth/register") {
+		role := types.NewSiteRole(userRole)
+		c.Locals(types.PrincipalContextKey, types.Principal{
+			UserID:   userID,
+			SiteRole: role,
+			Role:     role,
+		})
+
+		return c.Next()
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// uiAuthMiddleware redirects browser requests based on login state
+func uiAuthMiddleware(r *Router) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if bootstrapping, _ := c.Locals("bootstrapping").(bool); bootstrapping {
+			return c.Next()
+		}
+
+		pathInfo := requestPath(c)
+		if pathInfo.uiAsset || pathInfo.api || strings.HasPrefix(c.Path(), "/api/auth/logout") {
+			return c.Next()
+		}
+
+		session, err := r.sessionManager.Get(c)
+		if err != nil {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+
+		if session.Fresh() {
+			if pathInfo.authUI {
+				if !r.app.Config.EnableSignup && strings.HasPrefix(c.Path(), "/auth/register") {
 					return c.Redirect("/auth/login")
 				}
 
@@ -194,41 +241,15 @@ func authMiddleware(r *Router) fiber.Handler {
 			return c.Redirect("/auth/login")
 		}
 
-		if isAuthUI {
+		if pathInfo.authUI {
 			return c.Redirect("/")
 		}
 
-		// Allow public auth endpoints to proceed even with a session cookie
-		if strings.HasPrefix(path, "/api/auth/") {
-			if strings.HasPrefix(path, "/api/auth/login") ||
-				(r.app.Config.EnableSignup && strings.HasPrefix(path, "/api/auth/register")) ||
-				strings.HasPrefix(path, "/api/auth/signup-status") ||
-				strings.HasPrefix(path, "/api/auth/bootstrap/") {
-
-				return c.Next()
+		if p, ok := c.Locals(types.PrincipalContextKey).(types.Principal); ok {
+			if p.SiteRole != types.SiteRoleAdmin && r.isProtectedUIPage(c.Path()) {
+				return c.Redirect("/")
 			}
 		}
-
-		// Validate session for protected endpoints
-		userID, ok1 := session.Get("id").(string)
-		userRole, ok2 := session.Get("role").(string)
-		if !ok1 || !ok2 || userID == "" || userRole == "" {
-			return c.SendStatus(fiber.StatusUnauthorized)
-		}
-
-		if userRole != "site_admin" && userRole != "admin" && r.isProtectedUIPage(path) {
-			return c.Redirect("/")
-		}
-
-		role := types.NewSiteRole(userRole)
-		principal := types.Principal{
-			UserID:   userID,
-			SiteRole: role,
-			Role:     role,
-		}
-
-		// for your UI/router logic:
-		c.Locals(types.PrincipalContextKey, principal)
 
 		return c.Next()
 	}
@@ -250,7 +271,8 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// require returns middleware that enforces the given access level
+// require returns per-route API authorization middleware. It assumes sessionMiddleware has
+// already attached a principal for logged-in callers; it does not perform UI redirects
 func (r *Router) require(level routeAccess) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		switch level {
@@ -300,19 +322,17 @@ func (r *Router) require(level routeAccess) fiber.Handler {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// isProdUIPath checks if the request is for a sveltekit asset when running in production mode
-func (r *Router) isProdUIPath(path string) bool {
-	if r.app.Config.AppMode != app.AppModeDev && strings.HasPrefix(path, "/_app/") {
-		return true
-	}
+// requestPath returns path classification stored by requestPathMiddleware
+func requestPath(c *fiber.Ctx) requestPathInfo {
+	info, _ := c.Locals(requestPathLocalsKey).(requestPathInfo)
 
-	return false
+	return info
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// isDevUIPath checks if the request is for a sveltekit path when running in dev mode
-func (r *Router) isDevUIPath(path string) bool {
+// isUIAsset reports whether the path is a dev/prod UI bundle asset or static file
+func (r *Router) isUIAsset(path string) bool {
 	if r.app.Config.AppMode == app.AppModeDev &&
 		(strings.HasPrefix(path, "/node_modules/") ||
 			strings.HasPrefix(path, "/.svelte-kit/") ||
@@ -321,13 +341,10 @@ func (r *Router) isDevUIPath(path string) bool {
 		return true
 	}
 
-	return false
-}
+	if r.app.Config.AppMode != app.AppModeDev && strings.HasPrefix(path, "/_app/") {
+		return true
+	}
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// isStaticPath checks if the request is for a static asset
-func (r *Router) isStaticPath(path string) bool {
 	if strings.HasPrefix(path, "/apple-touch-icon.png") ||
 		strings.HasPrefix(path, "/favicon.") ||
 		strings.HasPrefix(path, "/fonts/") ||

@@ -111,11 +111,12 @@ func (r *Router) Test(req *http.Request, msTimeout ...int) (*http.Response, erro
 
 // initMiddleware initializes the middleware
 func (r *Router) initMiddleware() {
-	// Middleware
 	r.fiberApp.Use(requestLoggingMiddleware(r.logger))
 	r.fiberApp.Use(corsMiddleWare())
+	r.fiberApp.Use(requestPathMiddleware(r))
 	r.fiberApp.Use(bootstrapMiddleware(r))
-	r.fiberApp.Use(authMiddleware(r))
+	r.fiberApp.Use(sessionMiddleware(r))
+	r.fiberApp.Use(uiAuthMiddleware(r))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
