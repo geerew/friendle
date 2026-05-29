@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/database"
 	"github.com/geerew/friendle/models"
@@ -48,16 +49,16 @@ func newRoundScheduler(db database.Database, log *logger.Logger) *RoundScheduler
 // advanceGroup opens today's round for a group when eligible
 func (rs *RoundScheduler) advanceGroup(ctx context.Context, g *models.Group) {
 	roundDate := today()
-	if cur, _ := rs.dao.GetCurrentRound(ctx, g.ID, roundDate); cur != nil {
+	if cur, _ := rs.dao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": g.ID, "round_date": roundDate})); cur != nil {
 		return
 	}
 
 	yesterday := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
-	if prev, _ := rs.dao.GetCurrentRound(ctx, g.ID, yesterday); prev != nil {
+	if prev, _ := rs.dao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": g.ID, "round_date": yesterday})); prev != nil {
 		rs.closeRound(ctx, prev)
 	}
 
-	count, err := rs.dao.CountGroupMembers(ctx, g.ID)
+	count, err := rs.dao.CountGroupMembers(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": g.ID}))
 	if err != nil || count < 2 {
 		return
 	}
@@ -108,7 +109,7 @@ func (rs *RoundScheduler) closeRound(ctx context.Context, r *models.Round) {
 
 // completeRound marks unfinished participations done and sets the round to completed
 func (rs *RoundScheduler) completeRound(ctx context.Context, r *models.Round) {
-	participations, _ := rs.dao.ListRoundParticipationsForRound(ctx, r.ID)
+	participations, _ := rs.dao.ListRoundParticipations(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"round_id": r.ID}))
 	for _, p := range participations {
 		if p.Finished {
 			continue

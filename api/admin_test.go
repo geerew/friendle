@@ -170,7 +170,7 @@ func TestDeleteAdminGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, status)
 
-	deleted, err := router.appDao.GetGroup(ctx, group.ID)
+	deleted, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: group.ID}))
 	require.NoError(t, err)
 	require.Nil(t, deleted)
 }

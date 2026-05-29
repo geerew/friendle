@@ -21,7 +21,7 @@ type RoundLoad struct {
 
 // GetRoundLoaded returns a round with optional relations loaded
 func (dao *DAO) GetRoundLoaded(ctx context.Context, roundID string, load RoundLoad) (*models.Round, error) {
-	round, err := dao.GetRound(ctx, roundID)
+	round, err := dao.GetRound(ctx, NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: roundID}))
 	if err != nil || round == nil {
 		return round, err
 	}
@@ -50,14 +50,17 @@ func (dao *DAO) LoadRound(ctx context.Context, round *models.Round, load RoundLo
 		return nil
 	}
 
-	participations, err := dao.ListRoundParticipationsForRound(ctx, round.ID)
+	participations, err := dao.ListRoundParticipations(ctx, NewOptions().WithWhere(squirrel.Eq{"round_id": round.ID}))
 	if err != nil {
 		return err
 	}
 
 	for _, p := range participations {
 		if load.Guesses {
-			p.Guesses, err = dao.ListGuessesForRoundUser(ctx, round.ID, p.UserID)
+			p.Guesses, err = dao.ListGuesses(ctx, NewOptions().WithWhere(squirrel.Eq{
+				"round_id": round.ID,
+				"user_id":  p.UserID,
+			}))
 			if err != nil {
 				return err
 			}

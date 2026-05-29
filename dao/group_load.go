@@ -5,6 +5,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -19,7 +20,7 @@ type GroupLoad struct {
 
 // GetGroupLoaded returns a group with optional relations loaded
 func (dao *DAO) GetGroupLoaded(ctx context.Context, groupID string, load GroupLoad) (*models.Group, error) {
-	group, err := dao.GetGroup(ctx, groupID)
+	group, err := dao.GetGroup(ctx, NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: groupID}))
 	if err != nil || group == nil {
 		return group, err
 	}
@@ -36,7 +37,7 @@ func (dao *DAO) GetGroupLoaded(ctx context.Context, groupID string, load GroupLo
 // LoadGroup populates relation fields on an existing group row
 func (dao *DAO) LoadGroup(ctx context.Context, group *models.Group, load GroupLoad) error {
 	if load.Members {
-		members, err := dao.ListGroupMembers(ctx, group.ID)
+		members, err := dao.ListGroupMembers(ctx, NewOptions().WithWhere(squirrel.Eq{"group_id": group.ID}))
 		if err != nil {
 			return err
 		}
@@ -48,7 +49,10 @@ func (dao *DAO) LoadGroup(ctx context.Context, group *models.Group, load GroupLo
 	}
 
 	if load.JoinRequests {
-		requests, err := dao.ListPendingJoinRequests(ctx, group.ID)
+		requests, err := dao.ListJoinRequests(ctx, NewOptions().WithWhere(squirrel.Eq{
+			"group_id": group.ID,
+			"status":   types.JoinPending,
+		}))
 		if err != nil {
 			return err
 		}

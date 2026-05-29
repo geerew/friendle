@@ -21,6 +21,27 @@ var (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// UserListRow is a user projection for list queries
+type UserListRow struct {
+	ID          string         `db:"id"`
+	Username    string         `db:"username"`
+	DisplayName string         `db:"display_name"`
+	SiteRole    types.SiteRole `db:"site_role"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UserGroupSummaryRow is a group summary for a user's memberships
+type UserGroupSummaryRow struct {
+	UserID      string          `db:"user_id"`
+	ID          string          `db:"id"`
+	Name        string          `db:"name"`
+	MemberCount int             `db:"member_count"`
+	GroupRole   types.GroupRole `db:"group_role"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // CreateUser inserts a new user record
 func (dao *DAO) CreateUser(ctx context.Context, user *models.User) error {
 	if user == nil {
@@ -99,20 +120,51 @@ func (dao *DAO) ListUsers(ctx context.Context, dbOpts *Options) ([]*models.User,
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListAdminUsers returns users for the site admin list
-func (dao *DAO) ListAdminUsers(ctx context.Context, dbOpts *Options) ([]*AdminUserRow, error) {
+// ListUserRows returns user list projections matching the given options
+func (dao *DAO) ListUserRows(ctx context.Context, dbOpts *Options) ([]*UserListRow, error) {
 	u := models.USER_TABLE
 
 	applyDefaultOrderBy(dbOpts, defaultUsersListOrderBy)
 
-	return listGeneric[AdminUserRow](ctx, dao, *newBuilderOptions(u).
+	builderOpts := newBuilderOptions(u).
 		WithColumns(
 			u+"."+models.BASE_ID+" AS id",
 			u+"."+models.USER_USERNAME+" AS username",
 			u+"."+models.USER_DISPLAY_NAME+" AS display_name",
 			u+"."+models.USER_SITE_ROLE+" AS site_role",
 		).
-		SetDbOpts(dbOpts))
+		SetDbOpts(dbOpts)
+
+	return listGeneric[UserListRow](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ListUserGroupSummariesForUserIDs returns group summaries for the given user IDs, ordered by
+// user then group name
+func (dao *DAO) ListUserGroupSummariesForUserIDs(ctx context.Context, userIDs []string) ([]*UserGroupSummaryRow, error) {
+	if len(userIDs) == 0 {
+		return []*UserGroupSummaryRow{}, nil
+	}
+
+	gm := models.GROUP_MEMBER_TABLE
+	g := models.GROUP_TABLE
+
+	dbOpts := NewOptions().
+		WithWhere(squirrel.Eq{gm + ".user_id": userIDs}).
+		WithOrderBy(gm+".user_id ASC", g+"."+models.BASE_CREATED_AT+" desc")
+	builderOpts := newBuilderOptions(gm).
+		WithColumns(
+			gm+".user_id AS user_id",
+			g+"."+models.BASE_ID+" AS id",
+			g+".name AS name",
+			gm+".group_role AS group_role",
+			"(SELECT COUNT(*) FROM "+gm+" gm_count WHERE gm_count.group_id = "+g+"."+models.BASE_ID+") AS member_count",
+		).
+		WithJoin(g, g+"."+models.BASE_ID+" = "+gm+".group_id").
+		SetDbOpts(dbOpts)
+
+	return listGeneric[UserGroupSummaryRow](ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

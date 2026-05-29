@@ -41,7 +41,7 @@ type adminUserResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // adminUserResponseHelper maps admin user rows to API responses
-func adminUserResponseHelper(users []*dao.AdminUserRow, groupsByUser map[string][]*dao.UserGroupSummaryRow) []*adminUserResponse {
+func adminUserResponseHelper(users []*dao.UserListRow, groupsByUser map[string][]*dao.UserGroupSummaryRow) []*adminUserResponse {
 	responses := make([]*adminUserResponse, 0, len(users))
 	for _, user := range users {
 		groupRows := groupsByUser[user.ID]
@@ -583,7 +583,7 @@ type adminGroupResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // adminGroupResponseHelper maps admin group rows to API responses
-func adminGroupResponseHelper(groups []*dao.AdminGroupRow) []*adminGroupResponse {
+func adminGroupResponseHelper(groups []*dao.GroupListRow) []*adminGroupResponse {
 	responses := make([]*adminGroupResponse, 0, len(groups))
 	for _, g := range groups {
 		responses = append(responses, &adminGroupResponse{

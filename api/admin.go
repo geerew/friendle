@@ -41,7 +41,7 @@ func (r *Router) getUsers(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
-	users, err := r.appDao.ListAdminUsers(ctx, dbOpts)
+	users, err := r.appDao.ListUserRows(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
@@ -193,7 +193,7 @@ func (r *Router) getGroups(c *fiber.Ctx) error {
 	dbOpts := dao.NewOptions().
 		WithOrderBy(utils.StringSplit(c.Query("orderBy", ""), ",")...).
 		WithPagination(paginationFromCtx(c))
-	groups, err := r.appDao.ListAdminGroups(ctx, dbOpts)
+	groups, err := r.appDao.ListGroupRows(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
@@ -270,12 +270,15 @@ func (r *Router) createGroupMember(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 	userID := strings.TrimSpace(req.UserID)
 
-	g, err := r.appDao.GetGroup(ctx, groupID)
+	g, err := r.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: groupID}))
 	if err != nil || g == nil {
 		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
 	}
 
-	if m, _ := r.appDao.GetGroupMember(ctx, groupID, userID); m != nil {
+	if m, _ := r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": groupID,
+		"user_id":  userID,
+	})); m != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Already a member", nil)
 	}
 

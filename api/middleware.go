@@ -80,7 +80,7 @@ func (r *Router) requireAccess(level accessLevel) fiber.Handler {
 		}
 
 		if level&accessGroupAdmin != 0 {
-			m, err := r.appDao.GetGroupMember(ctx, groupID, p.UserID)
+			m, err := r.membership(ctx, groupID, p.UserID)
 			if err == nil && m != nil && m.GroupRole == types.GroupRoleAdmin {
 				return c.Next()
 			}

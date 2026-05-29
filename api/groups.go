@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
@@ -136,7 +137,10 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 	principal, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
-	m, _ := r.appDao.GetGroupMember(ctx, groupID, principal.UserID)
+	m, _ := r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": groupID,
+		"user_id":  principal.UserID,
+	}))
 	role := types.GroupRoleUser
 	isSiteAdmin := principal.SiteRole == types.SiteRoleAdmin
 	if m != nil {
@@ -163,7 +167,7 @@ func (r *Router) updateGroup(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
-	g, err := r.appDao.GetGroup(ctx, groupID)
+	g, err := r.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: groupID}))
 	if err != nil || g == nil {
 		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
 	}
@@ -203,11 +207,17 @@ func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
 		}
 	}
 
-	if m, _ := r.appDao.GetGroupMember(ctx, groupID, principal.UserID); m != nil {
+	if m, _ := r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": groupID,
+		"user_id":  principal.UserID,
+	})); m != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Already a member", nil)
 	}
 
-	if existing, _ := r.appDao.GetJoinRequestByUser(ctx, groupID, principal.UserID); existing != nil && existing.Status == types.JoinPending {
+	if existing, _ := r.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": groupID,
+		"user_id":  principal.UserID,
+	})); existing != nil && existing.Status == types.JoinPending {
 		return c.Status(fiber.StatusOK).JSON(&joinRequestResponse{Status: types.JoinPending})
 	}
 
@@ -233,14 +243,20 @@ func (r *Router) deleteGroupJoinRequest(c *fiber.Ctx) error {
 
 	if targetUserID != principal.UserID {
 		if principal.SiteRole != types.SiteRoleAdmin {
-			m, err := r.appDao.GetGroupMember(ctx, groupID, principal.UserID)
+			m, err := r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+				"group_id": groupID,
+				"user_id":  principal.UserID,
+			}))
 			if err != nil || m == nil || m.GroupRole != types.GroupRoleAdmin {
 				return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
 			}
 		}
 	}
 
-	jr, err := r.appDao.GetJoinRequestByUser(ctx, groupID, targetUserID)
+	jr, err := r.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": groupID,
+		"user_id":  targetUserID,
+	}))
 	if err != nil || jr == nil || jr.Status != types.JoinPending {
 		return errorResponse(c, fiber.StatusNotFound, "Pending request not found", nil)
 	}
@@ -258,7 +274,10 @@ func (r *Router) deleteGroupJoinRequest(c *fiber.Ctx) error {
 func (r *Router) getGroupJoinRequests(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	list, err := r.appDao.ListPendingJoinRequests(ctx, c.Params("id"))
+	list, err := r.appDao.ListJoinRequests(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": c.Params("id"),
+		"status":   types.JoinPending,
+	}))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
@@ -313,7 +332,7 @@ func (r *Router) getGroupLeaderboard(c *fiber.Ctx) error {
 func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status types.JoinRequestStatus, role types.GroupRole) error {
 	_, ctx := principalAndCtx(c)
 
-	jr, err := r.appDao.GetJoinRequest(ctx, c.Params("rid"))
+	jr, err := r.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: c.Params("rid")}))
 	if err != nil || jr == nil {
 		return errorResponse(c, fiber.StatusNotFound, "Request not found", nil)
 	}
@@ -335,7 +354,10 @@ func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status types.JoinRequestS
 
 // membership returns group membership for a user, or an error when not a member
 func (r *Router) membership(ctx context.Context, groupID, userID string) (*models.GroupMember, error) {
-	m, err := r.appDao.GetGroupMember(ctx, groupID, userID)
+	m, err := r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": groupID,
+		"user_id":  userID,
+	}))
 	if err != nil || m == nil {
 		return nil, err
 	}

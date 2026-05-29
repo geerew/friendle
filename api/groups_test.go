@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/squirrel"
+	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/stretchr/testify/require"
@@ -131,7 +133,10 @@ func TestCreateJoinRequestAuthorization(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, status)
 
-		jr, err := router.appDao.GetJoinRequestByUser(ctx, group.ID, "user")
+		jr, err := router.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+			"group_id": group.ID,
+			"user_id":  "user",
+		}))
 		require.NoError(t, err)
 		require.NotNil(t, jr)
 		require.Equal(t, types.JoinPending, jr.Status)
@@ -179,12 +184,15 @@ func TestAdminAddGroupMember(t *testing.T) {
 	require.NoError(t, json.Unmarshal(respBody, &resp))
 	require.Equal(t, member.ID, resp["userId"])
 
-	m, err := router.appDao.GetGroupMember(ctx, group.ID, member.ID)
+	m, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": group.ID, "user_id": member.ID}))
 	require.NoError(t, err)
 	require.NotNil(t, m)
 	require.Equal(t, types.GroupRoleUser, m.GroupRole)
 
-	jr, err := router.appDao.GetJoinRequestByUser(ctx, group.ID, member.ID)
+	jr, err := router.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+			"group_id": group.ID,
+			"user_id":  member.ID,
+		}))
 	require.NoError(t, err)
 	require.Nil(t, jr)
 }
@@ -208,7 +216,7 @@ func TestCreateGroup(t *testing.T) {
 	require.NoError(t, json.Unmarshal(respBody, &resp))
 	require.Equal(t, "My Group", resp["name"])
 
-	m, err := router.appDao.GetGroupMember(ctx, resp["id"].(string), "user")
+	m, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": resp["id"].(string), "user_id": "user"}))
 	require.NoError(t, err)
 	require.NotNil(t, m)
 	require.Equal(t, types.GroupRoleAdmin, m.GroupRole)
@@ -275,7 +283,7 @@ func TestUpdateGroup(t *testing.T) {
 	require.NoError(t, json.Unmarshal(respBody, &resp))
 	require.Equal(t, "New Name", resp["name"])
 
-	updated, err := router.appDao.GetGroup(ctx, group.ID)
+	updated, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: group.ID}))
 	require.NoError(t, err)
 	require.Equal(t, "New Name", updated.Name)
 }
@@ -297,7 +305,10 @@ func TestUpdateGroupJoinRequestApprove(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, status)
 
-	jr, err := router.appDao.GetJoinRequestByUser(ctx, group.ID, "user")
+	jr, err := router.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+			"group_id": group.ID,
+			"user_id":  "user",
+		}))
 	require.NoError(t, err)
 	require.NotNil(t, jr)
 
@@ -310,7 +321,7 @@ func TestUpdateGroupJoinRequestApprove(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, status)
 
-	m, err := router.appDao.GetGroupMember(ctx, group.ID, "user")
+	m, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": group.ID, "user_id": "user"}))
 	require.NoError(t, err)
 	require.NotNil(t, m)
 }
@@ -332,7 +343,10 @@ func TestUpdateGroupJoinRequestReject(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, status)
 
-	jr, err := router.appDao.GetJoinRequestByUser(ctx, group.ID, "user")
+	jr, err := router.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+			"group_id": group.ID,
+			"user_id":  "user",
+		}))
 	require.NoError(t, err)
 	require.NotNil(t, jr)
 
@@ -345,11 +359,11 @@ func TestUpdateGroupJoinRequestReject(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, status)
 
-	m, err := router.appDao.GetGroupMember(ctx, group.ID, "user")
+	m, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": group.ID, "user_id": "user"}))
 	require.NoError(t, err)
 	require.Nil(t, m)
 
-	updated, err := router.appDao.GetJoinRequest(ctx, jr.ID)
+	updated, err := router.appDao.GetJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: jr.ID}))
 	require.NoError(t, err)
 	require.Equal(t, types.JoinRejected, updated.Status)
 }
@@ -374,7 +388,7 @@ func TestDeleteGroupMember(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, status)
 
-	removed, err := router.appDao.GetGroupMember(ctx, group.ID, member.ID)
+	removed, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": group.ID, "user_id": member.ID}))
 	require.NoError(t, err)
 	require.Nil(t, removed)
 }

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/squirrel"
+	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
@@ -77,7 +79,10 @@ func TestCreateGroupRoundWord(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, status)
 
-	updated, err := router.appDao.GetCurrentRound(ctx, group.ID, roundDate)
+	updated, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": group.ID,
+		"round_date": roundDate,
+	}))
 	require.NoError(t, err)
 	require.Equal(t, types.RoundActive, updated.Status)
 	require.NotNil(t, updated.WordPlain)

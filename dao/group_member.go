@@ -18,30 +18,43 @@ func (dao *DAO) CreateGroupMember(ctx context.Context, m *models.GroupMember) er
 	}
 	m.RefreshCreatedAt()
 	m.RefreshUpdatedAt()
-	return createGeneric(ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).WithData(map[string]interface{}{
-		models.BASE_ID: m.ID, "group_id": m.GroupID, "user_id": m.UserID, "group_role": m.GroupRole,
-		"times_picked": m.TimesPicked, "picker_skips": m.PickerSkips,
-		models.BASE_CREATED_AT: m.CreatedAt, models.BASE_UPDATED_AT: m.UpdatedAt,
-	}))
+
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
+		WithData(map[string]interface{}{
+			models.BASE_ID:         m.ID,
+			"group_id":             m.GroupID,
+			"user_id":              m.UserID,
+			"group_role":           m.GroupRole,
+			"times_picked":         m.TimesPicked,
+			"picker_skips":         m.PickerSkips,
+			models.BASE_CREATED_AT: m.CreatedAt,
+			models.BASE_UPDATED_AT: m.UpdatedAt,
+		})
+
+	return createGeneric(ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetGroupMember returns a membership for a user in a group
-func (dao *DAO) GetGroupMember(ctx context.Context, groupID, userID string) (*models.GroupMember, error) {
-	return getGeneric[models.GroupMember](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
+// GetGroupMember returns a group member matching dbOpts
+func (dao *DAO) GetGroupMember(ctx context.Context, dbOpts *Options) (*models.GroupMember, error) {
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithColumns(models.GroupMemberColumns()...).
-		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "user_id": userID})).
-		WithLimit(1))
+		SetDbOpts(dbOpts).
+		WithLimit(1)
+
+	return getGeneric[models.GroupMember](ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListGroupMembers returns all members of a group
-func (dao *DAO) ListGroupMembers(ctx context.Context, groupID string) ([]*models.GroupMember, error) {
-	return listGeneric[models.GroupMember](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
+// ListGroupMembers returns group members matching dbOpts
+func (dao *DAO) ListGroupMembers(ctx context.Context, dbOpts *Options) ([]*models.GroupMember, error) {
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithColumns(models.GroupMemberColumns()...).
-		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID})))
+		SetDbOpts(dbOpts)
+
+	return listGeneric[models.GroupMember](ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,8 +64,9 @@ func (dao *DAO) DeleteGroupMember(ctx context.Context, groupID, userID string) e
 	if groupID == "" || userID == "" {
 		return utils.ErrWhere
 	}
-	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).SetDbOpts(
-		NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "user_id": userID}))
+
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "user_id": userID})
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).SetDbOpts(dbOpts)
 	sqlStr, args, _ := deleteBuilder(*builderOpts)
 	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
 
@@ -82,6 +96,7 @@ FROM group_members WHERE group_id = ? AND times_picked = (
 		return nil, err
 	}
 	defer rows.Close()
+
 	var members []*models.GroupMember
 	for rows.Next() {
 		m := &models.GroupMember{}
@@ -96,10 +111,11 @@ FROM group_members WHERE group_id = ? AND times_picked = (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CountGroupMembers returns the number of members in a group
-func (dao *DAO) CountGroupMembers(ctx context.Context, groupID string) (int, error) {
-	return countGeneric(ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
-		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID})))
+// CountGroupMembers returns the number of members matching dbOpts
+func (dao *DAO) CountGroupMembers(ctx context.Context, dbOpts *Options) (int, error) {
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).SetDbOpts(dbOpts)
+
+	return countGeneric(ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -114,12 +130,15 @@ func (dao *DAO) ListMemberGroupIDsForUser(ctx context.Context, userID string, gr
 		GroupID string `db:"group_id"`
 	}
 
-	rows, err := listGeneric[groupIDRow](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{
+		"user_id":  userID,
+		"group_id": groupIDs,
+	})
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithColumns("group_id").
-		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{
-			"user_id":  userID,
-			"group_id": groupIDs,
-		})))
+		SetDbOpts(dbOpts)
+
+	rows, err := listGeneric[groupIDRow](ctx, dao, *builderOpts)
 	if err != nil {
 		return nil, err
 	}

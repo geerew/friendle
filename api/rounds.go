@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
@@ -33,8 +34,11 @@ func (r *Router) listGroupRounds(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 	groupID := c.Params("id")
 
-	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
-	rounds, err := r.appDao.ListRoundsForGroup(ctx, groupID, dbOpts)
+	dbOpts := dao.NewOptions().
+		WithPagination(paginationFromCtx(c)).
+		WithWhere(squirrel.Eq{"group_id": groupID}).
+		WithOrderBy(models.ROUND_ROUND_DATE + " DESC")
+	rounds, err := r.appDao.ListRounds(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
@@ -82,7 +86,7 @@ func (r *Router) getGroupRound(c *fiber.Ctx) error {
 	roundDate := time.Now().Format("2006-01-02")
 
 	siteAdmin, groupAdmin := r.roundViewerAccess(ctx, groupID, p)
-	round, err := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
+	round, err := r.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "round_date": roundDate}))
 	if err != nil || round == nil {
 		return c.JSON(roundResponseHelper(nil, p.UserID, siteAdmin, groupAdmin))
 	}
@@ -106,7 +110,7 @@ func (r *Router) createGroupRoundWord(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
-	round, _ := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
+	round, _ := r.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "round_date": roundDate}))
 	if round == nil || round.Status != types.RoundAwaitingWord {
 		return errorResponse(c, fiber.StatusBadRequest, "No round awaiting word", nil)
 	}
@@ -146,7 +150,7 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
-	round, _ := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
+	round, _ := r.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "round_date": roundDate}))
 	if round == nil || round.Status != types.RoundActive {
 		return errorResponse(c, fiber.StatusBadRequest, "Round not active", nil)
 	}
@@ -173,7 +177,10 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Not in word list", nil)
 	}
 
-	participation, _ := r.appDao.GetRoundParticipation(ctx, round.ID, p.UserID)
+	participation, _ := r.appDao.GetRoundParticipation(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"round_id": round.ID,
+		"user_id":  p.UserID,
+	}))
 	if participation == nil {
 		now := time.Now().UTC().Format(time.RFC3339)
 		participation = &models.RoundParticipation{
@@ -186,7 +193,10 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Already finished", nil)
 	}
 
-	attempts, err := r.appDao.CountGuessesForRoundUser(ctx, round.ID, p.UserID)
+	attempts, err := r.appDao.CountGuesses(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"round_id": round.ID,
+		"user_id":  p.UserID,
+	}))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
 	}
@@ -240,7 +250,7 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
-	round, _ := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
+	round, _ := r.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "round_date": roundDate}))
 	if round == nil {
 		return errorResponse(c, fiber.StatusNotFound, "No round", nil)
 	}
@@ -272,7 +282,10 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 func (r *Router) roundViewerAccess(ctx context.Context, groupID string, p types.Principal) (bool, bool) {
 	siteAdmin := p.SiteRole == types.SiteRoleAdmin
 	groupAdmin := false
-	if m, _ := r.appDao.GetGroupMember(ctx, groupID, p.UserID); m != nil {
+	if m, _ := r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		"group_id": groupID,
+		"user_id":  p.UserID,
+	})); m != nil {
 		groupAdmin = m.GroupRole == types.GroupRoleAdmin
 	}
 
@@ -283,8 +296,8 @@ func (r *Router) roundViewerAccess(ctx context.Context, groupID string, p types.
 
 // allGuessersDone reports whether every non-picker member has finished guessing
 func (r *Router) allGuessersDone(ctx context.Context, round *models.Round) bool {
-	members, _ := r.appDao.ListGroupMembers(ctx, round.GroupID)
-	participations, _ := r.appDao.ListRoundParticipationsForRound(ctx, round.ID)
+	members, _ := r.appDao.ListGroupMembers(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": round.GroupID}))
+	participations, _ := r.appDao.ListRoundParticipations(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"round_id": round.ID}))
 
 	doneByUser := make(map[string]bool, len(participations))
 	for _, p := range participations {
