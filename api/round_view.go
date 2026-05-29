@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 )
 
@@ -13,7 +12,7 @@ func filterRoundForViewer(round *models.Round, viewerID string, siteAdmin, group
 		return
 	}
 
-	revealed := dao.RoundIsRevealed(round.Status)
+	revealed := round.Status.IsRevealed()
 	canSeeAll := revealed || siteAdmin || groupAdmin
 
 	filtered := make([]*models.RoundParticipation, 0, len(round.Participations))
@@ -44,7 +43,7 @@ func viewerCanSeeRoundWord(round *models.Round, viewerID string, siteAdmin, grou
 		return false
 	}
 
-	if dao.RoundIsRevealed(round.Status) {
+	if round.Status.IsRevealed() {
 		return true
 	}
 

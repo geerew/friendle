@@ -112,7 +112,8 @@ func (s *SqliteStorage) DeleteUser(id string) error {
 
 // Reset deletes all session for all users
 func (s *SqliteStorage) Reset() error {
-	return s.dao.DeleteAllSessions(context.Background())
+	dbOpts := dao.NewOptions().WithWhere(squirrel.NotEq{models.SESSION_TABLE_ID: ""})
+	return s.dao.DeleteSessions(context.Background(), dbOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

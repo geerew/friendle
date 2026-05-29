@@ -420,8 +420,8 @@ func Test_DeleteSessions(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_DeleteAllSessions(t *testing.T) {
-	// Test successfully deleting all session records
+func Test_DeleteSessions_all(t *testing.T) {
+	// Test successfully deleting all session records via where clause
 	t.Run("success", func(t *testing.T) {
 		dao, ctx := setup(t)
 
@@ -433,7 +433,8 @@ func Test_DeleteAllSessions(t *testing.T) {
 		}
 		require.NoError(t, dao.CreateOrReplaceSession(ctx, session))
 
-		require.Nil(t, dao.DeleteAllSessions(ctx))
+		opts := NewOptions().WithWhere(squirrel.NotEq{models.SESSION_TABLE_ID: ""})
+		require.Nil(t, dao.DeleteSessions(ctx, opts))
 
 		records, err := dao.ListSessions(ctx, nil)
 		require.NoError(t, err)

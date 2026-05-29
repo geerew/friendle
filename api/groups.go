@@ -33,9 +33,6 @@ func (r *Router) initGroupRoutes() {
 
 	// Members
 	g.Delete("/:id/members/:userId", r.requireAccess(accessGroupAdminScope), r.deleteGroupMember)
-
-	// Leaderboard
-	g.Get("/:id/leaderboard", r.requireAccess(accessGroupMemberScope), r.getGroupLeaderboard)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,12 +72,15 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 func (r *Router) getMyGroups(c *fiber.Ctx) error {
 	principal, ctx := principalAndCtx(c)
 
-	rows, err := r.appDao.ListUserGroupSummariesForUserIDs(ctx, []string{principal.UserID})
+	members, err := r.appDao.ListGroupMembers(ctx, dao.NewOptions().
+		WithWhere(squirrel.Eq{models.GROUP_MEMBER_USER_ID: principal.UserID}).
+		WithGroup().
+		WithMemberCount())
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to list groups", err)
 	}
 
-	return c.JSON(userGroupSummaryResponsesFromRows(rows))
+	return c.JSON(userGroupSummaryResponsesFromMembers(members))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,15 +99,18 @@ func (r *Router) searchGroups(c *fiber.Ctx) error {
 		return c.JSON(pResult)
 	}
 
-	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
-	rows, err := r.appDao.SearchGroupSummaries(ctx, strings.ToLower(q), dbOpts)
+	dbOpts := dao.NewOptions().
+		WithPagination(paginationFromCtx(c)).
+		WithGroupNameSearch(strings.ToLower(q)).
+		WithMemberCount()
+	groups, err := r.appDao.ListGroups(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Search failed", err)
 	}
 
-	groupIDs := make([]string, len(rows))
-	for i, row := range rows {
-		groupIDs[i] = row.ID
+	groupIDs := make([]string, len(groups))
+	for i, group := range groups {
+		groupIDs[i] = group.ID
 	}
 
 	memberGroupIDs, err := r.appDao.ListMemberGroupIDsForUser(ctx, principal.UserID, groupIDs)
@@ -121,7 +124,7 @@ func (r *Router) searchGroups(c *fiber.Ctx) error {
 	}
 
 	pResult, err := dbOpts.Pagination.BuildResult(
-		groupSearchResponsesFromRows(rows, stringSet(memberGroupIDs), stringSet(pendingGroupIDs)),
+		groupSearchResponsesFromGroups(groups, stringSet(memberGroupIDs), stringSet(pendingGroupIDs)),
 	)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
@@ -147,12 +150,17 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 		role = m.GroupRole
 	}
 
-	load := dao.GroupLoad{Members: true}
-	if isSiteAdmin || (m != nil && m.GroupRole == types.GroupRoleAdmin) {
-		load.JoinRequests = true
+	loadJoinRequests := isSiteAdmin || (m != nil && m.GroupRole == types.GroupRoleAdmin)
+
+	groupOpts := dao.NewOptions().
+		WithWhere(squirrel.Eq{models.BASE_ID: groupID}).
+		WithMembers().
+		WithUsers()
+	if loadJoinRequests {
+		groupOpts = groupOpts.WithJoinRequests()
 	}
 
-	group, err := r.appDao.GetGroupLoaded(ctx, groupID, load)
+	group, err := r.appDao.GetGroup(ctx, groupOpts)
 	if err != nil || group == nil {
 		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
 	}
@@ -315,20 +323,6 @@ func (r *Router) deleteGroupMember(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// getGroupLeaderboard returns the leaderboard for a group
-func (r *Router) getGroupLeaderboard(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
-	entries, err := r.appDao.ListLeaderboardEntries(ctx, c.Params("id"))
-	if err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "Leaderboard failed", err)
-	}
-
-	return c.JSON(leaderboardEntryResponsesFromModels(entries))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

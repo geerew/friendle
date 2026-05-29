@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
 )
@@ -40,12 +39,12 @@ type adminUserResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// adminUserResponseHelper maps admin user rows to API responses
-func adminUserResponseHelper(users []*dao.UserListRow, groupsByUser map[string][]*dao.UserGroupSummaryRow) []*adminUserResponse {
+// adminUserResponseHelper maps admin users to API responses
+func adminUserResponseHelper(users []*models.User, groupsByUser map[string][]*models.GroupMember) []*adminUserResponse {
 	responses := make([]*adminUserResponse, 0, len(users))
 	for _, user := range users {
-		groupRows := groupsByUser[user.ID]
-		groups := userGroupSummaryResponsesFromRows(groupRows)
+		members := groupsByUser[user.ID]
+		groups := userGroupSummaryResponsesFromMembers(members)
 		responses = append(responses, &adminUserResponse{
 			ID:          user.ID,
 			Username:    user.Username,
@@ -71,19 +70,23 @@ type userGroupSummaryResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// userGroupSummaryResponsesFromRows maps group summary rows to API responses
-func userGroupSummaryResponsesFromRows(rows []*dao.UserGroupSummaryRow) []*userGroupSummaryResponse {
-	if len(rows) == 0 {
+// userGroupSummaryResponsesFromMembers maps group memberships to API responses
+func userGroupSummaryResponsesFromMembers(members []*models.GroupMember) []*userGroupSummaryResponse {
+	if len(members) == 0 {
 		return []*userGroupSummaryResponse{}
 	}
 
-	responses := make([]*userGroupSummaryResponse, 0, len(rows))
-	for _, row := range rows {
+	responses := make([]*userGroupSummaryResponse, 0, len(members))
+	for _, member := range members {
+		if member.Group == nil {
+			continue
+		}
+
 		responses = append(responses, &userGroupSummaryResponse{
-			ID:          row.ID,
-			Name:        row.Name,
-			MemberCount: row.MemberCount,
-			GroupRole:   row.GroupRole,
+			ID:          member.Group.ID,
+			Name:        member.Group.Name,
+			MemberCount: member.Group.MemberCount,
+			GroupRole:   member.GroupRole,
 		})
 	}
 
@@ -92,11 +95,11 @@ func userGroupSummaryResponsesFromRows(rows []*dao.UserGroupSummaryRow) []*userG
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// userGroupSummariesByUserID groups summary rows by user ID
-func userGroupSummariesByUserID(rows []*dao.UserGroupSummaryRow) map[string][]*dao.UserGroupSummaryRow {
-	byUser := make(map[string][]*dao.UserGroupSummaryRow)
-	for _, row := range rows {
-		byUser[row.UserID] = append(byUser[row.UserID], row)
+// groupMembersByUserID groups memberships by user ID
+func groupMembersByUserID(members []*models.GroupMember) map[string][]*models.GroupMember {
+	byUser := make(map[string][]*models.GroupMember)
+	for _, member := range members {
+		byUser[member.UserID] = append(byUser[member.UserID], member)
 	}
 
 	return byUser
@@ -219,31 +222,6 @@ func joinRequestResponsesFromModels(requests []*models.GroupJoinRequest) []*join
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// leaderboardEntryResponse is one row on a group leaderboard
-type leaderboardEntryResponse struct {
-	UserID       string `json:"userId"`
-	DisplayName  string `json:"displayName"`
-	TotalScore   int    `json:"totalScore"`
-	RoundsPlayed int    `json:"roundsPlayed"`
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// leaderboardEntryResponsesFromModels maps leaderboard entries to API responses
-func leaderboardEntryResponsesFromModels(entries []*dao.LeaderboardEntry) []*leaderboardEntryResponse {
-	responses := make([]*leaderboardEntryResponse, 0, len(entries))
-	for _, e := range entries {
-		responses = append(responses, &leaderboardEntryResponse{
-			UserID: e.UserID, DisplayName: e.DisplayName,
-			TotalScore: e.TotalScore, RoundsPlayed: e.RoundsPlayed,
-		})
-	}
-
-	return responses
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // roundSummaryResponse is a round without player guess details
 type roundSummaryResponse struct {
 	ID           string            `json:"id"`
@@ -357,10 +335,10 @@ func roundResponseHelper(round *models.Round, viewerID string, siteAdmin, groupA
 	if viewerCanSeeRoundWord(round, viewerID, siteAdmin, groupAdmin) {
 		resp.Word = *round.WordPlain
 		resp.PickerUserID = round.PickerUserID
-	} else if dao.RoundIsRevealed(round.Status) {
+	} else if round.Status.IsRevealed() {
 		resp.PickerUserID = round.PickerUserID
 	}
-	if round.Picker != nil && (viewerCanSeeRoundWord(round, viewerID, siteAdmin, groupAdmin) || dao.RoundIsRevealed(round.Status)) {
+	if round.Picker != nil && (viewerCanSeeRoundWord(round, viewerID, siteAdmin, groupAdmin) || round.Status.IsRevealed()) {
 		resp.PickerDisplayName = round.Picker.DisplayName
 	}
 
@@ -490,20 +468,20 @@ type groupSearchResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// groupSearchResponsesFromRows maps search rows to API responses with membership flags
-func groupSearchResponsesFromRows(rows []*dao.GroupSearchRow, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
-	if len(rows) == 0 {
+// groupSearchResponsesFromGroups maps groups to search API responses with membership flags
+func groupSearchResponsesFromGroups(groups []*models.Group, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
+	if len(groups) == 0 {
 		return []*groupSearchResponse{}
 	}
 
-	responses := make([]*groupSearchResponse, 0, len(rows))
-	for _, row := range rows {
-		_, isMember := memberGroupIDs[row.ID]
-		_, joinPending := pendingGroupIDs[row.ID]
+	responses := make([]*groupSearchResponse, 0, len(groups))
+	for _, group := range groups {
+		_, isMember := memberGroupIDs[group.ID]
+		_, joinPending := pendingGroupIDs[group.ID]
 		responses = append(responses, &groupSearchResponse{
-			ID:          row.ID,
-			Name:        row.Name,
-			MemberCount: row.MemberCount,
+			ID:          group.ID,
+			Name:        group.Name,
+			MemberCount: group.MemberCount,
 			IsMember:    isMember,
 			JoinPending: joinPending,
 		})
@@ -582,8 +560,8 @@ type adminGroupResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// adminGroupResponseHelper maps admin group rows to API responses
-func adminGroupResponseHelper(groups []*dao.GroupListRow) []*adminGroupResponse {
+// adminGroupResponseHelper maps groups to admin API responses
+func adminGroupResponseHelper(groups []*models.Group) []*adminGroupResponse {
 	responses := make([]*adminGroupResponse, 0, len(groups))
 	for _, g := range groups {
 		responses = append(responses, &adminGroupResponse{

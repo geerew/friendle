@@ -58,7 +58,6 @@
 				<Button href="/groups/{groupId}/play/" variant="primary">Play today's word</Button>
 			{/if}
 
-			<Button href="/groups/{groupId}/leaderboard/" variant="secondary">Leaderboard</Button>
 			<Button href="/groups/{groupId}/settings/" variant="secondary">Group settings</Button>
 		</div>
 

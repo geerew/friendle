@@ -84,3 +84,20 @@ func (dao *DAO) UpdateRoundParticipation(ctx context.Context, p *models.RoundPar
 
 	return err
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DeleteRoundParticipations deletes records from the round_participations table
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteRoundParticipations(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
+		return utils.ErrWhere
+	}
+
+	builderOpts := newBuilderOptions(models.ROUND_PARTICIPATION_TABLE).SetDbOpts(dbOpts)
+	sqlStr, args, _ := deleteBuilder(*builderOpts)
+
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
+	return err
+}

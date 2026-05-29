@@ -39,7 +39,8 @@ type GroupMember struct {
 	PickerSkips int             `db:"picker_skips"` // Mutable
 
 	// Relations
-	User *User `db:"-"`
+	User  *User  `db:"-"`
+	Group *Group `db:"-"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

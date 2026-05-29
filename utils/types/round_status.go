@@ -33,6 +33,13 @@ func (s RoundStatus) IsValid() bool {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// IsRevealed reports whether the round word and guess details may be shown
+func (s RoundStatus) IsRevealed() bool {
+	return s == RoundCompleted || s == RoundSkipped
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // String returns the round status as a string
 func (s RoundStatus) String() string {
 	return string(s)

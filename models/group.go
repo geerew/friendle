@@ -28,6 +28,7 @@ type Group struct {
 	// Relations
 	Members      []*GroupMember      `db:"-"`
 	JoinRequests []*GroupJoinRequest `db:"-"`
+	MemberCount  int                 `db:"-"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

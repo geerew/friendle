@@ -41,7 +41,7 @@ func (r *Router) getUsers(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
-	users, err := r.appDao.ListUserRows(ctx, dbOpts)
+	users, err := r.appDao.ListUsers(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
@@ -51,12 +51,18 @@ func (r *Router) getUsers(c *fiber.Ctx) error {
 		userIDs[i] = user.ID
 	}
 
-	groupRows, err := r.appDao.ListUserGroupSummariesForUserIDs(ctx, userIDs)
-	if err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
+	var members []*models.GroupMember
+	if len(userIDs) > 0 {
+		members, err = r.appDao.ListGroupMembers(ctx, dao.NewOptions().
+			WithWhere(squirrel.Eq{models.GROUP_MEMBER_USER_ID: userIDs}).
+			WithGroup().
+			WithMemberCount())
+		if err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
+		}
 	}
 
-	pResult, err := dbOpts.Pagination.BuildResult(adminUserResponseHelper(users, userGroupSummariesByUserID(groupRows)))
+	pResult, err := dbOpts.Pagination.BuildResult(adminUserResponseHelper(users, groupMembersByUserID(members)))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -192,8 +198,9 @@ func (r *Router) getGroups(c *fiber.Ctx) error {
 
 	dbOpts := dao.NewOptions().
 		WithOrderBy(utils.StringSplit(c.Query("orderBy", ""), ",")...).
-		WithPagination(paginationFromCtx(c))
-	groups, err := r.appDao.ListGroupRows(ctx, dbOpts)
+		WithPagination(paginationFromCtx(c)).
+		WithMemberCount()
+	groups, err := r.appDao.ListGroups(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}

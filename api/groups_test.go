@@ -392,21 +392,3 @@ func TestDeleteGroupMember(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, removed)
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// TestGetGroupLeaderboard exercises the group leaderboard endpoint
-func TestGetGroupLeaderboard(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
-
-	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Leaderboard Group")
-
-	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/leaderboard", nil))
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, status)
-
-	var rows []map[string]interface{}
-	require.NoError(t, json.Unmarshal(body, &rows))
-	require.Len(t, rows, 1)
-	require.Equal(t, "user", rows[0]["userId"])
-}

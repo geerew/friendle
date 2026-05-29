@@ -65,11 +65,12 @@ func (r *Router) getGroupRoundByID(c *fiber.Ctx) error {
 	roundID := c.Params("roundId")
 
 	siteAdmin, groupAdmin := r.roundViewerAccess(ctx, groupID, p)
-	round, err := r.appDao.GetRoundLoaded(ctx, roundID, dao.RoundLoad{
-		Participations: true,
-		Guesses:        true,
-		Users:          true,
-	})
+	roundOpts := dao.NewOptions().
+		WithWhere(squirrel.Eq{models.BASE_ID: roundID}).
+		WithParticipations().
+		WithGuesses().
+		WithUsers()
+	round, err := r.appDao.GetRound(ctx, roundOpts)
 	if err != nil || round == nil || round.GroupID != groupID {
 		return errorResponse(c, fiber.StatusNotFound, "Round not found", nil)
 	}
@@ -86,17 +87,14 @@ func (r *Router) getGroupRound(c *fiber.Ctx) error {
 	roundDate := time.Now().Format("2006-01-02")
 
 	siteAdmin, groupAdmin := r.roundViewerAccess(ctx, groupID, p)
-	round, err := r.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "round_date": roundDate}))
+	roundOpts := dao.NewOptions().
+		WithWhere(squirrel.Eq{models.ROUND_GROUP_ID: groupID, models.ROUND_ROUND_DATE: roundDate}).
+		WithParticipations().
+		WithGuesses().
+		WithUsers()
+	round, err := r.appDao.GetRound(ctx, roundOpts)
 	if err != nil || round == nil {
 		return c.JSON(roundResponseHelper(nil, p.UserID, siteAdmin, groupAdmin))
-	}
-
-	if err := r.appDao.LoadRound(ctx, round, dao.RoundLoad{
-		Participations: true,
-		Guesses:        true,
-		Users:          true,
-	}); err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
 	}
 
 	return c.JSON(roundResponseHelper(round, p.UserID, siteAdmin, groupAdmin))
@@ -250,20 +248,24 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
-	round, _ := r.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "round_date": roundDate}))
+	round, err := r.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		models.ROUND_GROUP_ID: groupID, models.ROUND_ROUND_DATE: roundDate,
+	}))
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
+	}
 	if round == nil {
 		return errorResponse(c, fiber.StatusNotFound, "No round", nil)
 	}
 
-	if !dao.RoundIsRevealed(round.Status) {
+	if !round.Status.IsRevealed() {
 		return errorResponse(c, fiber.StatusBadRequest, "Round not finished", nil)
 	}
 
-	round, err := r.appDao.GetRoundLoaded(ctx, round.ID, dao.RoundLoad{
-		Participations: true,
-		Guesses:        false,
-		Users:          true,
-	})
+	round, err = r.appDao.GetRound(ctx, dao.NewOptions().
+		WithWhere(squirrel.Eq{models.BASE_ID: round.ID}).
+		WithParticipations().
+		WithUsers())
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
 	}

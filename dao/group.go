@@ -6,29 +6,12 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
+	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 var defaultGroupsListOrderBy = []string{models.GROUP_TABLE + "." + models.BASE_CREATED_AT + " desc"}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GroupListRow is a group projection for list queries with member count
-type GroupListRow struct {
-	ID          string `db:"id"`
-	Name        string `db:"name"`
-	MemberCount int    `db:"member_count"`
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GroupSearchRow is a group projection for name search results
-type GroupSearchRow struct {
-	ID          string `db:"id"`
-	Name        string `db:"name"`
-	MemberCount int    `db:"member_count"`
-}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -54,77 +37,66 @@ func (dao *DAO) CreateGroup(ctx context.Context, g *models.Group) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetGroup returns a group matching dbOpts
+//
+// Members, join requests, member count, and users are not included by default. Enable them
+// with WithMembers(), WithJoinRequests(), WithMemberCount(), and WithUsers() on the options
 func (dao *DAO) GetGroup(ctx context.Context, dbOpts *Options) (*models.Group, error) {
 	builderOpts := newBuilderOptions(models.GROUP_TABLE).
 		WithColumns(models.GroupColumns()...).
 		SetDbOpts(dbOpts).
 		WithLimit(1)
 
-	return getGeneric[models.Group](ctx, dao, *builderOpts)
+	if !groupRelationsRequested(dbOpts) {
+		return getGeneric[models.Group](ctx, dao, *builderOpts)
+	}
+
+	group, err := getGeneric[models.Group](ctx, dao, *builderOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if group == nil {
+		return nil, nil
+	}
+
+	if err := attachGroupRelations(ctx, dao, []*models.Group{group}, dbOpts); err != nil {
+		return nil, err
+	}
+
+	return group, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ListGroups returns groups matching the given options
+//
+// Members, join requests, member count, and users are not included by default. Enable them
+// with WithMembers(), WithJoinRequests(), WithMemberCount(), and WithUsers() on the options
 func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Group, error) {
+	applyDefaultOrderBy(dbOpts, defaultGroupsListOrderBy)
+
 	builderOpts := newBuilderOptions(models.GROUP_TABLE).
 		WithColumns(models.GroupColumns()...).
 		SetDbOpts(dbOpts)
 
-	return listGeneric[models.Group](ctx, dao, *builderOpts)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ListGroupRows returns groups with member counts matching the given options
-func (dao *DAO) ListGroupRows(ctx context.Context, dbOpts *Options) ([]*GroupListRow, error) {
-	g := models.GROUP_TABLE
-	gm := models.GROUP_MEMBER_TABLE
-
-	applyDefaultOrderBy(dbOpts, defaultGroupsListOrderBy)
-
-	builderOpts := newBuilderOptions(g).
-		WithColumns(
-			g+"."+models.BASE_ID+" AS id",
-			g+".name AS name",
-			"COUNT("+gm+".id) AS member_count",
-		).
-		WithLeftJoin(gm, gm+".group_id = "+g+"."+models.BASE_ID).
-		WithGroupBy(g+"."+models.BASE_ID, g+".name").
-		SetDbOpts(dbOpts)
-
-	return listGeneric[GroupListRow](ctx, dao, *builderOpts)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// SearchGroupSummaries searches groups by name with relevance ordering
-func (dao *DAO) SearchGroupSummaries(ctx context.Context, q string, dbOpts *Options) ([]*GroupSearchRow, error) {
-	g := models.GROUP_TABLE
-	gm := models.GROUP_MEMBER_TABLE
-	like := "%" + q + "%"
-
-	if dbOpts == nil {
-		dbOpts = NewOptions()
+	if !groupRelationsRequested(dbOpts) {
+		return listGeneric[models.Group](ctx, dao, *builderOpts)
 	}
 
-	searchOpts := NewOptions().
-		WithWhere(squirrel.Like{"LOWER(" + g + ".name)": like}).
-		WithOrderByClause(searchGroupRelevanceOrder(g, q))
-
-	if dbOpts.Pagination != nil {
-		searchOpts = searchOpts.WithPagination(dbOpts.Pagination)
+	groups, err := listGeneric[models.Group](ctx, dao, *builderOpts)
+	if err != nil {
+		return nil, err
 	}
 
-	builderOpts := newBuilderOptions(g).
-		WithColumns(
-			g+"."+models.BASE_ID+" AS id",
-			g+".name AS name",
-			"(SELECT COUNT(*) FROM "+gm+" gm_count WHERE gm_count.group_id = "+g+"."+models.BASE_ID+") AS member_count",
-		).
-		SetDbOpts(searchOpts)
+	if len(groups) == 0 {
+		return groups, nil
+	}
 
-	return listGeneric[GroupSearchRow](ctx, dao, *builderOpts)
+	if err := attachGroupRelations(ctx, dao, groups, dbOpts); err != nil {
+		return nil, err
+	}
+
+	return groups, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -177,11 +149,139 @@ func (dao *DAO) DeleteGroups(ctx context.Context, dbOpts *Options) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// searchGroupRelevanceOrder ranks exact name matches first, then prefix matches, then other
+// groupNameSearchOrder ranks exact name matches first, then prefix matches, then other
 // substring matches, then shorter names, then name ascending, then newest created
-func searchGroupRelevanceOrder(g, q string) squirrel.Sqlizer {
+func groupNameSearchOrder(g, q string) squirrel.Sqlizer {
 	return squirrel.Expr(
 		`CASE WHEN LOWER(`+g+`.name) = ? THEN 0 WHEN LOWER(`+g+`.name) LIKE ? THEN 1 ELSE 2 END, LENGTH(`+g+`.name), LOWER(`+g+`.name), `+g+`.`+models.BASE_CREATED_AT+` DESC`,
 		q, q+"%",
 	)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRelationsRequested reports whether dbOpts requests group relation data
+func groupRelationsRequested(dbOpts *Options) bool {
+	if dbOpts == nil {
+		return false
+	}
+
+	return dbOpts.IncludeMembers || dbOpts.IncludeJoinRequests || dbOpts.IncludeMemberCount
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// attachGroupRelations attaches members, join requests, and member counts to groups
+func attachGroupRelations(ctx context.Context, dao *DAO, groups []*models.Group, dbOpts *Options) error {
+	if len(groups) == 0 || dbOpts == nil {
+		return nil
+	}
+
+	groupIDs := utils.Map(groups, func(g *models.Group) string {
+		return g.ID
+	})
+
+	membersByGroup := make(map[string][]*models.GroupMember)
+	if dbOpts.IncludeMembers {
+		members, err := dao.ListGroupMembers(ctx, NewOptions().WithWhere(squirrel.Eq{
+			models.GROUP_MEMBER_GROUP_ID: groupIDs,
+		}))
+		if err != nil {
+			return err
+		}
+
+		for _, m := range members {
+			membersByGroup[m.GroupID] = append(membersByGroup[m.GroupID], m)
+		}
+	}
+
+	requestsByGroup := make(map[string][]*models.GroupJoinRequest)
+	if dbOpts.IncludeJoinRequests {
+		requests, err := dao.ListJoinRequests(ctx, NewOptions().WithWhere(squirrel.Eq{
+			models.JOIN_REQUEST_GROUP_ID: groupIDs,
+			models.JOIN_REQUEST_STATUS:   types.JoinPending,
+		}))
+		if err != nil {
+			return err
+		}
+
+		for _, jr := range requests {
+			requestsByGroup[jr.GroupID] = append(requestsByGroup[jr.GroupID], jr)
+		}
+	}
+
+	memberCounts := map[string]int{}
+	if dbOpts.IncludeMemberCount {
+		counts, err := memberCountsForGroups(ctx, dao, groupIDs)
+		if err != nil {
+			return err
+		}
+
+		memberCounts = counts
+	}
+
+	if dbOpts.IncludeUsers && dbOpts.IncludeMembers {
+		userIDs := make([]string, 0)
+		for _, members := range membersByGroup {
+			for _, m := range members {
+				userIDs = append(userIDs, m.UserID)
+			}
+		}
+
+		userMap, err := usersByIDs(ctx, dao, userIDs)
+		if err != nil {
+			return err
+		}
+
+		for _, members := range membersByGroup {
+			for _, m := range members {
+				m.User = userMap[m.UserID]
+			}
+		}
+	}
+
+	for _, g := range groups {
+		if dbOpts.IncludeMembers {
+			g.Members = membersByGroup[g.ID]
+			if g.Members == nil {
+				g.Members = []*models.GroupMember{}
+			}
+		}
+
+		if dbOpts.IncludeJoinRequests {
+			g.JoinRequests = requestsByGroup[g.ID]
+			if g.JoinRequests == nil {
+				g.JoinRequests = []*models.GroupJoinRequest{}
+			}
+		}
+
+		if dbOpts.IncludeMemberCount {
+			g.MemberCount = memberCounts[g.ID]
+		}
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// memberCountsForGroups returns member counts keyed by group ID
+func memberCountsForGroups(ctx context.Context, dao *DAO, groupIDs []string) (map[string]int, error) {
+	if len(groupIDs) == 0 {
+		return map[string]int{}, nil
+	}
+
+	members, err := dao.ListGroupMembers(ctx, NewOptions().WithWhere(squirrel.Eq{
+		models.GROUP_MEMBER_GROUP_ID: groupIDs,
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	counts := make(map[string]int, len(groupIDs))
+	for _, m := range members {
+		counts[m.GroupID]++
+	}
+
+	return counts, nil
 }

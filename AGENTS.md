@@ -107,7 +107,7 @@ Use it between types, vars, constructors, and major function groups—see
 - A **type** and its **helper function** (e.g. `userResponse` and
   `userResponseHelper`)—the helper gets its own section after the type
 - Each **function** from the next, including helpers that share a purpose (e.g.
-  `userGroupSummaryResponsesFromRows` and `userGroupSummariesByUserID`)
+  `userGroupSummaryResponsesFromMembers` and `groupMembersByUserID`)
 
 **Example:**
 
@@ -215,8 +215,8 @@ simplify logic)—not by splitting the signature.
 **Avoid:**
 
 ```go
-func groupSearchResponsesFromRows(
-	rows []*models.GroupSearchRow,
+func groupSearchResponsesFromGroups(
+	rows []*models.Group,
 	memberGroupIDs map[string]struct{},
 	pendingGroupIDs map[string]struct{},
 ) []*groupSearchResponse {
@@ -225,7 +225,7 @@ func groupSearchResponsesFromRows(
 **Prefer:**
 
 ```go
-func groupSearchResponsesFromRows(rows []*models.GroupSearchRow, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
+func groupSearchResponsesFromGroups(groups []*models.Group, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
 ```
 
 **One-line function bodies**

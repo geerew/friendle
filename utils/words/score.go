@@ -2,7 +2,7 @@ package words
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ScoreForAttempt returns leaderboard points for a solved guess on the given attempt
+// ScoreForAttempt returns points for a solved guess on the given attempt
 func ScoreForAttempt(attempt int, solved bool) int {
 	if !solved {
 		return 0
