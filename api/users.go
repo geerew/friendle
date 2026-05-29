@@ -15,31 +15,22 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type userAPI struct {
-	r *Router
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// initFsRoutes initializes the filesystem routes
+// initUserRoutes initializes the user routes
 func (r *Router) initUserRoutes() {
-	userAPI := userAPI{
-		r: r,
-	}
-
 	g := r.apiGroup("users")
 
-	g.Get("", protectedRoute, userAPI.getUsers)
-	g.Post("", protectedRoute, userAPI.createUser)
-	g.Put("/:id", protectedRoute, userAPI.updateUser)
-	g.Delete("/:id", protectedRoute, userAPI.deleteUser)
+	g.Get("", protectedRoute, r.getUsers)
+	g.Post("", protectedRoute, r.createUser)
+	g.Put("/:id", protectedRoute, r.updateUser)
+	g.Delete("/:id", protectedRoute, r.deleteUser)
 
-	g.Delete("/:id/sessions", protectedRoute, userAPI.deleteUserSession)
+	g.Delete("/:id/sessions", protectedRoute, r.deleteUserSession)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api userAPI) getUsers(c *fiber.Ctx) error {
+// getUsers returns a paginated list of users
+func (r *Router) getUsers(c *fiber.Ctx) error {
 	_, ctx, err := principalCtx(c)
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Missing principal", nil)
@@ -50,7 +41,7 @@ func (api userAPI) getUsers(c *fiber.Ctx) error {
 		WithApiQuery(c.Query("q", "")).
 		WithPagination(paginationFromCtx(c))
 
-	users, err := api.r.appDao.ListUsers(ctx, dbOpts)
+	users, err := r.appDao.ListUsers(ctx, dbOpts)
 	if err != nil {
 		if errors.Is(err, utils.ErrApiQueryParse) {
 			return errorResponse(c, fiber.StatusBadRequest, "Error parsing query", err)
@@ -69,7 +60,8 @@ func (api userAPI) getUsers(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api userAPI) createUser(c *fiber.Ctx) error {
+// createUser creates a user as site admin
+func (r *Router) createUser(c *fiber.Ctx) error {
 	userReq := &userRequest{}
 
 	if err := c.BodyParser(userReq); err != nil {
@@ -110,19 +102,20 @@ func (api userAPI) createUser(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusUnauthorized, "Missing principal", nil)
 	}
 
-	if err := api.r.appDao.CreateUser(ctx, user); err != nil {
+	if err := r.appDao.CreateUser(ctx, user); err != nil {
 		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			return errorResponse(c, fiber.StatusBadRequest, "Username already exists", nil)
 		}
 		return errorResponse(c, fiber.StatusInternalServerError, "Error creating user", err)
 	}
+
 	return c.SendStatus(fiber.StatusCreated)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Revokes all sessions for the user when the role is updated
-func (api userAPI) updateUser(c *fiber.Ctx) error {
+// updateUser updates a user and revokes sessions when the role changes
+func (r *Router) updateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	userReq := &userRequest{}
@@ -140,7 +133,7 @@ func (api userAPI) updateUser(c *fiber.Ctx) error {
 	}
 
 	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: id})
-	user, err := api.r.appDao.GetUser(ctx, dbOpts)
+	user, err := r.appDao.GetUser(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up user", err)
 	}
@@ -173,14 +166,14 @@ func (api userAPI) updateUser(c *fiber.Ctx) error {
 		}
 	}
 
-	err = api.r.appDao.UpdateUser(ctx, user)
+	err = r.appDao.UpdateUser(ctx, user)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error updating user", err)
 	}
 
 	// Update all the sessions for the user with the new role
 	if userReq.Role != "" {
-		if err := api.r.sessionManager.UpdateSessionRoleForUser(id, user.SiteRole); err != nil {
+		if err := r.sessionManager.UpdateSessionRoleForUser(id, user.SiteRole); err != nil {
 			return errorResponse(c, fiber.StatusInternalServerError, "Error updating user sessions", err)
 		}
 	}
@@ -195,7 +188,8 @@ func (api userAPI) updateUser(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api userAPI) deleteUser(c *fiber.Ctx) error {
+// deleteUser deletes a user and their sessions
+func (r *Router) deleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	_, ctx, err := principalCtx(c)
@@ -204,27 +198,30 @@ func (api userAPI) deleteUser(c *fiber.Ctx) error {
 	}
 
 	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: id})
-	err = api.r.appDao.DeleteUsers(ctx, dbOpts)
+	err = r.appDao.DeleteUsers(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting user", err)
 	}
 
-	err = api.r.sessionManager.DeleteUserSessions(id)
+	err = r.sessionManager.DeleteUserSessions(id)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting user sessions", err)
 	}
+
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (api userAPI) deleteUserSession(c *fiber.Ctx) error {
+// deleteUserSession revokes all sessions for a user
+func (r *Router) deleteUserSession(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := api.r.sessionManager.DeleteUserSessions(id)
+	err := r.sessionManager.DeleteUserSessions(id)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting user sessions", err)
 	}
+
 	return c.Status(fiber.StatusNoContent).Send(nil)
 }
 

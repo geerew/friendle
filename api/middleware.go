@@ -19,8 +19,6 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // corsMiddleWare creates a CORS middleware
 func corsMiddleWare() fiber.Handler {
 	return cors.New(cors.Config{
@@ -232,6 +230,65 @@ func authMiddleware(r *Router) fiber.Handler {
 
 		return c.Next()
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Route middleware
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// requireAuth requires an authenticated principal
+func (r *Router) requireAuth(c *fiber.Ctx) error {
+	if _, _, err := principalCtx(c); err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	return c.Next()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// requireSiteAdmin requires a site admin principal
+func (r *Router) requireSiteAdmin(c *fiber.Ctx) error {
+	p, _, err := principalCtx(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+	if p.SiteRole != types.SiteRoleAdmin {
+		return errorResponse(c, fiber.StatusForbidden, "Site admin required", nil)
+	}
+
+	return c.Next()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// requireGroupAdmin requires group admin membership for the route group ID
+func (r *Router) requireGroupAdmin(c *fiber.Ctx) error {
+	p, ctx, err := principalCtx(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+	m, err := r.appDao.GetGroupMember(ctx, c.Params("id"), p.UserID)
+	if err != nil || m == nil || m.GroupRole != types.GroupRoleAdmin {
+		return errorResponse(c, fiber.StatusForbidden, "Group admin required", nil)
+	}
+
+	return c.Next()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// requireGroupMember requires group membership for the route group ID
+func (r *Router) requireGroupMember(c *fiber.Ctx) error {
+	p, ctx, err := principalCtx(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+	if _, err := r.membership(ctx, c.Params("id"), p.UserID); err != nil {
+		return errorResponse(c, fiber.StatusForbidden, "Not a member", nil)
+	}
+
+	return c.Next()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

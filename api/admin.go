@@ -1,22 +1,36 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
+	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// initAdminRoutes initializes admin routes
 func (r *Router) initAdminRoutes() {
 	a := r.apiGroup("admin")
-	a.Get("/users", r.requireAuth, r.requireSiteAdmin, r.adminListUsers)
-	a.Get("/groups", r.requireAuth, r.requireSiteAdmin, r.adminListGroups)
-	a.Delete("/users/:id", r.requireAuth, r.requireSiteAdmin, r.adminDeleteUser)
-	a.Delete("/groups/:id", r.requireAuth, r.requireSiteAdmin, r.adminDeleteGroup)
+
+	// Users
+	a.Get("/users", r.requireAuth, r.requireSiteAdmin, r.getAdminUsers)
+	a.Delete("/users/:id", r.requireAuth, r.requireSiteAdmin, r.deleteAdminUser)
+
+	// Groups
+	a.Get("/groups", r.requireAuth, r.requireSiteAdmin, r.getAdminGroups)
+	a.Delete("/groups/:id", r.requireAuth, r.requireSiteAdmin, r.deleteAdminGroup)
+	a.Post("/groups/:id/members", r.requireAuth, r.requireSiteAdmin, r.createAdminGroupMember)
 }
 
-func (r *Router) adminListUsers(c *fiber.Ctx) error {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getAdminUsers returns paginated users for site admins
+func (r *Router) getAdminUsers(c *fiber.Ctx) error {
 	_, ctx, err := principalCtx(c)
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
@@ -48,7 +62,10 @@ func (r *Router) adminListUsers(c *fiber.Ctx) error {
 	return c.JSON(pResult)
 }
 
-func (r *Router) adminListGroups(c *fiber.Ctx) error {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getAdminGroups returns paginated groups for site admins
+func (r *Router) getAdminGroups(c *fiber.Ctx) error {
 	_, ctx, err := principalCtx(c)
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
@@ -70,7 +87,10 @@ func (r *Router) adminListGroups(c *fiber.Ctx) error {
 	return c.JSON(pResult)
 }
 
-func (r *Router) adminDeleteUser(c *fiber.Ctx) error {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// deleteAdminUser deletes a user and their sessions
+func (r *Router) deleteAdminUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	_, ctx, err := principalCtx(c)
@@ -90,7 +110,10 @@ func (r *Router) adminDeleteUser(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
-func (r *Router) adminDeleteGroup(c *fiber.Ctx) error {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// deleteAdminGroup deletes a group
+func (r *Router) deleteAdminGroup(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	_, ctx, err := principalCtx(c)
@@ -104,4 +127,50 @@ func (r *Router) adminDeleteGroup(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createAdminGroupMember adds a user to a group as site admin
+func (r *Router) createAdminGroupMember(c *fiber.Ctx) error {
+	_, ctx, err := principalCtx(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	req := &adminAddGroupMemberRequest{}
+	if err := c.BodyParser(req); err != nil || strings.TrimSpace(req.UserID) == "" {
+		return errorResponse(c, fiber.StatusBadRequest, "userId required", nil)
+	}
+
+	groupID := c.Params("id")
+	userID := strings.TrimSpace(req.UserID)
+
+	g, err := r.appDao.GetGroup(ctx, groupID)
+	if err != nil || g == nil {
+		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
+	}
+
+	if m, _ := r.appDao.GetGroupMember(ctx, groupID, userID); m != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Already a member", nil)
+	}
+
+	role := types.NewGroupRole(req.GroupRole)
+	if !role.IsValid() {
+		return errorResponse(c, fiber.StatusBadRequest, "Invalid group role", nil)
+	}
+
+	_ = r.appDao.DeletePendingJoinRequest(ctx, groupID, userID)
+
+	member := &models.GroupMember{GroupID: groupID, UserID: userID, GroupRole: role}
+	if err := r.appDao.CreateGroupMember(ctx, member); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Failed to add member", err)
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"id":        member.ID,
+		"userId":    userID,
+		"groupId":   groupID,
+		"groupRole": role,
+	})
 }

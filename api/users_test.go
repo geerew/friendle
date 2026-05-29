@@ -23,6 +23,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestUsers_GetUsers exercises paginated user listing
 func TestUsers_GetUsers(t *testing.T) {
 	t.Run("200 (empty)", func(t *testing.T) {
 		router, ctx := setupAdmin(t)
@@ -259,6 +260,7 @@ func TestUsers_GetUsers(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestUsers_CreateUser exercises admin user creation
 func TestUsers_CreateUser(t *testing.T) {
 	t.Run("201 (created)", func(t *testing.T) {
 		router, _ := setupAdmin(t)
@@ -348,6 +350,7 @@ func TestUsers_CreateUser(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestUsers_UpdateUser exercises admin user updates
 func TestUsers_UpdateUser(t *testing.T) {
 	t.Run("200 (found)", func(t *testing.T) {
 		router, ctx := setupAdmin(t)
@@ -455,6 +458,7 @@ func TestUsers_UpdateUser(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestUsers_DeleteUser exercises admin user deletion
 func TestUsers_DeleteUser(t *testing.T) {
 	t.Run("204 (deleted)", func(t *testing.T) {
 		router, ctx := setupAdmin(t)

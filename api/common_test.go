@@ -9,6 +9,7 @@ import (
 
 	"github.com/geerew/friendle/app"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils/auth"
 	"github.com/geerew/friendle/utils/pagination"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
@@ -52,21 +53,7 @@ func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Conte
 
 	// Configure middleware based on whether we have auth
 	if id != "" {
-		// Use dev auth for normal tests
-		router.SetTestMiddleware(
-			func(r *Router) fiber.Handler { return requestLoggingMiddleware(r.logger) },
-			func(r *Router) fiber.Handler { return corsMiddleWare() },
-			func(r *Router) fiber.Handler { return bootstrapMiddleware(r) },
-			func(r *Router) fiber.Handler {
-				return func(c *fiber.Ctx) error {
-					c.Locals(types.PrincipalContextKey, types.Principal{
-						UserID: id,
-						SiteRole: role,
-					})
-					return c.Next()
-				}
-			},
-		)
+		setTestPrincipal(t, router, id, role)
 	} else {
 		// Use CORS-only (for recovery tests)
 		router.SetTestMiddleware(
@@ -146,4 +133,79 @@ func unmarshalHelper[T any](t *testing.T, body []byte) (pagination.PaginationRes
 	}
 
 	return respData, resp
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// setTestPrincipal reconfigures test middleware for a different caller
+func setTestPrincipal(t *testing.T, router *Router, userID string, role types.UserRole) {
+	t.Helper()
+
+	router.SetTestMiddleware(
+		func(r *Router) fiber.Handler { return requestLoggingMiddleware(r.logger) },
+		func(r *Router) fiber.Handler { return corsMiddleWare() },
+		func(r *Router) fiber.Handler { return bootstrapMiddleware(r) },
+		func(r *Router) fiber.Handler {
+			return func(c *fiber.Ctx) error {
+				c.Locals(types.PrincipalContextKey, types.Principal{
+					UserID:   userID,
+					SiteRole: role,
+				})
+
+				return c.Next()
+			}
+		},
+	)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createTestUser inserts a user, using a placeholder password hash when none is set
+func createTestUser(t *testing.T, router *Router, ctx context.Context, user *models.User) {
+	t.Helper()
+
+	if user.PasswordHash == "" {
+		user.PasswordHash = "test-password-hash"
+	}
+	require.NoError(t, router.appDao.CreateUser(ctx, user))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createTestUserWithPassword inserts a user with a hashed password
+func createTestUserWithPassword(
+	t *testing.T,
+	router *Router,
+	ctx context.Context,
+	user *models.User,
+	password string,
+) {
+	t.Helper()
+
+	passwordHash, err := auth.GeneratePassword(password)
+	require.NoError(t, err)
+	user.PasswordHash = passwordHash
+	require.NoError(t, router.appDao.CreateUser(ctx, user))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createTestGroupWithMember creates a group and adds the user as a member
+func createTestGroupWithMember(
+	t *testing.T,
+	router *Router,
+	ctx context.Context,
+	userID string,
+	groupRole types.GroupRole,
+	name string,
+) *models.Group {
+	t.Helper()
+
+	group := &models.Group{Name: name, CreatedBy: userID, IntervalHours: 24, Timezone: "UTC"}
+	require.NoError(t, router.appDao.CreateGroup(ctx, group))
+	require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+		GroupID: group.ID, UserID: userID, GroupRole: groupRole,
+	}))
+
+	return group
 }

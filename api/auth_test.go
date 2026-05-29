@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,6 +19,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestAuth_Register exercises user registration
 func TestAuth_Register(t *testing.T) {
 
 	// Test successfully registering a new user
@@ -122,6 +124,7 @@ func TestAuth_Register(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestAuth_Bootstrap exercises first-run bootstrap
 func TestAuth_Bootstrap(t *testing.T) {
 	// Test successfully bootstrapping the application
 	t.Run("201 (created)", func(t *testing.T) {
@@ -190,6 +193,7 @@ func TestAuth_Bootstrap(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestAuth_Login exercises user login
 func TestAuth_Login(t *testing.T) {
 	t.Run("200 (success)", func(t *testing.T) {
 		router, ctx := setupAdmin(t)
@@ -313,5 +317,124 @@ func TestAuth_Login(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusUnauthorized, status)
 		require.Contains(t, string(body), "Invalid username and/or password")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAuth_SignupStatus exercises the signup status endpoint
+func TestAuth_SignupStatus(t *testing.T) {
+	router, _ := setupNoAuth(t)
+
+	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/auth/signup-status", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, status)
+
+	var resp signupStatusResponse
+	require.NoError(t, json.Unmarshal(body, &resp))
+	require.True(t, resp.Enabled)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAuth_GetMe exercises the current user profile endpoint
+func TestAuth_GetMe(t *testing.T) {
+	router, _ := setupUser(t)
+
+	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/auth/me", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, status)
+
+	var resp userResponse
+	require.NoError(t, json.Unmarshal(body, &resp))
+	require.Equal(t, "user", resp.Username)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAuth_UpdateMe exercises self-service profile updates
+func TestAuth_UpdateMe(t *testing.T) {
+	// Test successfully updating display name
+	t.Run("display name", func(t *testing.T) {
+		router, ctx := setupUser(t)
+
+		req := httptest.NewRequest(http.MethodPut, "/api/auth/me", strings.NewReader(`{"displayName":"Updated Name"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var resp userResponse
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, "Updated Name", resp.DisplayName)
+
+		user, err := router.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: "user"}))
+		require.NoError(t, err)
+		require.Equal(t, "Updated Name", user.DisplayName)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAuth_DeleteMe exercises self-service account deletion
+func TestAuth_DeleteMe(t *testing.T) {
+	// Test successfully deleting your own account
+	t.Run("success", func(t *testing.T) {
+		router, ctx := setupUser(t)
+
+		user, err := router.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: "user"}))
+		require.NoError(t, err)
+		passwordHash, err := auth.GeneratePassword("abcd1234")
+		require.NoError(t, err)
+		user.PasswordHash = passwordHash
+		require.NoError(t, router.appDao.UpdateUser(ctx, user))
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/auth/me", strings.NewReader(`{"currentPassword":"abcd1234"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, _, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+
+		deleted, err := router.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: "user"}))
+		require.NoError(t, err)
+		require.Nil(t, deleted)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAuth_Logout exercises session logout
+func TestAuth_Logout(t *testing.T) {
+	// Test successfully logging out after login
+	t.Run("204", func(t *testing.T) {
+		router, ctx := setupAdmin(t)
+
+		createTestUserWithPassword(t, router, ctx, &models.User{
+			Username:    "logout-user",
+			DisplayName: "Logout",
+			SiteRole:    types.UserRoleUser,
+		}, "abcd1234")
+
+		loginReq := httptest.NewRequest(
+			http.MethodPost,
+			"/api/auth/login",
+			strings.NewReader(`{"username":"logout-user","password":"abcd1234"}`),
+		)
+		loginReq.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		loginResp, err := router.Test(loginReq)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, loginResp.StatusCode)
+
+		logoutReq := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+		for _, cookie := range loginResp.Cookies() {
+			logoutReq.AddCookie(cookie)
+		}
+
+		status, _, err := requestHelper(t, router, logoutReq)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
 	})
 }

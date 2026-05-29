@@ -69,57 +69,6 @@ func (r *Router) Serve() error {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Private
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// initMiddleware initializes the middleware
-func (r *Router) initMiddleware() {
-	// Middleware
-	r.fiberApp.Use(requestLoggingMiddleware(r.logger))
-	r.fiberApp.Use(corsMiddleWare())
-	r.fiberApp.Use(bootstrapMiddleware(r))
-	r.fiberApp.Use(authMiddleware(r))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// initRoutes initializes the routes
-func (r *Router) initRoutes() {
-	// UI
-	r.bindUi()
-
-	// API routes
-	r.initAuthRoutes()
-	r.initUserRoutes()
-	r.initGroupRoutes()
-	r.initAdminRoutes()
-	r.initVersionRoutes()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// createSessionStore creates the session store
-func (r *Router) createSessionStore() {
-	config := fibersession.Config{
-		KeyLookup:      "cookie:session",
-		Expiration:     7 * (24 * time.Hour),
-		CookieHTTPOnly: true,
-		CookieSameSite: "Lax",
-	}
-
-	sqliteStorage := session.NewSqliteStorage(r.app.DbManager.DataDb, 10*time.Second)
-
-	r.sessionManager = session.New(r.app.DbManager.DataDb, config, sqliteStorage)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// apiGroup returns a new API router group
-func (r *Router) apiGroup(groupPath string) fiber.Router {
-	return r.fiberApp.Group("/api/" + groupPath)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // SetTestMiddleware replaces the middleware stack with test middleware
 //
@@ -154,4 +103,56 @@ func (r *Router) SetTestMiddleware(factories ...MiddlewareFactory) {
 // Test is a test helper that wraps FiberApp.Test() for testing purposes
 func (r *Router) Test(req *http.Request, msTimeout ...int) (*http.Response, error) {
 	return r.fiberApp.Test(req, msTimeout...)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Private
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// initMiddleware initializes the middleware
+func (r *Router) initMiddleware() {
+	// Middleware
+	r.fiberApp.Use(requestLoggingMiddleware(r.logger))
+	r.fiberApp.Use(corsMiddleWare())
+	r.fiberApp.Use(bootstrapMiddleware(r))
+	r.fiberApp.Use(authMiddleware(r))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// initRoutes initializes the routes
+func (r *Router) initRoutes() {
+	// UI
+	r.bindUi()
+
+	// API routes
+	r.initAuthRoutes()
+	r.initUserRoutes()
+	r.initGroupRoutes()
+	r.initRoundRoutes()
+	r.initAdminRoutes()
+	r.initVersionRoutes()
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createSessionStore creates the session store
+func (r *Router) createSessionStore() {
+	config := fibersession.Config{
+		KeyLookup:      "cookie:session",
+		Expiration:     7 * (24 * time.Hour),
+		CookieHTTPOnly: true,
+		CookieSameSite: "Lax",
+	}
+
+	sqliteStorage := session.NewSqliteStorage(r.app.DbManager.DataDb, 10*time.Second)
+
+	r.sessionManager = session.New(r.app.DbManager.DataDb, config, sqliteStorage)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// apiGroup returns a new API router group
+func (r *Router) apiGroup(groupPath string) fiber.Router {
+	return r.fiberApp.Group("/api/" + groupPath)
 }

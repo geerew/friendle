@@ -9,6 +9,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// errorResponse writes a JSON error response and stores details for request logging
 func errorResponse(c *fiber.Ctx, status int, message string, err error) error {
 	resp := fiber.Map{"message": message}
 	if err != nil {
@@ -20,9 +23,13 @@ func errorResponse(c *fiber.Ctx, status int, message string, err error) error {
 			c.Locals("api_error_detail", err.Error())
 		}
 	}
+
 	return c.Status(status).JSON(resp)
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// validatePassword checks password length constraints
 func validatePassword(password string) error {
 	if len(password) < 8 {
 		return fmt.Errorf("password must be at least 8 characters")
@@ -30,9 +37,13 @@ func validatePassword(password string) error {
 	if len(password) > 128 {
 		return fmt.Errorf("password must be no more than 128 characters")
 	}
+
 	return nil
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// principalCtx returns the authenticated principal and a context carrying it
 func principalCtx(c *fiber.Ctx) (types.Principal, context.Context, error) {
 	principal, ok := c.Locals(types.PrincipalContextKey).(types.Principal)
 	if !ok {
@@ -40,9 +51,13 @@ func principalCtx(c *fiber.Ctx) (types.Principal, context.Context, error) {
 	}
 	ctx := c.UserContext()
 	ctx = context.WithValue(ctx, types.PrincipalContextKey, principal)
+
 	return principal, ctx, nil
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// paginationFromCtx builds pagination options from query parameters
 func paginationFromCtx(c *fiber.Ctx) *pagination.Pagination {
 	return pagination.New(
 		pagination.ParsePage(c.Query(pagination.PageQueryParam)),
@@ -50,6 +65,9 @@ func paginationFromCtx(c *fiber.Ctx) *pagination.Pagination {
 	)
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// protectedRoute requires a site admin principal
 func protectedRoute(c *fiber.Ctx) error {
 	principal, _, err := principalCtx(c)
 	if err != nil {
@@ -58,5 +76,6 @@ func protectedRoute(c *fiber.Ctx) error {
 	if principal.SiteRole != types.SiteRoleAdmin {
 		return errorResponse(c, fiber.StatusForbidden, "User is not an admin", nil)
 	}
+
 	return c.Next()
 }

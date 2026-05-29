@@ -15,6 +15,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// bindUi wires static or dev-proxied UI serving
 func (r *Router) bindUi() {
 	if r.app.Config.AppMode != app.AppModeDev {
 		// Only apply filesystem middleware to non-API routes

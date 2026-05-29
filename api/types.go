@@ -3,7 +3,10 @@ package api
 import (
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
+	"github.com/gofiber/fiber/v2"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type userRequest struct {
 	Username    string `json:"username"`
@@ -19,6 +22,7 @@ type userResponse struct {
 	SiteRole    types.SiteRole `json:"siteRole"`
 }
 
+// userResponseHelper maps users to API responses
 func userResponseHelper(users []*models.User) []*userResponse {
 	responses := []*userResponse{}
 	for _, user := range users {
@@ -29,18 +33,22 @@ func userResponseHelper(users []*models.User) []*userResponse {
 			SiteRole:    user.SiteRole,
 		})
 	}
+
 	return responses
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type adminUserResponse struct {
-	ID          string                     `json:"id"`
-	Username    string                     `json:"username"`
-	DisplayName string                     `json:"displayName"`
-	SiteRole    types.SiteRole             `json:"siteRole"`
-	GroupCount  int                        `json:"groupCount"`
+	ID          string                      `json:"id"`
+	Username    string                      `json:"username"`
+	DisplayName string                      `json:"displayName"`
+	SiteRole    types.SiteRole              `json:"siteRole"`
+	GroupCount  int                         `json:"groupCount"`
 	Groups      []*userGroupSummaryResponse `json:"groups"`
 }
 
+// adminUserResponseHelper maps admin user rows to API responses
 func adminUserResponseHelper(
 	users []*models.AdminUserListRow,
 	groupsByUser map[string][]*models.UserGroupSummaryRow,
@@ -62,6 +70,8 @@ func adminUserResponseHelper(
 	return responses
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type userGroupSummaryResponse struct {
 	ID          string          `json:"id"`
 	Name        string          `json:"name"`
@@ -69,6 +79,7 @@ type userGroupSummaryResponse struct {
 	GroupRole   types.GroupRole `json:"groupRole,omitempty"`
 }
 
+// userGroupSummaryResponsesFromRows maps group summary rows to API responses
 func userGroupSummaryResponsesFromRows(rows []*models.UserGroupSummaryRow) []*userGroupSummaryResponse {
 	if len(rows) == 0 {
 		return []*userGroupSummaryResponse{}
@@ -87,6 +98,7 @@ func userGroupSummaryResponsesFromRows(rows []*models.UserGroupSummaryRow) []*us
 	return responses
 }
 
+// userGroupSummariesByUserID groups summary rows by user ID
 func userGroupSummariesByUserID(rows []*models.UserGroupSummaryRow) map[string][]*models.UserGroupSummaryRow {
 	byUser := make(map[string][]*models.UserGroupSummaryRow)
 	for _, row := range rows {
@@ -96,6 +108,44 @@ func userGroupSummariesByUserID(rows []*models.UserGroupSummaryRow) map[string][
 	return byUser
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type createGroupRequest struct {
+	Name string `json:"name"`
+}
+
+type updateGroupRequest struct {
+	Name          *string `json:"name"`
+	IntervalHours *int    `json:"intervalHours"`
+}
+
+type createGroupJoinRequest struct {
+	UserID string `json:"userId"`
+}
+
+type adminAddGroupMemberRequest struct {
+	UserID    string `json:"userId"`
+	GroupRole string `json:"groupRole"`
+}
+
+type submitRoundWordRequest struct {
+	Word string `json:"word"`
+}
+
+type submitRoundGuessRequest struct {
+	Word string `json:"word"`
+}
+
+// groupResponseHelper builds a group detail response map
+func groupResponseHelper(g *models.Group, role types.GroupRole) fiber.Map {
+	return fiber.Map{
+		"id": g.ID, "name": g.Name, "intervalHours": g.IntervalHours,
+		"timezone": g.Timezone, "groupRole": role,
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type groupSearchResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -104,6 +154,7 @@ type groupSearchResponse struct {
 	JoinPending bool   `json:"joinPending"`
 }
 
+// groupSearchResponsesFromRows maps search rows to API responses with membership flags
 func groupSearchResponsesFromRows(
 	rows []*models.GroupSearchRow,
 	memberGroupIDs map[string]struct{},
@@ -129,6 +180,7 @@ func groupSearchResponsesFromRows(
 	return responses
 }
 
+// stringSet converts a slice of IDs into a lookup set
 func stringSet(ids []string) map[string]struct{} {
 	set := make(map[string]struct{}, len(ids))
 	for _, id := range ids {
@@ -137,6 +189,8 @@ func stringSet(ids []string) map[string]struct{} {
 
 	return set
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 type signupStatusResponse struct {
 	Enabled bool `json:"enabled"`
@@ -163,12 +217,15 @@ type selfDeleteRequest struct {
 	CurrentPassword string `json:"currentPassword"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type adminGroupResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	MemberCount int    `json:"memberCount"`
 }
 
+// adminGroupResponseHelper maps admin group rows to API responses
 func adminGroupResponseHelper(groups []*models.AdminGroupListRow) []*adminGroupResponse {
 	responses := make([]*adminGroupResponse, 0, len(groups))
 	for _, g := range groups {

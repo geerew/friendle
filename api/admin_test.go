@@ -6,11 +6,17 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/Masterminds/squirrel"
+	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/pagination"
+	"github.com/geerew/friendle/utils/types"
 	"github.com/stretchr/testify/require"
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAdminListUsers exercises admin user listing
 func TestAdminListUsers(t *testing.T) {
 	// Test successfully listing users for a site admin
 	t.Run("success", func(t *testing.T) {
@@ -37,6 +43,9 @@ func TestAdminListUsers(t *testing.T) {
 	})
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAdminListGroups exercises admin group listing and pagination
 func TestAdminListGroups(t *testing.T) {
 	router, ctx := setupAdmin(t)
 
@@ -73,4 +82,40 @@ func TestAdminListGroups(t *testing.T) {
 		require.Equal(t, 5, result.TotalItems)
 		require.Len(t, groups, 2)
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestDeleteAdminUser exercises site admin user deletion
+func TestDeleteAdminUser(t *testing.T) {
+	router, ctx := setupAdmin(t)
+
+	target := &models.User{Username: "delete-me", DisplayName: "Delete Me", SiteRole: types.UserRoleUser}
+	createTestUser(t, router, ctx, target)
+
+	status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/admin/users/"+target.ID, nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, status)
+
+	deleted, err := router.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: target.ID}))
+	require.NoError(t, err)
+	require.Nil(t, deleted)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestDeleteAdminGroup exercises site admin group deletion
+func TestDeleteAdminGroup(t *testing.T) {
+	router, ctx := setupAdmin(t)
+
+	group := &models.Group{Name: "Delete Group", CreatedBy: "admin"}
+	require.NoError(t, router.appDao.CreateGroup(ctx, group))
+
+	status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/admin/groups/"+group.ID, nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, status)
+
+	deleted, err := router.appDao.GetGroup(ctx, group.ID)
+	require.NoError(t, err)
+	require.Nil(t, deleted)
 }
