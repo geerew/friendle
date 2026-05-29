@@ -136,6 +136,15 @@ type adminUserResponse struct {
 
 Prefer a blank line before a trailing `return` that is not part of the same block as the preceding logic.
 
+Also put a blank line between **consecutive `if` statements** at the same block level—each
+`if` is its own step, not a run-on chain.
+
+**Exceptions** (no blank line):
+
+- Assignment and its `if err != nil` check—see [§3](#3-error-handling-stays-tight)
+- `else` / `else if` attached to the preceding `if`
+- An `if` nested **inside** another `if`'s body (only **sibling** `if` blocks need spacing)
+
 **Avoid:**
 
 ```go
@@ -143,6 +152,15 @@ if a == b {
 	return this
 }
 return that
+```
+
+```go
+if req.Name != nil {
+	g.Name = strings.TrimSpace(*req.Name)
+}
+if req.IntervalHours != nil {
+	g.IntervalHours = *req.IntervalHours
+}
 ```
 
 **Prefer:**
@@ -153,6 +171,16 @@ if a == b {
 }
 
 return that
+```
+
+```go
+if req.Name != nil {
+	g.Name = strings.TrimSpace(*req.Name)
+}
+
+if req.IntervalHours != nil {
+	g.IntervalHours = *req.IntervalHours
+}
 ```
 
 ### 3. Error handling stays tight
@@ -181,6 +209,31 @@ Within a file:
 - A small shared function used in **multiple** places is fine
 - Judge length by **how much work** the function does, not raw line count. Many lines of error handling or multi-line log calls can still be a small, focused function
 - Extract helpers when they take on a **meaningful chunk** of work—not one-liner wrappers used in a single caller
+
+**Signatures**
+
+Keep the **function definition on one line**—`func` name, parameters, and return
+types together. Do not break parameters or returns across lines for length; a long
+signature is fine.
+
+If a function’s **body** grows hard to follow, shorten the body (extract helpers,
+simplify logic)—not by splitting the signature.
+
+**Avoid:**
+
+```go
+func groupSearchResponsesFromRows(
+	rows []*models.GroupSearchRow,
+	memberGroupIDs map[string]struct{},
+	pendingGroupIDs map[string]struct{},
+) []*groupSearchResponse {
+```
+
+**Prefer:**
+
+```go
+func groupSearchResponsesFromRows(rows []*models.GroupSearchRow, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
+```
 
 **Visibility**
 

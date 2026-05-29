@@ -30,23 +30,6 @@ type userResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// userResponseHelper maps users to API responses
-func userResponseHelper(users []*models.User) []*userResponse {
-	responses := []*userResponse{}
-	for _, user := range users {
-		responses = append(responses, &userResponse{
-			ID:          user.ID,
-			Username:    user.Username,
-			DisplayName: user.DisplayName,
-			SiteRole:    user.SiteRole,
-		})
-	}
-
-	return responses
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // adminUserResponse is a user row enriched for the site admin list
 type adminUserResponse struct {
 	ID          string                      `json:"id"`
@@ -60,10 +43,7 @@ type adminUserResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // adminUserResponseHelper maps admin user rows to API responses
-func adminUserResponseHelper(
-	users []*models.AdminUserListRow,
-	groupsByUser map[string][]*models.UserGroupSummaryRow,
-) []*adminUserResponse {
+func adminUserResponseHelper(users []*models.AdminUserListRow, groupsByUser map[string][]*models.UserGroupSummaryRow) []*adminUserResponse {
 	responses := make([]*adminUserResponse, 0, len(users))
 	for _, user := range users {
 		groupRows := groupsByUser[user.ID]
@@ -172,11 +152,11 @@ type submitRoundGuessRequest struct {
 
 // groupResponse is a group returned by the API
 type groupResponse struct {
-	ID            string          `json:"id"`
-	Name          string          `json:"name"`
-	IntervalHours int             `json:"intervalHours"`
-	Timezone      string          `json:"timezone"`
-	GroupRole     types.GroupRole `json:"groupRole"`
+	ID            string                     `json:"id"`
+	Name          string                     `json:"name"`
+	IntervalHours int                        `json:"intervalHours"`
+	Timezone      string                     `json:"timezone"`
+	GroupRole     types.GroupRole            `json:"groupRole"`
 	Round         *groupRoundSummaryResponse `json:"round,omitempty"`
 }
 
@@ -207,7 +187,7 @@ type groupRoundSummaryResponse struct {
 
 // joinRequestResponse is a join request returned by the API
 type joinRequestResponse struct {
-	ID     string                  `json:"id,omitempty"`
+	ID     string                   `json:"id,omitempty"`
 	Status models.JoinRequestStatus `json:"status"`
 }
 
@@ -225,8 +205,8 @@ type adminGroupMemberResponse struct {
 
 // guessRowResponse is one submitted guess row for the current round
 type guessRowResponse struct {
-	Word   string                `json:"word"`
-	Result []wordgame.TileState  `json:"result"`
+	Word   string               `json:"word"`
+	Result []wordgame.TileState `json:"result"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -300,10 +280,10 @@ type groupRoundRevealGuessResponse struct {
 
 // groupRoundRevealResponse is the reveal payload for a finished round
 type groupRoundRevealResponse struct {
-	Status            models.RoundStatus             `json:"status"`
-	PickerUserID      string                         `json:"pickerUserId"`
-	PickerDisplayName string                         `json:"pickerDisplayName,omitempty"`
-	Word              string                         `json:"word,omitempty"`
+	Status            models.RoundStatus              `json:"status"`
+	PickerUserID      string                          `json:"pickerUserId"`
+	PickerDisplayName string                          `json:"pickerDisplayName,omitempty"`
+	Word              string                          `json:"word,omitempty"`
 	Guesses           []groupRoundRevealGuessResponse `json:"guesses"`
 }
 
@@ -328,11 +308,7 @@ type groupSearchResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // groupSearchResponsesFromRows maps search rows to API responses with membership flags
-func groupSearchResponsesFromRows(
-	rows []*models.GroupSearchRow,
-	memberGroupIDs map[string]struct{},
-	pendingGroupIDs map[string]struct{},
-) []*groupSearchResponse {
+func groupSearchResponsesFromRows(rows []*models.GroupSearchRow, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
 	if len(rows) == 0 {
 		return []*groupSearchResponse{}
 	}

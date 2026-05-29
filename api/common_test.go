@@ -173,13 +173,7 @@ func createTestUser(t *testing.T, router *Router, ctx context.Context, user *mod
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // createTestUserWithPassword inserts a user with a hashed password
-func createTestUserWithPassword(
-	t *testing.T,
-	router *Router,
-	ctx context.Context,
-	user *models.User,
-	password string,
-) {
+func createTestUserWithPassword(t *testing.T, router *Router, ctx context.Context, user *models.User, password string) {
 	t.Helper()
 
 	passwordHash, err := auth.GeneratePassword(password)
@@ -191,14 +185,7 @@ func createTestUserWithPassword(
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // createTestGroupWithMember creates a group and adds the user as a member
-func createTestGroupWithMember(
-	t *testing.T,
-	router *Router,
-	ctx context.Context,
-	userID string,
-	groupRole types.GroupRole,
-	name string,
-) *models.Group {
+func createTestGroupWithMember(t *testing.T, router *Router, ctx context.Context, userID string, groupRole types.GroupRole, name string) *models.Group {
 	t.Helper()
 
 	group := &models.Group{Name: name, CreatedBy: userID, IntervalHours: 24, Timezone: "UTC"}

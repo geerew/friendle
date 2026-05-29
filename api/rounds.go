@@ -243,6 +243,7 @@ func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID strin
 	if round.Status == models.RoundCompleted || round.Status == models.RoundSkipped {
 		out.CanReveal = true
 	}
+
 	if m != nil {
 		out.GroupRole = m.GroupRole
 	}

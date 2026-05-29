@@ -61,6 +61,7 @@ func requestLoggingMiddleware(log *logger.Logger) fiber.Handler {
 			if errMsg != "" {
 				evt = evt.Str("error_message", errMsg)
 			}
+
 			if errDetail != "" {
 				evt = evt.Str("error_detail", errDetail)
 			}
@@ -74,6 +75,7 @@ func requestLoggingMiddleware(log *logger.Logger) fiber.Handler {
 			if errMsg != "" {
 				evt = evt.Str("error_message", errMsg)
 			}
+
 			if errDetail != "" {
 				evt = evt.Str("error_detail", errDetail)
 			}
@@ -245,6 +247,8 @@ const (
 	accessGroupMember
 	accessGroupAdmin
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // require returns middleware that enforces the given access level
 func (r *Router) require(level routeAccess) fiber.Handler {
