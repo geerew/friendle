@@ -10,51 +10,77 @@ import (
 //go:embed dictionary
 var embedFS embed.FS
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Dictionary holds the set of five-letter words accepted for picks and guesses
 type Dictionary struct {
-	AllowedGuesses map[string]struct{}
-	ValidAnswers   map[string]struct{}
+	words map[string]struct{}
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 var (
 	global     *Dictionary
 	globalOnce sync.Once
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// LoadDictionary returns the shared word list loaded once at startup
 func LoadDictionary() (*Dictionary, error) {
 	var err error
 	globalOnce.Do(func() {
 		global, err = load()
 	})
+
 	return global, err
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsValidGuess reports whether guessers may submit the word
+func (d *Dictionary) IsValidGuess(word string) bool {
+	return d.hasWord(word)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsValidAnswer reports whether the picker may choose the word as the round answer
+func (d *Dictionary) IsValidAnswer(word string) bool {
+	return d.hasWord(word)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// load reads words.txt from the embedded dictionary directory
 func load() (*Dictionary, error) {
-	guesses, err := readWords("dictionary/allowed_guesses.txt")
-	if err != nil {
-		guesses, err = readWords("dictionary/valid_answers.txt")
-		if err != nil {
-			return nil, err
-		}
-	}
-	answers, err := readWords("dictionary/valid_answers.txt")
+	words, err := readWords("dictionary/words.txt")
 	if err != nil {
 		return nil, err
 	}
-	if len(guesses) == 0 {
-		guesses = answers
-	}
-	return &Dictionary{
-		AllowedGuesses: toSet(guesses),
-		ValidAnswers:   toSet(answers),
-	}, nil
+
+	return &Dictionary{words: toSet(words)}, nil
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// hasWord reports whether the word is in the dictionary
+func (d *Dictionary) hasWord(word string) bool {
+	_, ok := d.words[strings.ToUpper(word)]
+
+	return ok
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// readWords loads five-letter words from a newline-delimited file
 func readWords(path string) ([]string, error) {
 	f, err := embedFS.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
+
 	var words []string
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
@@ -63,23 +89,18 @@ func readWords(path string) ([]string, error) {
 			words = append(words, w)
 		}
 	}
+
 	return words, sc.Err()
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// toSet builds a lookup map from a word slice
 func toSet(words []string) map[string]struct{} {
 	m := make(map[string]struct{}, len(words))
 	for _, w := range words {
 		m[w] = struct{}{}
 	}
+
 	return m
-}
-
-func (d *Dictionary) IsValidGuess(word string) bool {
-	_, ok := d.AllowedGuesses[strings.ToUpper(word)]
-	return ok
-}
-
-func (d *Dictionary) IsValidAnswer(word string) bool {
-	_, ok := d.ValidAnswers[strings.ToUpper(word)]
-	return ok
 }

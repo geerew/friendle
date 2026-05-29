@@ -6,6 +6,6 @@ cmd = "sh scripts/build-dev.sh"
 bin = "./tmp/main"
 args_bin = ["serve", "--dev", "--http", "0.0.0.0:9081", "--enable-signup"]
 delay = 1000
-exclude_dir = ["assets", "ui", "friendle_data", "scripts"]
+exclude_dir = ["ui", "friendle_data", "scripts"]
 include_ext = ["go"]
 exclude_regex = ["_test\\.go"]
