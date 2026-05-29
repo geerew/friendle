@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/geerew/friendle/utils/types"
-	"github.com/geerew/friendle/utils/wordgame"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,7 +37,7 @@ type Guess struct {
 	UserID  string              `db:"user_id"`  // Immutable
 	Attempt int                 `db:"attempt"`  // Immutable
 	Word    string              `db:"word"`     // Immutable
-	Result  wordgame.TileStates `db:"result"`   // Immutable
+	Result  types.TileStates   `db:"result"`   // Immutable
 	Outcome types.GuessOutcome  `db:"outcome"`  // Immutable
 }
 

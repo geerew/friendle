@@ -57,7 +57,6 @@ CREATE TABLE rounds (
     group_id        TEXT NOT NULL,
     round_date      TEXT NOT NULL,
     picker_user_id  TEXT NOT NULL,
-    word_hash       TEXT,
     word_plain      TEXT,
     status          TEXT NOT NULL CHECK(status IN ('awaiting_word', 'active', 'completed', 'skipped')),
     created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),

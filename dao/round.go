@@ -22,9 +22,7 @@ func (dao *DAO) CreateRound(ctx context.Context, r *models.Round) error {
 		"picker_user_id": r.PickerUserID, "status": r.Status,
 		models.BASE_CREATED_AT: r.CreatedAt, models.BASE_UPDATED_AT: r.UpdatedAt,
 	}
-	if r.WordHash != nil {
-		data["word_hash"] = *r.WordHash
-	}
+
 	if r.WordPlain != nil {
 		data["word_plain"] = *r.WordPlain
 	}
@@ -77,9 +75,6 @@ func (dao *DAO) UpdateRound(ctx context.Context, r *models.Round) error {
 	r.RefreshUpdatedAt()
 	data := map[string]interface{}{
 		"status": r.Status, models.BASE_UPDATED_AT: r.UpdatedAt,
-	}
-	if r.WordHash != nil {
-		data["word_hash"] = *r.WordHash
 	}
 	if r.WordPlain != nil {
 		data["word_plain"] = *r.WordPlain

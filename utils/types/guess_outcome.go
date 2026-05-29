@@ -78,6 +78,23 @@ func (o GuessOutcome) Value() (driver.Value, error) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GuessOutcomeFromTileStates derives the stored outcome label from a graded guess row
+func GuessOutcomeFromTileStates(states []TileState) GuessOutcome {
+	if TileStates(states).IsWin() {
+		return GuessOutcomeCorrect
+	}
+
+	for _, s := range states {
+		if s == TileCorrect || s == TilePresent {
+			return GuessOutcomePartial
+		}
+	}
+
+	return GuessOutcomeIncorrect
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Scan implements the sql.Scanner interface
 func (o *GuessOutcome) Scan(value interface{}) error {
 	outcome, ok := value.(string)

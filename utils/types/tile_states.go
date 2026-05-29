@@ -1,4 +1,4 @@
-package wordgame
+package types
 
 import (
 	"database/sql/driver"
@@ -12,6 +12,19 @@ import (
 
 // TileStates is a JSON-encoded slice of per-letter tile feedback stored in SQLite
 type TileStates []TileState
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsWin reports whether every tile in the row is correct
+func (t TileStates) IsWin() bool {
+	for _, s := range t {
+		if s != TileCorrect {
+			return false
+		}
+	}
+
+	return true
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

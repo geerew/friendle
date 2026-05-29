@@ -14,7 +14,7 @@ import (
 	"github.com/geerew/friendle/utils/filesystem"
 	"github.com/geerew/friendle/utils/logger"
 	"github.com/geerew/friendle/utils/types"
-	"github.com/geerew/friendle/utils/wordgame"
+	"github.com/geerew/friendle/utils/words"
 	"github.com/spf13/afero"
 )
 
@@ -47,7 +47,7 @@ type App struct {
 	Logger       *logger.Logger
 	FS           *filesystem.FS
 	DbManager    *database.DatabaseManager
-	Dictionary   *wordgame.Dictionary
+	Dictionary   *words.Dictionary
 	Cron         *cron.Cron
 	Config       *Config
 	bootstrapped atomic.Int32
@@ -91,7 +91,7 @@ func New(ctx context.Context, config *Config) (*App, error) {
 		return nil, fmt.Errorf("failed to create database manager: %w", err)
 	}
 
-	dict, err := wordgame.LoadDictionary()
+	dict, err := words.New()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load dictionary: %w", err)
 	}

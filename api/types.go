@@ -4,7 +4,6 @@ import (
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
-	"github.com/geerew/friendle/utils/wordgame"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -304,7 +303,7 @@ type adminGroupMemberResponse struct {
 // guessRowResponse is one submitted guess row for the current round
 type guessRowResponse struct {
 	Word    string               `json:"word"`
-	Result  []wordgame.TileState   `json:"result"`
+	Result  []types.TileState    `json:"result"`
 	Outcome types.GuessOutcome   `json:"outcome"`
 }
 
@@ -400,7 +399,7 @@ func guessRowResponsesFromModels(guesses []*models.Guess) []guessRowResponse {
 	rows := make([]guessRowResponse, 0, len(guesses))
 	for _, g := range guesses {
 		rows = append(rows, guessRowResponse{
-			Word: g.Word, Result: []wordgame.TileState(g.Result), Outcome: g.Outcome,
+			Word: g.Word, Result: []types.TileState(g.Result), Outcome: g.Outcome,
 		})
 	}
 
@@ -411,7 +410,7 @@ func guessRowResponsesFromModels(guesses []*models.Guess) []guessRowResponse {
 
 // groupRoundGuessResponse is returned after submitting a guess
 type groupRoundGuessResponse struct {
-	Result   []wordgame.TileState `json:"result"`
+	Result   []types.TileState `json:"result"`
 	Attempt  int                  `json:"attempt"`
 	Won      bool                 `json:"won"`
 	Finished bool                 `json:"finished"`

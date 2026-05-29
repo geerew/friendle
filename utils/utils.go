@@ -31,3 +31,15 @@ func StringSplit(s string, sep string) []string {
 
 	return out
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ToSet builds a string lookup set from a slice of unique keys
+func ToSet(words []string) map[string]struct{} {
+	m := make(map[string]struct{}, len(words))
+	for _, w := range words {
+		m[w] = struct{}{}
+	}
+
+	return m
+}

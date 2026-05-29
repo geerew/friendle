@@ -1,9 +1,13 @@
-package wordgame
+package words
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ScoreForAttempt returns leaderboard points for a solved guess on the given attempt
 func ScoreForAttempt(attempt int, solved bool) int {
 	if !solved {
 		return 0
 	}
+
 	switch attempt {
 	case 1:
 		return 100

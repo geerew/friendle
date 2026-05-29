@@ -14,7 +14,6 @@ const (
 	ROUND_GROUP_ID       = "group_id"
 	ROUND_ROUND_DATE     = "round_date"
 	ROUND_PICKER_USER_ID = "picker_user_id"
-	ROUND_WORD_HASH      = "word_hash"
 	ROUND_WORD_PLAIN     = "word_plain"
 	ROUND_STATUS         = "status"
 
@@ -24,7 +23,6 @@ const (
 	ROUND_TABLE_GROUP_ID       = ROUND_TABLE + "." + ROUND_GROUP_ID
 	ROUND_TABLE_ROUND_DATE     = ROUND_TABLE + "." + ROUND_ROUND_DATE
 	ROUND_TABLE_PICKER_USER_ID = ROUND_TABLE + "." + ROUND_PICKER_USER_ID
-	ROUND_TABLE_WORD_HASH      = ROUND_TABLE + "." + ROUND_WORD_HASH
 	ROUND_TABLE_WORD_PLAIN     = ROUND_TABLE + "." + ROUND_WORD_PLAIN
 	ROUND_TABLE_STATUS         = ROUND_TABLE + "." + ROUND_STATUS
 )
@@ -37,7 +35,6 @@ type Round struct {
 	GroupID      string            `db:"group_id"`       // Immutable
 	RoundDate    string            `db:"round_date"`     // Immutable
 	PickerUserID string            `db:"picker_user_id"` // Immutable
-	WordHash     *string           `db:"word_hash"`      // Mutable
 	WordPlain    *string           `db:"word_plain"`     // Mutable
 	Status       types.RoundStatus `db:"status"`         // Mutable
 
@@ -57,7 +54,6 @@ func RoundColumns() []string {
 		fmt.Sprintf("%s AS %s", ROUND_TABLE_GROUP_ID, ROUND_GROUP_ID),
 		fmt.Sprintf("%s AS %s", ROUND_TABLE_ROUND_DATE, ROUND_ROUND_DATE),
 		fmt.Sprintf("%s AS %s", ROUND_TABLE_PICKER_USER_ID, ROUND_PICKER_USER_ID),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_WORD_HASH, ROUND_WORD_HASH),
 		fmt.Sprintf("%s AS %s", ROUND_TABLE_WORD_PLAIN, ROUND_WORD_PLAIN),
 		fmt.Sprintf("%s AS %s", ROUND_TABLE_STATUS, ROUND_STATUS),
 	}

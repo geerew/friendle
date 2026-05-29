@@ -8,7 +8,7 @@ import (
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
-	"github.com/geerew/friendle/utils/wordgame"
+	"github.com/geerew/friendle/utils/words"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -125,12 +125,10 @@ func (r *Router) createGroupRoundWord(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Word must be 5 letters", nil)
 	}
 
-	if !r.app.Dictionary.IsValidAnswer(word) {
+	if !r.app.Dictionary.IsValid(word) {
 		return errorResponse(c, fiber.StatusBadRequest, "Not a valid answer word", nil)
 	}
 
-	hash := wordgame.HashWord(r.app.Config.DataDir, word)
-	round.WordHash = &hash
 	round.WordPlain = &word
 	round.Status = types.RoundActive
 	if err := r.appDao.UpdateRound(ctx, round); err != nil {
@@ -171,7 +169,7 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Word must be 5 letters", nil)
 	}
 
-	if !r.app.Dictionary.IsValidGuess(word) {
+	if !r.app.Dictionary.IsValid(word) {
 		return errorResponse(c, fiber.StatusBadRequest, "Not in word list", nil)
 	}
 
@@ -197,16 +195,16 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 	}
 
 	answer := *round.WordPlain
-	result := wordgame.Grade(word, answer)
-	won := wordgame.IsWin(result)
+	result := words.Grade(word, answer)
+	won := result.IsWin()
 
 	guess := &models.Guess{
 		RoundID: round.ID,
 		UserID:  p.UserID,
 		Attempt: attempts + 1,
 		Word:    word,
-		Result:  wordgame.TileStates(result),
-		Outcome: types.GuessOutcome(wordgame.GuessOutcomeLabel(result)),
+		Result:  result,
+		Outcome: types.GuessOutcomeFromTileStates(result),
 	}
 	if err := r.appDao.CreateGuess(ctx, guess); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Guess failed", err)
@@ -215,7 +213,7 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 	participation.Solved = won
 	if won || guess.Attempt >= 6 {
 		participation.Finished = true
-		participation.Score = wordgame.ScoreForAttempt(guess.Attempt, won)
+		participation.Score = words.ScoreForAttempt(guess.Attempt, won)
 		now := time.Now().UTC().Format(time.RFC3339)
 		participation.CompletedAt = &now
 	}

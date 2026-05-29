@@ -1,4 +1,4 @@
-package wordgame
+package types
 
 import (
 	"testing"
@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test successfully round-tripping tile states through JSON and SQL value helpers
 func TestTileStates(t *testing.T) {
 	// Test successfully marshaling and scanning stored JSON
 	t.Run("scan value", func(t *testing.T) {
@@ -24,5 +23,11 @@ func TestTileStates(t *testing.T) {
 		var states TileStates
 		require.NoError(t, states.UnmarshalJSON([]byte(`["absent","present","correct","absent","absent"]`)))
 		require.Equal(t, TileStates{TileAbsent, TilePresent, TileCorrect, TileAbsent, TileAbsent}, states)
+	})
+
+	// Test successfully detecting a winning row
+	t.Run("is win", func(t *testing.T) {
+		require.True(t, TileStates{TileCorrect, TileCorrect, TileCorrect, TileCorrect, TileCorrect}.IsWin())
+		require.False(t, TileStates{TileCorrect, TilePresent, TileCorrect, TileCorrect, TileCorrect}.IsWin())
 	})
 }

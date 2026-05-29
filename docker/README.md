@@ -18,4 +18,4 @@ Or use the example compose file:
 docker compose -f docker/docker-compose.example.yml up -d
 ```
 
-Sign-up is enabled in the default image entrypoint. Mount `/friendle_data` so SQLite and the word pepper file survive restarts.
+Sign-up is enabled in the default image entrypoint. Mount `/friendle_data` so SQLite survives restarts.
