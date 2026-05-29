@@ -46,7 +46,7 @@ func txFromContext(ctx context.Context) *sqlx.Tx {
 
 // DatabaseManagerConfig represents the settings needed to create a DatabaseManager
 type DatabaseManagerConfig struct {
-	// Where to write data.db & logs.db
+	// Where to write data.db
 	DataDir string
 
 	// The application file system
@@ -58,8 +58,7 @@ type DatabaseManagerConfig struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DatabaseManager manages different databases
+// DatabaseManager manages the application database
 type DatabaseManager struct {
 	DataDb Database
-	LogsDb Database
 }

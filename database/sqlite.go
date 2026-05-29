@@ -21,12 +21,10 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const (
-	migrateDirData        = "data"
-	migrateDirLogs        = "logs"
-	modeReadWrite         = "rwc"
-	modeReadOnly          = "ro"
-	dsnData               = "data.db"
-	dsnLogs               = "logs.db"
+	migrateDirData = "data"
+	modeReadWrite  = "rwc"
+	modeReadOnly   = "ro"
+	dsnData        = "data.db"
 	defaultMaxLockRetries = 5
 )
 
@@ -54,7 +52,7 @@ type sqliteConfig struct {
 	// The directory where the database files are stored
 	DataDir string
 
-	// The name of the database file (ie data.db or logs.db)
+	// The name of the database file (ie data.db)
 	DSN string
 
 	// The directory where the migration files are stored
@@ -114,8 +112,6 @@ func NewSQLiteManager(config *DatabaseManagerConfig) (*DatabaseManager, error) {
 		read:  readDb,
 		write: writeDb,
 	}
-
-	manager.LogsDb = manager.DataDb
 
 	return manager, nil
 }

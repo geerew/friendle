@@ -47,24 +47,3 @@ func setup(tb testing.TB) (*DAO, context.Context) {
 
 	return dao, ctx
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func setupLog(tb testing.TB) (*DAO, context.Context) {
-	tb.Helper()
-
-	fs := filesystem.New(afero.NewMemMapFs())
-
-	dbManager, err := database.NewSQLiteManager(&database.DatabaseManagerConfig{
-		DataDir: "./oc_data",
-		FS:   fs,
-		Testing: true,
-	})
-
-	require.NoError(tb, err)
-	require.NotNil(tb, dbManager)
-
-	dao := &DAO{db: dbManager.LogsDb}
-
-	return dao, context.Background()
-}

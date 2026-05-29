@@ -6,7 +6,7 @@ This file is the primary reference for AI assistants working in this repository.
 
 **OffCourse** is a local course management application. It scans course directories on the filesystem, organizes assets (videos, PDFs, markdown, text) into lessons, and exposes a web UI for browsing courses and tracking progress—without requiring an internet connection.
 
-- **Backend**: Go REST API, SQLite (`data.db`, `logs.db`), CGO (SQLite + libwebp for course cards), FFmpeg and FFprobe (on-demand HLS video transcoding)
+- **Backend**: Go REST API, SQLite (`data.db`), CGO (SQLite)
 - **Frontend**: SvelteKit + TypeScript in `ui/`, embedded into the Go binary at build time
 - **Data**: Default `oc_data/` (override with `--data-dir`); holds DBs, HLS transcodes, optimized card WebP files
 
