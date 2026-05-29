@@ -17,24 +17,24 @@ func (r *Router) initGroupRoutes() {
 	g := r.apiGroup("groups")
 
 	// Groups
-	g.Post("/", r.require(accessAuth), r.createGroup)
-	g.Get("/", r.require(accessAuth), r.getMyGroups)
-	g.Get("/search", r.require(accessAuth), r.searchGroups)
-	g.Get("/:id", r.require(accessGroupMember), r.getGroup)
-	g.Patch("/:id", r.require(accessGroupAdmin), r.updateGroup)
+	g.Post("/", r.requireAccess(accessAuth), r.createGroup)
+	g.Get("/", r.requireAccess(accessAuth), r.getMyGroups)
+	g.Get("/search", r.requireAccess(accessAuth), r.searchGroups)
+	g.Get("/:id", r.requireAccess(accessGroupMemberScope), r.getGroup)
+	g.Patch("/:id", r.requireAccess(accessGroupAdminScope), r.updateGroup)
 
 	// Join requests
-	g.Post("/:id/join-requests", r.require(accessAuth), r.createGroupJoinRequest)
-	g.Delete("/:id/join-requests/:userId", r.require(accessAuth), r.deleteGroupJoinRequest)
-	g.Get("/:id/join-requests", r.require(accessGroupAdmin), r.getGroupJoinRequests)
-	g.Post("/:id/join-requests/:rid/approve", r.require(accessGroupAdmin), r.updateGroupJoinRequestApprove)
-	g.Post("/:id/join-requests/:rid/reject", r.require(accessGroupAdmin), r.updateGroupJoinRequestReject)
+	g.Post("/:id/join-requests", r.requireAccess(accessAuth), r.createGroupJoinRequest)
+	g.Delete("/:id/join-requests/:userId", r.requireAccess(accessAuth), r.deleteGroupJoinRequest)
+	g.Get("/:id/join-requests", r.requireAccess(accessGroupAdminScope), r.getGroupJoinRequests)
+	g.Post("/:id/join-requests/:rid/approve", r.requireAccess(accessGroupAdminScope), r.updateGroupJoinRequestApprove)
+	g.Post("/:id/join-requests/:rid/reject", r.requireAccess(accessGroupAdminScope), r.updateGroupJoinRequestReject)
 
 	// Members
-	g.Delete("/:id/members/:userId", r.require(accessGroupAdmin), r.deleteGroupMember)
+	g.Delete("/:id/members/:userId", r.requireAccess(accessGroupAdminScope), r.deleteGroupMember)
 
 	// Leaderboard
-	g.Get("/:id/leaderboard", r.require(accessGroupMember), r.getGroupLeaderboard)
+	g.Get("/:id/leaderboard", r.requireAccess(accessGroupMemberScope), r.getGroupLeaderboard)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

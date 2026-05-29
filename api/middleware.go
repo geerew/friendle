@@ -259,11 +259,11 @@ func uiAuthMiddleware(r *Router) fiber.Handler {
 // Route middleware
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// routeAccess is the access level required for a route
-type routeAccess int
+// accessLevel is a bitmask of access checks; requireAccess passes when any set bit matches
+type accessLevel uint8
 
 const (
-	accessAuth routeAccess = iota
+	accessAuth accessLevel = 1 << iota
 	accessSiteAdmin
 	accessGroupMember
 	accessGroupAdmin
@@ -271,52 +271,50 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// require returns per-route API authorization middleware. It assumes sessionMiddleware has
+const (
+	accessGroupMemberScope = accessSiteAdmin | accessGroupMember
+	accessGroupAdminScope  = accessSiteAdmin | accessGroupAdmin
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// requireAccess returns per-route API authorization middleware. It assumes sessionMiddleware has
 // already attached a principal for logged-in callers; it does not perform UI redirects
-func (r *Router) require(level routeAccess) fiber.Handler {
+func (r *Router) requireAccess(level accessLevel) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		switch level {
-		case accessAuth:
-			if _, _, err := principalCtx(c); err != nil {
-				return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-			}
-
-		case accessSiteAdmin:
-			p, _, err := principalCtx(c)
-			if err != nil {
-				return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-			}
-
-			if p.SiteRole != types.SiteRoleAdmin {
-				return errorResponse(c, fiber.StatusForbidden, "Site admin required", nil)
-			}
-
-		case accessGroupMember:
-			p, ctx, err := principalCtx(c)
-			if err != nil {
-				return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-			}
-
-			if _, err := r.membership(ctx, c.Params("id"), p.UserID); err != nil {
-				return errorResponse(c, fiber.StatusForbidden, "Not a member", nil)
-			}
-
-		case accessGroupAdmin:
-			p, ctx, err := principalCtx(c)
-			if err != nil {
-				return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-			}
-
-			m, err := r.appDao.GetGroupMember(ctx, c.Params("id"), p.UserID)
-			if err != nil || m == nil || m.GroupRole != types.GroupRoleAdmin {
-				return errorResponse(c, fiber.StatusForbidden, "Group admin required", nil)
-			}
-
-		default:
+		if level == 0 {
 			return errorResponse(c, fiber.StatusInternalServerError, "Unknown access level", nil)
 		}
 
-		return c.Next()
+		p, ctx, err := principalCtx(c)
+		if err != nil {
+			return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+		}
+
+		if level&accessAuth != 0 {
+			return c.Next()
+		}
+
+		if level&accessSiteAdmin != 0 && p.SiteRole == types.SiteRoleAdmin {
+			return c.Next()
+		}
+
+		groupID := c.Params("id")
+
+		if level&accessGroupMember != 0 {
+			if _, err := r.membership(ctx, groupID, p.UserID); err == nil {
+				return c.Next()
+			}
+		}
+
+		if level&accessGroupAdmin != 0 {
+			m, err := r.appDao.GetGroupMember(ctx, groupID, p.UserID)
+			if err == nil && m != nil && m.GroupRole == types.GroupRoleAdmin {
+				return c.Next()
+			}
+		}
+
+		return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
 	}
 }
 

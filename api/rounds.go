@@ -20,10 +20,10 @@ func (r *Router) initRoundRoutes() {
 	g := r.apiGroup("groups")
 
 	// Rounds
-	g.Get("/:id/rounds/current", r.require(accessGroupMember), r.getGroupRound)
-	g.Post("/:id/rounds/current/word", r.require(accessGroupMember), r.createGroupRoundWord)
-	g.Post("/:id/rounds/current/guesses", r.require(accessGroupMember), r.createGroupRoundGuess)
-	g.Get("/:id/rounds/current/reveal", r.require(accessGroupMember), r.getGroupRoundReveal)
+	g.Get("/:id/rounds/current", r.requireAccess(accessGroupMemberScope), r.getGroupRound)
+	g.Post("/:id/rounds/current/word", r.requireAccess(accessGroupMemberScope), r.createGroupRoundWord)
+	g.Post("/:id/rounds/current/guesses", r.requireAccess(accessGroupMemberScope), r.createGroupRoundGuess)
+	g.Get("/:id/rounds/current/reveal", r.requireAccess(accessGroupMemberScope), r.getGroupRoundReveal)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

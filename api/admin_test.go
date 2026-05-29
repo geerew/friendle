@@ -40,7 +40,7 @@ func TestAdminListUsers(t *testing.T) {
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/admin/users", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusForbidden, status)
-		require.Contains(t, string(body), "Site admin required")
+		require.Contains(t, string(body), "Forbidden")
 	})
 }
 
@@ -67,7 +67,7 @@ func TestAdminCreateUser(t *testing.T) {
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodPost, "/api/admin/users", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusForbidden, status)
-		require.Contains(t, string(body), "Site admin required")
+		require.Contains(t, string(body), "Forbidden")
 	})
 }
 

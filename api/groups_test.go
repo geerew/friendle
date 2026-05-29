@@ -218,19 +218,40 @@ func TestCreateGroup(t *testing.T) {
 
 // TestGetGroup exercises fetching a group the caller belongs to
 func TestGetGroup(t *testing.T) {
-	router, ctx := setupUser(t)
+	// Test successfully fetching a group as a member
+	t.Run("member", func(t *testing.T) {
+		router, ctx := setupUser(t)
 
-	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Detail Group")
+		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Detail Group")
 
-	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID, nil))
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, status)
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
 
-	var resp map[string]interface{}
-	require.NoError(t, json.Unmarshal(body, &resp))
-	require.Equal(t, group.ID, resp["id"])
-	require.Equal(t, "Detail Group", resp["name"])
-	require.NotNil(t, resp["round"])
+		var resp map[string]interface{}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, group.ID, resp["id"])
+		require.Equal(t, "Detail Group", resp["name"])
+		require.NotNil(t, resp["round"])
+	})
+
+	// Test successfully fetching a group as site admin without membership
+	t.Run("site admin", func(t *testing.T) {
+		router, ctx := setupAdmin(t)
+
+		member := &models.User{Username: "member", DisplayName: "Member", SiteRole: types.UserRoleUser}
+		createTestUser(t, router, ctx, member)
+
+		group := createTestGroupWithMember(t, router, ctx, member.ID, types.GroupRoleAdmin, "Admin View Group")
+
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var resp map[string]interface{}
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, group.ID, resp["id"])
+	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

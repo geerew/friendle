@@ -19,16 +19,16 @@ func (r *Router) initAdminRoutes() {
 	a := r.apiGroup("admin")
 
 	// Users
-	a.Get("/users", r.require(accessSiteAdmin), r.getUsers)
-	a.Post("/users", r.require(accessSiteAdmin), r.createUser)
-	a.Put("/users/:id", r.require(accessSiteAdmin), r.updateUser)
-	a.Delete("/users/:id", r.require(accessSiteAdmin), r.deleteUser)
-	a.Delete("/users/:id/sessions", r.require(accessSiteAdmin), r.deleteUserSessions)
+	a.Get("/users", r.requireAccess(accessSiteAdmin), r.getUsers)
+	a.Post("/users", r.requireAccess(accessSiteAdmin), r.createUser)
+	a.Put("/users/:id", r.requireAccess(accessSiteAdmin), r.updateUser)
+	a.Delete("/users/:id", r.requireAccess(accessSiteAdmin), r.deleteUser)
+	a.Delete("/users/:id/sessions", r.requireAccess(accessSiteAdmin), r.deleteUserSessions)
 
 	// Groups
-	a.Get("/groups", r.require(accessSiteAdmin), r.getGroups)
-	a.Delete("/groups/:id", r.require(accessSiteAdmin), r.deleteGroup)
-	a.Post("/groups/:id/members", r.require(accessSiteAdmin), r.createGroupMember)
+	a.Get("/groups", r.requireAccess(accessSiteAdmin), r.getGroups)
+	a.Delete("/groups/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup)
+	a.Post("/groups/:id/members", r.requireAccess(accessSiteAdmin), r.createGroupMember)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

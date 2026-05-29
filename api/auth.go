@@ -24,9 +24,9 @@ func (r *Router) initAuthRoutes() {
 	authGroup.Post("/login", r.login)
 	authGroup.Post("/logout", r.logout)
 
-	authGroup.Get("/me", r.require(accessAuth), r.getMe)
-	authGroup.Put("/me", r.require(accessAuth), r.updateMe)
-	authGroup.Delete("/me", r.require(accessAuth), r.deleteMe)
+	authGroup.Get("/me", r.requireAccess(accessAuth), r.getMe)
+	authGroup.Put("/me", r.requireAccess(accessAuth), r.updateMe)
+	authGroup.Delete("/me", r.requireAccess(accessAuth), r.deleteMe)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
