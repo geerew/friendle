@@ -37,6 +37,8 @@ type GroupMember struct {
 	GroupRole   types.GroupRole `db:"group_role"`   // Mutable
 	TimesPicked int             `db:"times_picked"` // Mutable
 	PickerSkips int             `db:"picker_skips"` // Mutable
+
+	User *User `db:"-"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -30,6 +30,12 @@ type Group struct {
 	CreatedBy     string `db:"created_by"`     // Immutable
 	IntervalHours int    `db:"interval_hours"` // Mutable
 	Timezone      string `db:"timezone"`       // Mutable
+
+	Members        []*GroupMember       `db:"-"`
+	JoinRequests   []*GroupJoinRequest  `db:"-"`
+	Leaderboard    []*LeaderboardEntry  `db:"-"`
+	CurrentRound   *Round               `db:"-"`
+	PreviousRounds []*Round             `db:"-"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

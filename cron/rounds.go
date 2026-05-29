@@ -106,16 +106,16 @@ func (rs *RoundScheduler) closeRound(ctx context.Context, r *models.Round) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// completeRound marks unfinished guesses done and sets the round to completed
+// completeRound marks unfinished participations done and sets the round to completed
 func (rs *RoundScheduler) completeRound(ctx context.Context, r *models.Round) {
-	guesses, _ := rs.dao.ListGuessesForRound(ctx, r.ID)
-	for _, g := range guesses {
-		if g.Finished {
+	participations, _ := rs.dao.ListRoundParticipationsForRound(ctx, r.ID)
+	for _, p := range participations {
+		if p.Finished {
 			continue
 		}
 
-		g.Finished = true
-		_ = rs.dao.UpdateGuess(ctx, g)
+		p.Finished = true
+		_ = rs.dao.UpdateRoundParticipation(ctx, p)
 	}
 
 	r.Status = types.RoundCompleted

@@ -138,20 +138,31 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 	principal, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
-	g, err := r.appDao.GetGroup(ctx, groupID)
-	if err != nil || g == nil {
-		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
-	}
-
 	m, _ := r.appDao.GetGroupMember(ctx, groupID, principal.UserID)
 	role := types.GroupRoleUser
+	isAdmin := principal.SiteRole == types.SiteRoleAdmin
 	if m != nil {
 		role = m.GroupRole
 	}
 
-	summary := r.roundSummary(ctx, g, principal.UserID)
-	resp := groupResponseHelper(g, role)
-	resp.Round = summary
+	load := dao.GroupDetailLoad{
+		Members:        true,
+		Leaderboard:    true,
+		CurrentRound:   true,
+		PreviousRounds: true,
+		RoundLimit:     10,
+	}
+	if isAdmin || (m != nil && m.GroupRole == types.GroupRoleAdmin) {
+		load.JoinRequests = true
+	}
+
+	detail, err := r.appDao.GetGroupDetail(ctx, groupID, load)
+	if err != nil || detail == nil || detail.Group == nil {
+		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
+	}
+
+	resp := groupResponseHelper(detail.Group, role)
+	resp.Round = r.roundSummary(ctx, detail.Group, principal.UserID)
 
 	return c.JSON(resp)
 }
@@ -303,12 +314,12 @@ func (r *Router) deleteGroupMember(c *fiber.Ctx) error {
 func (r *Router) getGroupLeaderboard(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	rows, err := r.appDao.Leaderboard(ctx, c.Params("id"))
+	entries, err := r.appDao.ListLeaderboardEntries(ctx, c.Params("id"))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Leaderboard failed", err)
 	}
 
-	return c.JSON(rows)
+	return c.JSON(leaderboardEntryResponsesFromModels(entries))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

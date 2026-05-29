@@ -40,6 +40,9 @@ type Round struct {
 	WordHash     *string           `db:"word_hash"`      // Mutable
 	WordPlain    *string           `db:"word_plain"`     // Mutable
 	Status       types.RoundStatus `db:"status"`         // Mutable
+
+	Picker         *User                 `db:"-"`
+	Participations []*RoundParticipation `db:"-"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

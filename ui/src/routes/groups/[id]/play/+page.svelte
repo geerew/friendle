@@ -2,9 +2,10 @@
 	import { page } from '$app/state';
 	import { ApiError } from '$lib/api';
 	import { getGroup } from '$lib/api/groups-api';
-	import { getCurrentRound, getMyGuess, revealWord, submitGuess } from '$lib/api/rounds-api';
+	import { getCurrentRound, revealWord, submitGuess } from '$lib/api/rounds-api';
 	import { AppShell, Keyboard, TileGrid } from '$lib/components';
-	import type { Guess, GuessRow } from '$lib/types/round';
+	import type { GuessRow } from '$lib/types/round';
+	import { currentRoundToParticipation } from '$lib/types/round';
 	import { buildLetterStates, normalizeWord } from '$lib/wordle';
 
 	const groupId = $derived(page.params.id ?? '');
@@ -33,7 +34,8 @@
 		error = null;
 
 		try {
-			const [round, group] = await Promise.all([getCurrentRound(groupId), getGroup(groupId)]);
+			const round = await getCurrentRound(groupId);
+			const group = await getGroup(groupId);
 			groupName = group.name;
 			roundActive = round?.status === 'active';
 
@@ -42,8 +44,7 @@
 				return;
 			}
 
-			const guess = await getMyGuess(groupId);
-			applyGuess(guess);
+			applyParticipation(currentRoundToParticipation(round));
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Failed to load game';
 		} finally {
@@ -51,21 +52,11 @@
 		}
 	}
 
-	function applyGuess(guess: Guess | null): void {
-		const rawRows = guess?.rows ?? (guess as { rowsJson?: GuessRow[] | string } | null)?.rowsJson;
-		if (typeof rawRows === 'string') {
-			try {
-				rows = JSON.parse(rawRows) as GuessRow[];
-			} catch {
-				rows = [];
-			}
-		} else {
-			rows = rawRows ?? [];
-		}
-
+	function applyParticipation(participation: ReturnType<typeof currentRoundToParticipation>): void {
+		rows = participation?.rows ?? [];
 		currentRow = rows.length;
-		finished = guess?.finished ?? false;
-		solved = guess?.solved ?? false;
+		finished = participation?.finished ?? false;
+		solved = participation?.solved ?? false;
 		currentWord = '';
 	}
 
@@ -99,12 +90,13 @@
 
 		try {
 			const response = await submitGuess(groupId, { word: currentWord });
-			applyGuess(response.guess);
+			const round = await getCurrentRound(groupId);
+			applyParticipation(currentRoundToParticipation(round));
 
-			if (response.guess.finished && !response.guess.solved) {
+			if (response.finished && !response.won) {
 				try {
 					const revealed = await revealWord(groupId);
-					reveal = revealed.word;
+					reveal = revealed.word ?? null;
 				} catch {
 					// reveal may be restricted until round ends
 				}

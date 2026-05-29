@@ -153,25 +153,141 @@ type submitRoundGuessRequest struct {
 
 // groupResponse is a group returned by the API
 type groupResponse struct {
-	ID            string                     `json:"id"`
-	Name          string                     `json:"name"`
-	IntervalHours int                        `json:"intervalHours"`
-	Timezone      string                     `json:"timezone"`
-	GroupRole     types.GroupRole            `json:"groupRole"`
-	Round         *groupRoundSummaryResponse `json:"round,omitempty"`
+	ID             string                      `json:"id"`
+	Name           string                      `json:"name"`
+	IntervalHours  int                         `json:"intervalHours"`
+	Timezone       string                      `json:"timezone"`
+	GroupRole      types.GroupRole             `json:"groupRole"`
+	Round          *groupRoundSummaryResponse  `json:"round,omitempty"`
+	Members        []*groupMemberResponse      `json:"members,omitempty"`
+	JoinRequests   []*joinRequestResponse      `json:"joinRequests,omitempty"`
+	Leaderboard    []*leaderboardEntryResponse `json:"leaderboard,omitempty"`
+	PreviousRounds []*roundSummaryResponse     `json:"previousRounds,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // groupResponseHelper maps a group to an API response
 func groupResponseHelper(g *models.Group, role types.GroupRole) *groupResponse {
-	return &groupResponse{
+	resp := &groupResponse{
 		ID:            g.ID,
 		Name:          g.Name,
 		IntervalHours: g.IntervalHours,
 		Timezone:      g.Timezone,
 		GroupRole:     role,
 	}
+	if len(g.Members) > 0 {
+		resp.Members = groupMemberResponsesFromModels(g.Members)
+	}
+	if len(g.JoinRequests) > 0 {
+		resp.JoinRequests = joinRequestResponsesFromModels(g.JoinRequests)
+	}
+	if len(g.Leaderboard) > 0 {
+		resp.Leaderboard = leaderboardEntryResponsesFromModels(g.Leaderboard)
+	}
+	if len(g.PreviousRounds) > 0 {
+		resp.PreviousRounds = make([]*roundSummaryResponse, 0, len(g.PreviousRounds))
+		for _, round := range g.PreviousRounds {
+			resp.PreviousRounds = append(resp.PreviousRounds, roundSummaryResponseHelper(round, false))
+		}
+	}
+
+	return resp
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupMemberResponse is a group member returned by the API
+type groupMemberResponse struct {
+	ID          string          `json:"id"`
+	UserID      string          `json:"userId"`
+	DisplayName string          `json:"displayName"`
+	GroupRole   types.GroupRole `json:"groupRole"`
+	TimesPicked int             `json:"timesPicked"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupMemberResponsesFromModels maps group members to API responses
+func groupMemberResponsesFromModels(members []*models.GroupMember) []*groupMemberResponse {
+	responses := make([]*groupMemberResponse, 0, len(members))
+	for _, m := range members {
+		name := m.UserID
+		if m.User != nil {
+			name = m.User.DisplayName
+		}
+		responses = append(responses, &groupMemberResponse{
+			ID: m.ID, UserID: m.UserID, DisplayName: name,
+			GroupRole: m.GroupRole, TimesPicked: m.TimesPicked,
+		})
+	}
+
+	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// joinRequestResponsesFromModels maps join requests to API responses
+func joinRequestResponsesFromModels(requests []*models.GroupJoinRequest) []*joinRequestResponse {
+	responses := make([]*joinRequestResponse, 0, len(requests))
+	for _, jr := range requests {
+		responses = append(responses, &joinRequestResponse{ID: jr.ID, Status: jr.Status})
+	}
+
+	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// leaderboardEntryResponse is one row on a group leaderboard
+type leaderboardEntryResponse struct {
+	UserID       string `json:"userId"`
+	DisplayName  string `json:"displayName"`
+	TotalScore   int    `json:"totalScore"`
+	RoundsPlayed int    `json:"roundsPlayed"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// leaderboardEntryResponsesFromModels maps leaderboard entries to API responses
+func leaderboardEntryResponsesFromModels(entries []*models.LeaderboardEntry) []*leaderboardEntryResponse {
+	responses := make([]*leaderboardEntryResponse, 0, len(entries))
+	for _, e := range entries {
+		responses = append(responses, &leaderboardEntryResponse{
+			UserID: e.UserID, DisplayName: e.DisplayName,
+			TotalScore: e.TotalScore, RoundsPlayed: e.RoundsPlayed,
+		})
+	}
+
+	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// roundSummaryResponse is a round without player guess details
+type roundSummaryResponse struct {
+	ID           string            `json:"id"`
+	RoundDate    string            `json:"roundDate"`
+	Status       types.RoundStatus `json:"status"`
+	PickerUserID string            `json:"pickerUserId,omitempty"`
+	Word         string            `json:"word,omitempty"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// roundSummaryResponseHelper maps a round to a summary response
+func roundSummaryResponseHelper(round *models.Round, includeWord bool) *roundSummaryResponse {
+	resp := &roundSummaryResponse{
+		ID: round.ID, RoundDate: round.RoundDate, Status: round.Status,
+	}
+	if includeWord && round.WordPlain != nil {
+		resp.Word = *round.WordPlain
+	}
+	if includeWord {
+		resp.PickerUserID = round.PickerUserID
+	}
+
+	return resp
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,7 +342,7 @@ type groupRoundResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // groupRoundResponseHelper builds the current round response for a member
-func groupRoundResponseHelper(round *models.Round, guess *models.Guess, userID string) *groupRoundResponse {
+func groupRoundResponseHelper(round *models.Round, participation *models.RoundParticipation, guesses []*models.Guess, userID string) *groupRoundResponse {
 	if round == nil {
 		return &groupRoundResponse{Status: "none"}
 	}
@@ -244,13 +360,140 @@ func groupRoundResponseHelper(round *models.Round, guess *models.Guess, userID s
 		Finished:     false,
 		Rows:         []guessRowResponse{},
 	}
-	if guess != nil {
-		var rows []guessRowResponse
-		_ = json.Unmarshal([]byte(guess.RowsJSON), &rows)
-		resp.AttemptsUsed = guess.AttemptsUsed
-		resp.Finished = guess.Finished
-		resp.Solved = guess.Solved
-		resp.Rows = rows
+	if participation != nil {
+		resp.AttemptsUsed = len(guesses)
+		resp.Finished = participation.Finished
+		resp.Solved = participation.Solved
+		resp.Rows = guessRowResponsesFromModels(guesses)
+	}
+
+	return resp
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// guessRowResponsesFromModels maps guess rows to API responses
+func guessRowResponsesFromModels(guesses []*models.Guess) []guessRowResponse {
+	rows := make([]guessRowResponse, 0, len(guesses))
+	for _, g := range guesses {
+		var result []wordgame.TileState
+		_ = json.Unmarshal([]byte(g.Result), &result)
+		rows = append(rows, guessRowResponse{Word: g.Word, Result: result})
+	}
+
+	return rows
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundDetailResponse is a full round with player data
+type groupRoundDetailResponse struct {
+	RoundID           string                         `json:"roundId"`
+	RoundDate         string                         `json:"roundDate"`
+	Status            types.RoundStatus              `json:"status"`
+	PickerUserID      string                         `json:"pickerUserId,omitempty"`
+	PickerDisplayName string                         `json:"pickerDisplayName,omitempty"`
+	Word              string                         `json:"word,omitempty"`
+	Players           []groupRoundPlayerResponse     `json:"players"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundPlayerResponse is one player's round participation
+type groupRoundPlayerResponse struct {
+	UserID       string             `json:"userId"`
+	DisplayName  string             `json:"displayName"`
+	AttemptsUsed int                `json:"attemptsUsed"`
+	Solved       bool               `json:"solved"`
+	Finished     bool               `json:"finished"`
+	Score        int                `json:"score"`
+	Rows         []guessRowResponse `json:"rows,omitempty"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundDetailResponseHelper maps a group round to an API response
+func groupRoundDetailResponseHelper(gr *models.GroupRound, viewerUserID string, includeWord bool) *groupRoundDetailResponse {
+	round := gr.Round
+	resp := &groupRoundDetailResponse{
+		RoundID: round.ID, RoundDate: round.RoundDate, Status: round.Status,
+		Players: []groupRoundPlayerResponse{},
+	}
+
+	revealed := dao.RoundIsRevealed(round.Status)
+	if revealed && includeWord && round.WordPlain != nil {
+		resp.Word = *round.WordPlain
+	}
+	if revealed && round.Picker != nil {
+		resp.PickerUserID = round.PickerUserID
+		resp.PickerDisplayName = round.Picker.DisplayName
+	} else if revealed {
+		resp.PickerUserID = round.PickerUserID
+	}
+
+	for _, player := range gr.Players {
+		if player.Participation == nil {
+			continue
+		}
+		p := player.Participation
+		if p.UserID == round.PickerUserID {
+			continue
+		}
+
+		name := p.UserID
+		if player.User != nil {
+			name = player.User.DisplayName
+		}
+
+		playerResp := groupRoundPlayerResponse{
+			UserID: p.UserID, DisplayName: name,
+			AttemptsUsed: len(player.Guesses), Solved: p.Solved,
+			Finished: p.Finished, Score: p.Score,
+		}
+
+		showGuesses := revealed || p.UserID == viewerUserID
+		if showGuesses {
+			playerResp.Rows = guessRowResponsesFromModels(player.Guesses)
+		}
+
+		resp.Players = append(resp.Players, playerResp)
+	}
+
+	return resp
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundRevealResponseHelper maps a group round to a reveal response
+func groupRoundRevealResponseHelper(gr *models.GroupRound) *groupRoundRevealResponse {
+	round := gr.Round
+	resp := &groupRoundRevealResponse{
+		Status:       round.Status,
+		PickerUserID: round.PickerUserID,
+		Guesses:      []groupRoundRevealGuessResponse{},
+	}
+	if round.Picker != nil {
+		resp.PickerDisplayName = round.Picker.DisplayName
+	}
+	if round.WordPlain != nil {
+		resp.Word = *round.WordPlain
+	}
+
+	for _, player := range gr.Players {
+		if player.Participation == nil || player.Participation.UserID == round.PickerUserID {
+			continue
+		}
+
+		p := player.Participation
+		name := p.UserID
+		if player.User != nil {
+			name = player.User.DisplayName
+		}
+
+		resp.Guesses = append(resp.Guesses, groupRoundRevealGuessResponse{
+			UserID: p.UserID, DisplayName: name,
+			AttemptsUsed: len(player.Guesses), Solved: p.Solved, Score: p.Score,
+		})
 	}
 
 	return resp

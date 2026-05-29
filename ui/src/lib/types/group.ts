@@ -13,28 +13,40 @@ export type Group = {
 };
 
 export type GroupDetail = Group & {
+	groupRole?: GroupRole;
 	members?: GroupMember[];
-	currentRound?: RoundSummary | null;
+	joinRequests?: JoinRequest[];
+	leaderboard?: LeaderboardEntry[];
+	previousRounds?: RoundSummary[];
+	round?: {
+		status: RoundStatus | 'none';
+		yourRole?: string;
+		canReveal?: boolean;
+		groupRole?: GroupRole;
+	};
+};
+
+export type LeaderboardEntry = {
+	userId: string;
+	displayName: string;
+	totalScore: number;
+	roundsPlayed: number;
+};
+
+export type RoundSummary = {
+	id: string;
+	roundDate: string;
+	status: RoundStatus;
+	pickerUserId?: string;
+	word?: string;
 };
 
 export type GroupMember = {
 	id: string;
 	userId: string;
-	username: string;
 	displayName: string;
 	groupRole: GroupRole;
 	timesPicked: number;
-	pickerSkips: number;
-};
-
-export type RoundSummary = {
-	id: string;
-	groupId: string;
-	roundDate: string;
-	pickerUserId: string;
-	pickerUsername?: string;
-	status: RoundStatus;
-	isPicker?: boolean;
 };
 
 export type CreateGroupRequest = {

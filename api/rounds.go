@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
@@ -20,11 +19,63 @@ import (
 func (r *Router) initRoundRoutes() {
 	g := r.apiGroup("groups")
 
-	// Rounds
+	g.Get("/:id/rounds", r.requireAccess(accessGroupMemberScope), r.listGroupRounds)
 	g.Get("/:id/rounds/current", r.requireAccess(accessGroupMemberScope), r.getGroupRound)
 	g.Post("/:id/rounds/current/word", r.requireAccess(accessGroupMemberScope), r.createGroupRoundWord)
 	g.Post("/:id/rounds/current/guesses", r.requireAccess(accessGroupMemberScope), r.createGroupRoundGuess)
 	g.Get("/:id/rounds/current/reveal", r.requireAccess(accessGroupMemberScope), r.getGroupRoundReveal)
+	g.Get("/:id/rounds/:roundId", r.requireAccess(accessGroupMemberScope), r.getGroupRoundByID)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// listGroupRounds returns paginated round history for a group
+func (r *Router) listGroupRounds(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+	groupID := c.Params("id")
+
+	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
+	rounds, err := r.appDao.ListRoundsForGroup(ctx, groupID, dbOpts)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
+	}
+
+	items := make([]*roundSummaryResponse, 0, len(rounds))
+	for _, round := range rounds {
+		items = append(items, roundSummaryResponseHelper(round, false))
+	}
+
+	pResult, err := dbOpts.Pagination.BuildResult(items)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getGroupRoundByID returns a round with role-filtered player data
+func (r *Router) getGroupRoundByID(c *fiber.Ctx) error {
+	p, ctx := principalAndCtx(c)
+	groupID := c.Params("id")
+	roundID := c.Params("roundId")
+
+	round, err := r.appDao.GetRound(ctx, roundID)
+	if err != nil || round == nil || round.GroupID != groupID {
+		return errorResponse(c, fiber.StatusNotFound, "Round not found", nil)
+	}
+
+	gr, err := r.appDao.GetGroupRound(ctx, roundID, dao.RoundDetailLoad{
+		Participations: true,
+		Guesses:        true,
+		Picker:         dao.RoundIsRevealed(round.Status),
+	})
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
+	}
+
+	return c.JSON(groupRoundDetailResponseHelper(gr, p.UserID, false))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,12 +88,16 @@ func (r *Router) getGroupRound(c *fiber.Ctx) error {
 
 	round, err := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
 	if err != nil || round == nil {
-		return c.JSON(groupRoundResponseHelper(nil, nil, p.UserID))
+		return c.JSON(groupRoundResponseHelper(nil, nil, nil, p.UserID))
 	}
 
-	guess, _ := r.appDao.GetGuess(ctx, round.ID, p.UserID)
+	participation, _ := r.appDao.GetRoundParticipation(ctx, round.ID, p.UserID)
+	var guesses []*models.Guess
+	if participation != nil {
+		guesses, _ = r.appDao.ListGuessesForRoundUser(ctx, round.ID, p.UserID)
+	}
 
-	return c.JSON(groupRoundResponseHelper(round, guess, p.UserID))
+	return c.JSON(groupRoundResponseHelper(round, participation, guesses, p.UserID))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -122,39 +177,51 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Not in word list", nil)
 	}
 
-	guess, _ := r.appDao.GetGuess(ctx, round.ID, p.UserID)
-	if guess == nil {
-		guess = &models.Guess{RoundID: round.ID, UserID: p.UserID, RowsJSON: "[]"}
+	participation, _ := r.appDao.GetRoundParticipation(ctx, round.ID, p.UserID)
+	if participation == nil {
 		now := time.Now().UTC().Format(time.RFC3339)
-		guess.FirstGuessAt = &now
-		_ = r.appDao.CreateGuess(ctx, guess)
+		participation = &models.RoundParticipation{
+			RoundID: round.ID, UserID: p.UserID, FirstGuessAt: &now,
+		}
+		_ = r.appDao.CreateRoundParticipation(ctx, participation)
 	}
 
-	if guess.Finished {
+	if participation.Finished {
 		return errorResponse(c, fiber.StatusBadRequest, "Already finished", nil)
 	}
 
-	if guess.AttemptsUsed >= 6 {
+	attempts, err := r.appDao.CountGuessesForRoundUser(ctx, round.ID, p.UserID)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
+	}
+	if attempts >= 6 {
 		return errorResponse(c, fiber.StatusBadRequest, "No attempts left", nil)
 	}
 
 	answer := *round.WordPlain
 	result := wordgame.Grade(word, answer)
 	won := wordgame.IsWin(result)
-	var rows []guessRowResponse
-	_ = json.Unmarshal([]byte(guess.RowsJSON), &rows)
-	rows = append(rows, guessRowResponse{Word: word, Result: result})
-	guess.AttemptsUsed++
-	guess.Solved = won
-	b, _ := json.Marshal(rows)
-	guess.RowsJSON = string(b)
-	if won || guess.AttemptsUsed >= 6 {
-		guess.Finished = true
-		guess.Score = wordgame.ScoreForAttempt(guess.AttemptsUsed, won)
-		now := time.Now().UTC().Format(time.RFC3339)
-		guess.CompletedAt = &now
+	resultJSON, _ := json.Marshal(result)
+
+	guess := &models.Guess{
+		RoundID:       round.ID,
+		UserID:        p.UserID,
+		AttemptNumber: attempts + 1,
+		Word:          word,
+		Result:        string(resultJSON),
 	}
-	_ = r.appDao.UpdateGuess(ctx, guess)
+	if err := r.appDao.CreateGuess(ctx, guess); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Guess failed", err)
+	}
+
+	participation.Solved = won
+	if won || guess.AttemptNumber >= 6 {
+		participation.Finished = true
+		participation.Score = wordgame.ScoreForAttempt(guess.AttemptNumber, won)
+		now := time.Now().UTC().Format(time.RFC3339)
+		participation.CompletedAt = &now
+	}
+	_ = r.appDao.UpdateRoundParticipation(ctx, participation)
 
 	if r.allGuessersDone(ctx, round) {
 		round.Status = types.RoundCompleted
@@ -163,9 +230,9 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 
 	return c.JSON(&groupRoundGuessResponse{
 		Result:   result,
-		Attempt:  guess.AttemptsUsed,
+		Attempt:  guess.AttemptNumber,
 		Won:      won,
-		Finished: guess.Finished,
+		Finished: participation.Finished,
 	})
 }
 
@@ -182,43 +249,20 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusNotFound, "No round", nil)
 	}
 
-	if round.Status != types.RoundCompleted && round.Status != types.RoundSkipped {
+	if !dao.RoundIsRevealed(round.Status) {
 		return errorResponse(c, fiber.StatusBadRequest, "Round not finished", nil)
 	}
 
-	picker, _ := r.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: round.PickerUserID}))
-	resp := &groupRoundRevealResponse{
-		Status:       round.Status,
-		PickerUserID: round.PickerUserID,
-		Guesses:      []groupRoundRevealGuessResponse{},
-	}
-	if picker != nil {
-		resp.PickerDisplayName = picker.DisplayName
-	}
-
-	if round.Status == types.RoundCompleted && round.WordPlain != nil {
-		resp.Word = *round.WordPlain
+	gr, err := r.appDao.GetGroupRound(ctx, round.ID, dao.RoundDetailLoad{
+		Participations: true,
+		Guesses:        false,
+		Picker:         true,
+	})
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
 	}
 
-	guesses, _ := r.appDao.ListGuessesForRound(ctx, round.ID)
-	for _, g := range guesses {
-		if g.UserID == round.PickerUserID {
-			continue
-		}
-
-		u, _ := r.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: g.UserID}))
-		name := g.UserID
-		if u != nil {
-			name = u.DisplayName
-		}
-
-		resp.Guesses = append(resp.Guesses, groupRoundRevealGuessResponse{
-			UserID: g.UserID, DisplayName: name,
-			AttemptsUsed: g.AttemptsUsed, Solved: g.Solved, Score: g.Score,
-		})
-	}
-
-	return c.JSON(resp)
+	return c.JSON(groupRoundRevealResponseHelper(gr))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -241,7 +285,7 @@ func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID strin
 		Status:   string(round.Status),
 		YourRole: yourRole,
 	}
-	if round.Status == types.RoundCompleted || round.Status == types.RoundSkipped {
+	if dao.RoundIsRevealed(round.Status) {
 		out.CanReveal = true
 	}
 
@@ -257,7 +301,15 @@ func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID strin
 // allGuessersDone reports whether every non-picker member has finished guessing
 func (r *Router) allGuessersDone(ctx context.Context, round *models.Round) bool {
 	members, _ := r.appDao.ListGroupMembers(ctx, round.GroupID)
-	guesses, _ := r.appDao.ListGuessesForRound(ctx, round.ID)
+	participations, _ := r.appDao.ListRoundParticipationsForRound(ctx, round.ID)
+
+	doneByUser := make(map[string]bool, len(participations))
+	for _, p := range participations {
+		if p.Finished {
+			doneByUser[p.UserID] = true
+		}
+	}
+
 	done, need := 0, 0
 	for _, m := range members {
 		if m.UserID == round.PickerUserID {
@@ -265,10 +317,8 @@ func (r *Router) allGuessersDone(ctx context.Context, round *models.Round) bool 
 		}
 
 		need++
-		for _, g := range guesses {
-			if g.UserID == m.UserID && g.Finished {
-				done++
-			}
+		if doneByUser[m.UserID] {
+			done++
 		}
 	}
 
