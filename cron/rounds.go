@@ -8,129 +8,122 @@ import (
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/database"
 	"github.com/geerew/friendle/models"
-	"github.com/geerew/friendle/utils/filesystem"
 	"github.com/geerew/friendle/utils/logger"
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// RoundScheduler advances daily rounds and closes stale rounds at day boundaries
 type RoundScheduler struct {
-	d       *dao.DAO
-	fs      *filesystem.FS
-	dataDir string
-	logger  *logger.Logger
+	dao    *dao.DAO
+	logger *logger.Logger
 }
 
-func newRoundScheduler(db database.Database, fs *filesystem.FS, dataDir string, log *logger.Logger) *RoundScheduler {
-	return &RoundScheduler{dao.New(db), fs, dataDir, log}
-}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func today() string {
-	return time.Now().Format("2006-01-02")
-}
-
-func (s *RoundScheduler) AdvanceAll() {
+// AdvanceAll creates today's round for each group that does not have one yet
+func (rs *RoundScheduler) AdvanceAll() {
 	ctx := context.Background()
-	groups, err := s.d.ListAllGroups(ctx)
+	groups, err := rs.dao.ListAllGroups(ctx)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("advance rounds: list groups")
+		rs.logger.Error().Err(err).Msg("advance rounds: list groups")
 		return
 	}
+
 	for _, g := range groups {
-		s.advanceGroup(ctx, g)
+		rs.advanceGroup(ctx, g)
 	}
 }
 
-func (s *RoundScheduler) advanceGroup(ctx context.Context, g *models.Group) {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// newRoundScheduler creates a RoundScheduler backed by the data database
+func newRoundScheduler(db database.Database, log *logger.Logger) *RoundScheduler {
+	return &RoundScheduler{dao: dao.New(db), logger: log}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// advanceGroup opens today's round for a group when eligible
+func (rs *RoundScheduler) advanceGroup(ctx context.Context, g *models.Group) {
 	roundDate := today()
-	if cur, _ := s.d.GetCurrentRound(ctx, g.ID, roundDate); cur != nil {
+	if cur, _ := rs.dao.GetCurrentRound(ctx, g.ID, roundDate); cur != nil {
 		return
 	}
-	// close yesterday's round if still open
+
 	yesterday := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
-	if prev, _ := s.d.GetCurrentRound(ctx, g.ID, yesterday); prev != nil {
-		s.closeRound(ctx, prev)
+	if prev, _ := rs.dao.GetCurrentRound(ctx, g.ID, yesterday); prev != nil {
+		rs.closeRound(ctx, prev)
 	}
-	count, err := s.d.CountGroupMembers(ctx, g.ID)
+
+	count, err := rs.dao.CountGroupMembers(ctx, g.ID)
 	if err != nil || count < 2 {
 		return
 	}
-	picker, err := s.pickMember(ctx, g.ID)
+
+	picker, err := rs.pickMember(ctx, g.ID)
 	if err != nil || picker == nil {
 		return
 	}
-	_ = s.d.IncrementTimesPicked(ctx, picker.ID)
+
+	_ = rs.dao.IncrementTimesPicked(ctx, picker.ID)
 	round := &models.Round{
-		GroupID: g.ID, RoundDate: roundDate, PickerUserID: picker.UserID,
-		Status: models.RoundAwaitingWord,
+		GroupID:      g.ID,
+		RoundDate:    roundDate,
+		PickerUserID: picker.UserID,
+		Status:       models.RoundAwaitingWord,
 	}
-	if err := s.d.CreateRound(ctx, round); err != nil {
-		s.logger.Error().Err(err).Str("group", g.ID).Msg("create round")
+	if err := rs.dao.CreateRound(ctx, round); err != nil {
+		rs.logger.Error().Err(err).Str("group", g.ID).Msg("create round")
 	}
 }
 
-func (s *RoundScheduler) pickMember(ctx context.Context, groupID string) (*models.GroupMember, error) {
-	pool, err := s.d.MembersWithMinPicks(ctx, groupID)
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// pickMember chooses a random member from those picked least often
+func (rs *RoundScheduler) pickMember(ctx context.Context, groupID string) (*models.GroupMember, error) {
+	pool, err := rs.dao.MembersWithMinPicks(ctx, groupID)
 	if err != nil || len(pool) == 0 {
 		return nil, err
 	}
+
 	return pool[rand.Intn(len(pool))], nil
 }
 
-func (s *RoundScheduler) closeRound(ctx context.Context, r *models.Round) {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// closeRound finalizes a stale round from a previous day
+func (rs *RoundScheduler) closeRound(ctx context.Context, r *models.Round) {
 	switch r.Status {
 	case models.RoundAwaitingWord:
 		r.Status = models.RoundSkipped
-		_ = s.d.UpdateRound(ctx, r)
+		_ = rs.dao.UpdateRound(ctx, r)
 	case models.RoundActive:
-		s.completeRound(ctx, r)
+		rs.completeRound(ctx, r)
 	}
 }
 
-func (s *RoundScheduler) CheckCompletionAll() {
-	ctx := context.Background()
-	rounds, err := s.d.ListActiveRounds(ctx)
-	if err != nil {
-		return
-	}
-	for _, r := range rounds {
-		if r.Status != models.RoundActive {
-			continue
-		}
-		if s.allGuessersDone(ctx, r) {
-			s.completeRound(ctx, r)
-		}
-	}
-}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (s *RoundScheduler) allGuessersDone(ctx context.Context, r *models.Round) bool {
-	members, _ := s.d.ListGroupMembers(ctx, r.GroupID)
-	guesses, _ := s.d.ListGuessesForRound(ctx, r.ID)
-	done := 0
-	needed := 0
-	for _, m := range members {
-		if m.UserID == r.PickerUserID {
-			continue
-		}
-		needed++
-		for _, g := range guesses {
-			if g.UserID == m.UserID && g.Finished {
-				done++
-				break
-			}
-		}
-	}
-	return needed > 0 && done >= needed
-}
-
-func (s *RoundScheduler) completeRound(ctx context.Context, r *models.Round) {
-	guesses, _ := s.d.ListGuessesForRound(ctx, r.ID)
+// completeRound marks unfinished guesses done and sets the round to completed
+func (rs *RoundScheduler) completeRound(ctx context.Context, r *models.Round) {
+	guesses, _ := rs.dao.ListGuessesForRound(ctx, r.ID)
 	for _, g := range guesses {
 		if g.Finished {
 			continue
 		}
+
 		g.Finished = true
-		_ = s.d.UpdateGuess(ctx, g)
+		_ = rs.dao.UpdateGuess(ctx, g)
 	}
+
 	r.Status = models.RoundCompleted
-	_ = s.d.UpdateRound(ctx, r)
+	_ = rs.dao.UpdateRound(ctx, r)
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// today returns the current calendar date used as the round key
+func today() string {
+	return time.Now().Format("2006-01-02")
+}

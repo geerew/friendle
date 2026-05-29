@@ -96,13 +96,10 @@ func New(ctx context.Context, config *Config) (*App, error) {
 		return nil, fmt.Errorf("failed to load dictionary: %w", err)
 	}
 
-	cronConfig := &cron.CronConfig{
-		DataDb:  dbManager.DataDb,
-		FS:      fs,
-		DataDir: config.DataDir,
-		Logger:  appLogger.WithComponent(string(ComponentCron)),
-	}
-	cronScheduler := cron.NewCronScheduler(cronConfig)
+	cronScheduler := cron.New(&cron.Config{
+		DataDb: dbManager.DataDb,
+		Logger: appLogger.WithComponent(string(ComponentCron)),
+	})
 
 	application := &App{
 		Logger:     appLogger,
