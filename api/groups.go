@@ -342,7 +342,8 @@ func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status types.JoinRequestS
 		return errorResponse(c, fiber.StatusNotFound, "Request not found", nil)
 	}
 
-	if err := r.appDao.UpdateJoinRequest(ctx, jr.ID, status); err != nil {
+	jr.Status = status
+	if err := r.appDao.UpdateJoinRequest(ctx, jr); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Update failed", err)
 	}
 

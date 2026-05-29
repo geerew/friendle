@@ -1,14 +1,11 @@
 package dao
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
-	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -118,47 +115,6 @@ func (dao *DAO) BulkUpdateSessions(ctx context.Context, sessions []*models.Sessi
 
 	_, err := updateGeneric(ctx, dao, *builderOpts)
 	return err
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// UpdateSessionRoleForUser updates the role for all sessions belonging to a user
-func (dao *DAO) UpdateSessionRoleForUser(ctx context.Context, userID string, newRole types.SiteRole) error {
-	if userID == "" {
-		return utils.ErrUserId
-	}
-
-	opts := NewOptions().WithWhere(squirrel.Eq{models.SESSION_TABLE_USER_ID: userID})
-
-	sessions, err := dao.ListSessions(ctx, opts)
-	if err != nil {
-		return err
-	}
-
-	if len(sessions) == 0 {
-		return nil
-	}
-
-	var updatedSessions []*models.Session
-	for _, session := range sessions {
-		var values map[string]interface{}
-		buf := bytes.NewBuffer(session.Data)
-		if err := gob.NewDecoder(buf).Decode(&values); err != nil {
-			continue
-		}
-
-		values["role"] = newRole.String()
-
-		var out bytes.Buffer
-		if err := gob.NewEncoder(&out).Encode(values); err != nil {
-			continue
-		}
-
-		session.Data = out.Bytes()
-		updatedSessions = append(updatedSessions, session)
-	}
-
-	return dao.BulkUpdateSessions(ctx, updatedSessions)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -131,6 +131,10 @@ func (dao *DAO) SearchGroupSummaries(ctx context.Context, q string, dbOpts *Opti
 
 // UpdateGroup updates mutable group fields
 func (dao *DAO) UpdateGroup(ctx context.Context, g *models.Group) error {
+	if g.ID == "" {
+		return utils.ErrId
+	}
+
 	g.RefreshUpdatedAt()
 
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: g.ID})

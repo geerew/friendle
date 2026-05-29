@@ -61,15 +61,19 @@ func (dao *DAO) ListJoinRequests(ctx context.Context, dbOpts *Options) ([]*model
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateJoinRequest updates the status of a join request
-func (dao *DAO) UpdateJoinRequest(ctx context.Context, id string, status types.JoinRequestStatus) error {
-	now := types.NowDateTime().String()
-	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})
+// UpdateJoinRequest updates mutable join request fields
+func (dao *DAO) UpdateJoinRequest(ctx context.Context, r *models.GroupJoinRequest) error {
+	if r.ID == "" {
+		return utils.ErrId
+	}
 
+	r.RefreshUpdatedAt()
+
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: r.ID})
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
 		WithData(map[string]interface{}{
-			models.JOIN_REQUEST_STATUS: status,
-			models.BASE_UPDATED_AT:     now,
+			models.JOIN_REQUEST_STATUS: r.Status,
+			models.BASE_UPDATED_AT:     r.UpdatedAt,
 		}).
 		SetDbOpts(dbOpts)
 

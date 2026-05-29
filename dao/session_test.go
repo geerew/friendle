@@ -1,8 +1,6 @@
 package dao
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"testing"
 	"time"
@@ -11,7 +9,6 @@ import (
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/pagination"
-	"github.com/geerew/friendle/utils/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -353,58 +350,6 @@ func Test_BulkUpdateSessions(t *testing.T) {
 	t.Run("nil slice", func(t *testing.T) {
 		dao, ctx := setup(t)
 		require.ErrorIs(t, dao.BulkUpdateSessions(ctx, nil), utils.ErrNilPtr)
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func Test_UpdateSessionRoleForUser(t *testing.T) {
-	// Test successfully updating the session role for a user
-	t.Run("success", func(t *testing.T) {
-		dao, ctx := setup(t)
-
-		for i := range 3 {
-			session := &models.Session{
-				ID:      fmt.Sprintf("session-%d", i),
-				UserId:  "user-123",
-				Expires: time.Now().Add(24 * time.Hour).Unix(),
-			}
-
-			// Set the user role in the session data
-			values := map[string]interface{}{
-				"role": types.SiteRoleUser.String(),
-			}
-
-			var out bytes.Buffer
-			require.NoError(t, gob.NewEncoder(&out).Encode(values))
-			session.Data = out.Bytes()
-
-			require.NoError(t, dao.CreateOrReplaceSession(ctx, session))
-
-			time.Sleep(1 * time.Millisecond)
-		}
-
-		require.NoError(t, dao.UpdateSessionRoleForUser(ctx, "user-123", types.SiteRoleAdmin))
-
-		records, err := dao.ListSessions(ctx, nil)
-		require.Nil(t, err)
-		require.Len(t, records, 3)
-
-		for _, record := range records {
-
-			buf := bytes.NewBuffer(record.Data)
-			var values map[string]interface{}
-			require.NoError(t, gob.NewDecoder(buf).Decode(&values))
-
-			require.Equal(t, types.SiteRoleAdmin.String(), values["role"], "Role should be updated to admin")
-		}
-	})
-
-	// Test error due to invalid user ID
-	t.Run("invalid user ID", func(t *testing.T) {
-		dao, ctx := setup(t)
-
-		require.ErrorIs(t, dao.UpdateSessionRoleForUser(ctx, "", "admin"), utils.ErrUserId)
 	})
 }
 

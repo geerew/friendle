@@ -6,7 +6,6 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
-	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,11 +75,25 @@ func (dao *DAO) DeleteGroupMembers(ctx context.Context, dbOpts *Options) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// IncrementTimesPicked bumps the picker count for a member
-func (dao *DAO) IncrementTimesPicked(ctx context.Context, memberID string) error {
-	now := types.NowDateTime().String()
-	sql := `UPDATE group_members SET times_picked = times_picked + 1, updated_at = ? WHERE id = ?`
-	_, err := dao.db.ExecContext(ctx, sql, now, memberID)
+// UpdateGroupMember updates mutable group member fields
+func (dao *DAO) UpdateGroupMember(ctx context.Context, m *models.GroupMember) error {
+	if m.ID == "" {
+		return utils.ErrId
+	}
+
+	m.RefreshUpdatedAt()
+
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: m.ID})
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
+		WithData(map[string]interface{}{
+			models.GROUP_MEMBER_GROUP_ROLE:   m.GroupRole,
+			models.GROUP_MEMBER_TIMES_PICKED: m.TimesPicked,
+			models.GROUP_MEMBER_PICKER_SKIPS: m.PickerSkips,
+			models.BASE_UPDATED_AT:           m.UpdatedAt,
+		}).
+		SetDbOpts(dbOpts)
+
+	_, err := updateGeneric(ctx, dao, *builderOpts)
 
 	return err
 }

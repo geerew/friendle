@@ -5,6 +5,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,6 +62,10 @@ func (dao *DAO) ListRoundParticipations(ctx context.Context, dbOpts *Options) ([
 
 // UpdateRoundParticipation updates mutable participation fields
 func (dao *DAO) UpdateRoundParticipation(ctx context.Context, p *models.RoundParticipation) error {
+	if p.ID == "" {
+		return utils.ErrId
+	}
+
 	p.RefreshUpdatedAt()
 
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: p.ID})

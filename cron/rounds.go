@@ -68,7 +68,8 @@ func (rs *RoundScheduler) advanceGroup(ctx context.Context, g *models.Group) {
 		return
 	}
 
-	_ = rs.dao.IncrementTimesPicked(ctx, picker.ID)
+	picker.TimesPicked++
+	_ = rs.dao.UpdateGroupMember(ctx, picker)
 	round := &models.Round{
 		GroupID:      g.ID,
 		RoundDate:    roundDate,

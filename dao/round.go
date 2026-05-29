@@ -5,6 +5,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -63,19 +64,24 @@ func (dao *DAO) ListRounds(ctx context.Context, dbOpts *Options) ([]*models.Roun
 
 // UpdateRound updates mutable round fields
 func (dao *DAO) UpdateRound(ctx context.Context, r *models.Round) error {
+	if r.ID == "" {
+		return utils.ErrId
+	}
+
 	r.RefreshUpdatedAt()
 
-	data := map[string]interface{}{
-		models.ROUND_STATUS:    r.Status,
-		models.BASE_UPDATED_AT: r.UpdatedAt,
-	}
+	var wordPlain interface{}
 	if r.WordPlain != nil {
-		data[models.ROUND_WORD_PLAIN] = *r.WordPlain
+		wordPlain = *r.WordPlain
 	}
 
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: r.ID})
 	builderOpts := newBuilderOptions(models.ROUND_TABLE).
-		WithData(data).
+		WithData(map[string]interface{}{
+			models.ROUND_STATUS:     r.Status,
+			models.ROUND_WORD_PLAIN: wordPlain,
+			models.BASE_UPDATED_AT:  r.UpdatedAt,
+		}).
 		SetDbOpts(dbOpts)
 
 	_, err := updateGeneric(ctx, dao, *builderOpts)

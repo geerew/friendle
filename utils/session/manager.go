@@ -1,10 +1,15 @@
 package session
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/database"
+	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
 	fs "github.com/gofiber/fiber/v2/middleware/session"
@@ -101,5 +106,40 @@ func (s *SessionManager) DeleteUserSessions(id string) error {
 
 // UpdateSessionRoleForUser updates the role for all sessions belonging to a user
 func (s *SessionManager) UpdateSessionRoleForUser(userID string, newRole types.SiteRole) error {
-	return s.dao.UpdateSessionRoleForUser(context.Background(), userID, newRole)
+	if userID == "" {
+		return utils.ErrUserId
+	}
+
+	ctx := context.Background()
+	sessions, err := s.dao.ListSessions(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		models.SESSION_TABLE_USER_ID: userID,
+	}))
+	if err != nil {
+		return err
+	}
+
+	if len(sessions) == 0 {
+		return nil
+	}
+
+	updatedSessions := make([]*models.Session, 0, len(sessions))
+	for _, session := range sessions {
+		var values map[string]interface{}
+		buf := bytes.NewBuffer(session.Data)
+		if err := gob.NewDecoder(buf).Decode(&values); err != nil {
+			continue
+		}
+
+		values["role"] = newRole.String()
+
+		var out bytes.Buffer
+		if err := gob.NewEncoder(&out).Encode(values); err != nil {
+			continue
+		}
+
+		session.Data = out.Bytes()
+		updatedSessions = append(updatedSessions, session)
+	}
+
+	return s.dao.BulkUpdateSessions(ctx, updatedSessions)
 }
