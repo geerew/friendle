@@ -23,7 +23,6 @@ func (dao *DAO) CreateGroup(ctx context.Context, g *models.Group) error {
 	g.RefreshUpdatedAt()
 	return createGeneric(ctx, dao, *newBuilderOptions(models.GROUP_TABLE).WithData(map[string]interface{}{
 		models.BASE_ID: g.ID, "name": g.Name, "created_by": g.CreatedBy,
-		"interval_hours": g.IntervalHours, "timezone": g.Timezone,
 		models.BASE_CREATED_AT: g.CreatedAt, models.BASE_UPDATED_AT: g.UpdatedAt,
 	}))
 }
@@ -62,7 +61,7 @@ func (dao *DAO) SearchGroups(ctx context.Context, q string) ([]*models.Group, er
 func (dao *DAO) UpdateGroup(ctx context.Context, g *models.Group) error {
 	g.RefreshUpdatedAt()
 	_, err := updateGeneric(ctx, dao, *newBuilderOptions(models.GROUP_TABLE).WithData(map[string]interface{}{
-		"name": g.Name, "interval_hours": g.IntervalHours, "timezone": g.Timezone,
+		"name": g.Name,
 		models.BASE_UPDATED_AT: g.UpdatedAt,
 	}).SetDbOpts(NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: g.ID})))
 

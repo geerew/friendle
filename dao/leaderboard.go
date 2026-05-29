@@ -2,14 +2,22 @@ package dao
 
 import (
 	"context"
-
-	"github.com/geerew/friendle/models"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// LeaderboardEntry is a computed score row for a group member
+type LeaderboardEntry struct {
+	UserID       string `db:"user_id"`
+	DisplayName  string `db:"display_name"`
+	TotalScore   int    `db:"total_score"`
+	RoundsPlayed int    `db:"rounds_played"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // ListLeaderboardEntries returns scored members for a group
-func (dao *DAO) ListLeaderboardEntries(ctx context.Context, groupID string) ([]*models.LeaderboardEntry, error) {
+func (dao *DAO) ListLeaderboardEntries(ctx context.Context, groupID string) ([]*LeaderboardEntry, error) {
 	query := `
 SELECT u.id AS user_id, u.display_name, COALESCE(SUM(rp.score), 0) AS total_score,
        COUNT(rp.id) AS rounds_played
@@ -27,9 +35,9 @@ ORDER BY total_score DESC`
 	}
 	defer rows.Close()
 
-	var out []*models.LeaderboardEntry
+	var out []*LeaderboardEntry
 	for rows.Next() {
-		entry := &models.LeaderboardEntry{}
+		entry := &LeaderboardEntry{}
 		if err := rows.Scan(&entry.UserID, &entry.DisplayName, &entry.TotalScore, &entry.RoundsPlayed); err != nil {
 			return nil, err
 		}

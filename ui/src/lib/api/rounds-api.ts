@@ -1,13 +1,13 @@
 import { apiFetch, parseJson } from './fetch';
 import type {
-	CurrentRound,
+	Round,
 	RevealResponse,
 	SubmitGuessRequest,
 	SubmitGuessResponse,
 	SubmitWordRequest
 } from '$lib/types/round';
 
-export async function getCurrentRound(groupId: string): Promise<CurrentRound> {
+export async function getCurrentRound(groupId: string): Promise<Round> {
 	const response = await apiFetch(`/api/groups/${groupId}/rounds/current`);
 	return parseJson(response);
 }

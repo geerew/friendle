@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -55,49 +54,48 @@ func (r *Router) listGroupRounds(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getGroupRoundByID returns a round with role-filtered player data
+// getGroupRoundByID returns a round with role-filtered participations
 func (r *Router) getGroupRoundByID(c *fiber.Ctx) error {
 	p, ctx := principalAndCtx(c)
 	groupID := c.Params("id")
 	roundID := c.Params("roundId")
 
-	round, err := r.appDao.GetRound(ctx, roundID)
+	siteAdmin, groupAdmin := r.roundViewerAccess(ctx, groupID, p)
+	round, err := r.appDao.GetRoundLoaded(ctx, roundID, dao.RoundLoad{
+		Participations: true,
+		Guesses:        true,
+		Users:          true,
+	})
 	if err != nil || round == nil || round.GroupID != groupID {
 		return errorResponse(c, fiber.StatusNotFound, "Round not found", nil)
 	}
 
-	gr, err := r.appDao.GetGroupRound(ctx, roundID, dao.RoundDetailLoad{
-		Participations: true,
-		Guesses:        true,
-		Picker:         dao.RoundIsRevealed(round.Status),
-	})
-	if err != nil {
-		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
-	}
-
-	return c.JSON(groupRoundDetailResponseHelper(gr, p.UserID, false))
+	return c.JSON(roundResponseHelper(round, p.UserID, siteAdmin, groupAdmin))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getGroupRound returns the current round state for the caller
+// getGroupRound returns the current round for a group
 func (r *Router) getGroupRound(c *fiber.Ctx) error {
 	p, ctx := principalAndCtx(c)
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
+	siteAdmin, groupAdmin := r.roundViewerAccess(ctx, groupID, p)
 	round, err := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
 	if err != nil || round == nil {
-		return c.JSON(groupRoundResponseHelper(nil, nil, nil, p.UserID))
+		return c.JSON(roundResponseHelper(nil, p.UserID, siteAdmin, groupAdmin))
 	}
 
-	participation, _ := r.appDao.GetRoundParticipation(ctx, round.ID, p.UserID)
-	var guesses []*models.Guess
-	if participation != nil {
-		guesses, _ = r.appDao.ListGuessesForRoundUser(ctx, round.ID, p.UserID)
+	if err := r.appDao.LoadRound(ctx, round, dao.RoundLoad{
+		Participations: true,
+		Guesses:        true,
+		Users:          true,
+	}); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
 	}
 
-	return c.JSON(groupRoundResponseHelper(round, participation, guesses, p.UserID))
+	return c.JSON(roundResponseHelper(round, p.UserID, siteAdmin, groupAdmin))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -201,23 +199,23 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 	answer := *round.WordPlain
 	result := wordgame.Grade(word, answer)
 	won := wordgame.IsWin(result)
-	resultJSON, _ := json.Marshal(result)
 
 	guess := &models.Guess{
-		RoundID:       round.ID,
-		UserID:        p.UserID,
-		AttemptNumber: attempts + 1,
-		Word:          word,
-		Result:        string(resultJSON),
+		RoundID: round.ID,
+		UserID:  p.UserID,
+		Attempt: attempts + 1,
+		Word:    word,
+		Result:  wordgame.TileStates(result),
+		Outcome: types.GuessOutcome(wordgame.GuessOutcomeLabel(result)),
 	}
 	if err := r.appDao.CreateGuess(ctx, guess); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Guess failed", err)
 	}
 
 	participation.Solved = won
-	if won || guess.AttemptNumber >= 6 {
+	if won || guess.Attempt >= 6 {
 		participation.Finished = true
-		participation.Score = wordgame.ScoreForAttempt(guess.AttemptNumber, won)
+		participation.Score = wordgame.ScoreForAttempt(guess.Attempt, won)
 		now := time.Now().UTC().Format(time.RFC3339)
 		participation.CompletedAt = &now
 	}
@@ -230,7 +228,7 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 
 	return c.JSON(&groupRoundGuessResponse{
 		Result:   result,
-		Attempt:  guess.AttemptNumber,
+		Attempt:  guess.Attempt,
 		Won:      won,
 		Finished: participation.Finished,
 	})
@@ -253,47 +251,34 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Round not finished", nil)
 	}
 
-	gr, err := r.appDao.GetGroupRound(ctx, round.ID, dao.RoundDetailLoad{
+	round, err := r.appDao.GetRoundLoaded(ctx, round.ID, dao.RoundLoad{
 		Participations: true,
 		Guesses:        false,
-		Picker:         true,
+		Users:          true,
 	})
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Load failed", err)
 	}
 
-	return c.JSON(groupRoundRevealResponseHelper(gr))
+	resp := groupRoundRevealResponseHelper(round)
+	if round.Picker != nil {
+		resp.PickerDisplayName = round.Picker.DisplayName
+	}
+
+	return c.JSON(resp)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// roundSummary returns a summary of the current round for a group member
-func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID string) *groupRoundSummaryResponse {
-	roundDate := time.Now().Format("2006-01-02")
-	round, _ := r.appDao.GetCurrentRound(ctx, g.ID, roundDate)
-	if round == nil {
-		return &groupRoundSummaryResponse{Status: "none"}
+// roundViewerAccess returns site-admin and group-admin flags for round filtering
+func (r *Router) roundViewerAccess(ctx context.Context, groupID string, p types.Principal) (bool, bool) {
+	siteAdmin := p.SiteRole == types.SiteRoleAdmin
+	groupAdmin := false
+	if m, _ := r.appDao.GetGroupMember(ctx, groupID, p.UserID); m != nil {
+		groupAdmin = m.GroupRole == types.GroupRoleAdmin
 	}
 
-	m, _ := r.appDao.GetGroupMember(ctx, g.ID, userID)
-	yourRole := "guesser"
-	if round.PickerUserID == userID {
-		yourRole = "picker"
-	}
-
-	out := &groupRoundSummaryResponse{
-		Status:   string(round.Status),
-		YourRole: yourRole,
-	}
-	if dao.RoundIsRevealed(round.Status) {
-		out.CanReveal = true
-	}
-
-	if m != nil {
-		out.GroupRole = m.GroupRole
-	}
-
-	return out
+	return siteAdmin, groupAdmin
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

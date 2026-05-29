@@ -21,8 +21,6 @@ CREATE TABLE groups (
     id              TEXT PRIMARY KEY NOT NULL,
     name            TEXT NOT NULL,
     created_by      TEXT NOT NULL,
-    interval_hours  INTEGER NOT NULL DEFAULT 24,
-    timezone        TEXT NOT NULL DEFAULT 'UTC',
     created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     updated_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     FOREIGN KEY (created_by) REFERENCES users (id)
@@ -89,13 +87,14 @@ CREATE TABLE guesses (
     id              TEXT PRIMARY KEY NOT NULL,
     round_id        TEXT NOT NULL,
     user_id         TEXT NOT NULL,
-    attempt_number  INTEGER NOT NULL CHECK(attempt_number BETWEEN 1 AND 6),
+    attempt         INTEGER NOT NULL CHECK(attempt BETWEEN 1 AND 6),
     word            TEXT NOT NULL,
     result          TEXT NOT NULL,
+    outcome         TEXT NOT NULL CHECK(outcome IN ('correct', 'partial', 'incorrect')),
     created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     FOREIGN KEY (round_id) REFERENCES rounds (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    UNIQUE(round_id, user_id, attempt_number)
+    UNIQUE(round_id, user_id, attempt)
 );
 
 CREATE INDEX idx_sessions_expires ON sessions(expires);

@@ -4,13 +4,13 @@
 	import { getGroup } from '$lib/api/groups-api';
 	import { getCurrentRound, revealWord, submitGuess } from '$lib/api/rounds-api';
 	import { AppShell, Keyboard, TileGrid } from '$lib/components';
-	import type { GuessRow } from '$lib/types/round';
-	import { currentRoundToParticipation } from '$lib/types/round';
+	import type { Round } from '$lib/types/round';
+	import { participationToBoard } from '$lib/types/round';
 	import { buildLetterStates, normalizeWord } from '$lib/wordle';
 
 	const groupId = $derived(page.params.id ?? '');
 
-	let rows = $state<GuessRow[]>([]);
+	let rows = $state<import('$lib/types/round').GuessRow[]>([]);
 	let currentWord = $state('');
 	let currentRow = $state(0);
 	let finished = $state(false);
@@ -34,7 +34,7 @@
 		error = null;
 
 		try {
-			const round = await getCurrentRound(groupId);
+			const round: Round = await getCurrentRound(groupId);
 			const group = await getGroup(groupId);
 			groupName = group.name;
 			roundActive = round?.status === 'active';
@@ -44,7 +44,8 @@
 				return;
 			}
 
-			applyParticipation(currentRoundToParticipation(round));
+			const board = participationToBoard(round.participations?.[0] ?? null);
+			applyBoard(board);
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Failed to load game';
 		} finally {
@@ -52,11 +53,11 @@
 		}
 	}
 
-	function applyParticipation(participation: ReturnType<typeof currentRoundToParticipation>): void {
-		rows = participation?.rows ?? [];
+	function applyBoard(board: { rows: import('$lib/types/round').GuessRow[]; finished: boolean; solved: boolean }): void {
+		rows = board.rows;
 		currentRow = rows.length;
-		finished = participation?.finished ?? false;
-		solved = participation?.solved ?? false;
+		finished = board.finished;
+		solved = board.solved;
 		currentWord = '';
 	}
 
@@ -91,7 +92,7 @@
 		try {
 			const response = await submitGuess(groupId, { word: currentWord });
 			const round = await getCurrentRound(groupId);
-			applyParticipation(currentRoundToParticipation(round));
+			applyBoard(participationToBoard(round.participations?.[0] ?? null));
 
 			if (response.finished && !response.won) {
 				try {

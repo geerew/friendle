@@ -95,7 +95,7 @@ func TestCreateGroupRoundGuess(t *testing.T) {
 	createTestUser(t, router, ctx, picker)
 	createTestUser(t, router, ctx, guesser)
 
-	group := &models.Group{Name: "Guess Group", CreatedBy: picker.ID, IntervalHours: 24, Timezone: "UTC"}
+	group := &models.Group{Name: "Guess Group", CreatedBy: picker.ID}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
 	require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
 		GroupID: group.ID, UserID: picker.ID, GroupRole: types.GroupRoleAdmin,

@@ -158,9 +158,6 @@ return that
 if req.Name != nil {
 	g.Name = strings.TrimSpace(*req.Name)
 }
-if req.IntervalHours != nil {
-	g.IntervalHours = *req.IntervalHours
-}
 ```
 
 **Prefer:**
@@ -176,10 +173,6 @@ return that
 ```go
 if req.Name != nil {
 	g.Name = strings.TrimSpace(*req.Name)
-}
-
-if req.IntervalHours != nil {
-	g.IntervalHours = *req.IntervalHours
 }
 ```
 

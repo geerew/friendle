@@ -9,8 +9,6 @@
 	const groupId = $derived(page.params.id ?? '');
 
 	let name = $state('');
-	let intervalHours = $state(24);
-	let timezone = $state('UTC');
 	let myRole = $state<string | null>(null);
 	let loading = $state(true);
 	let saving = $state(false);
@@ -28,8 +26,6 @@
 		try {
 			const group = await getGroup(groupId);
 			name = group.name;
-			intervalHours = group.intervalHours;
-			timezone = group.timezone;
 			myRole = group.myRole ?? null;
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Failed to load group';
@@ -45,7 +41,7 @@
 		message = null;
 
 		try {
-			await updateGroup(groupId, { name, intervalHours, timezone });
+			await updateGroup(groupId, { name });
 			message = 'Settings saved';
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Failed to save settings';
@@ -94,21 +90,6 @@
 					maxlength={64}
 					disabled={myRole !== 'group_admin'}
 				/>
-			</Field>
-
-			<Field label="Round interval (hours)">
-				<Input
-					type="number"
-					min={1}
-					max={168}
-					bind:value={intervalHours}
-					required
-					disabled={myRole !== 'group_admin'}
-				/>
-			</Field>
-
-			<Field label="Timezone">
-				<Input bind:value={timezone} required disabled={myRole !== 'group_admin'} />
 			</Field>
 
 			{#if message}

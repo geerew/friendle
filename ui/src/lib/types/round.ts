@@ -1,6 +1,8 @@
-import type { RoundStatus } from './group';
+import type { GroupRole, JoinRequest, RoundStatus } from './group';
 
 export type TileState = 'empty' | 'correct' | 'present' | 'absent' | 'tbd';
+
+export type GuessOutcome = 'correct' | 'partial' | 'incorrect';
 
 export type GuessRow = {
 	letters: string;
@@ -10,32 +12,39 @@ export type GuessRow = {
 export type ApiGuessRow = {
 	word: string;
 	result: TileState[];
-};
-
-export type CurrentRound = {
-	roundId?: string;
-	status: RoundStatus | 'none';
-	yourRole?: string;
-	attemptsUsed?: number;
-	finished?: boolean;
-	solved?: boolean;
-	rows?: ApiGuessRow[];
+	outcome: GuessOutcome;
 };
 
 export type RoundParticipation = {
-	attemptsUsed: number;
+	id: string;
+	userId: string;
+	displayName?: string;
 	solved: boolean;
 	finished: boolean;
-	score?: number;
-	rows: GuessRow[];
+	score: number;
+	firstGuessAt?: string;
+	completedAt?: string;
+	guesses?: ApiGuessRow[];
+};
+
+export type Round = {
+	id?: string;
+	groupId?: string;
+	roundDate?: string;
+	status: RoundStatus | 'none';
+	pickerUserId?: string;
+	word?: string;
+	yourRole?: string;
+	participations?: RoundParticipation[];
 };
 
 export type Guess = {
 	id: string;
 	roundId: string;
 	userId: string;
-	attemptNumber: number;
+	attempt: number;
 	word: string;
+	outcome: GuessOutcome;
 	result: TileState[];
 };
 
@@ -76,13 +85,6 @@ export type RoundSummary = {
 	word?: string;
 };
 
-export type LeaderboardEntry = {
-	userId: string;
-	displayName: string;
-	totalScore: number;
-	roundsPlayed: number;
-};
-
 export function mapApiRows(apiRows: ApiGuessRow[] | undefined): GuessRow[] {
 	if (!apiRows) {
 		return [];
@@ -94,15 +96,26 @@ export function mapApiRows(apiRows: ApiGuessRow[] | undefined): GuessRow[] {
 	}));
 }
 
-export function currentRoundToParticipation(round: CurrentRound | null): RoundParticipation | null {
-	if (!round || round.status === 'none') {
+export function participationFromRound(round: Round | null, userId: string): RoundParticipation | null {
+	const participation = round?.participations?.find((p) => p.userId === userId);
+	if (!participation) {
 		return null;
 	}
 
 	return {
-		attemptsUsed: round.attemptsUsed ?? 0,
-		solved: round.solved ?? false,
-		finished: round.finished ?? false,
-		rows: mapApiRows(round.rows)
+		...participation,
+		guesses: participation.guesses
+	};
+}
+
+export function participationToBoard(participation: RoundParticipation | null): {
+	rows: GuessRow[];
+	finished: boolean;
+	solved: boolean;
+} {
+	return {
+		rows: mapApiRows(participation?.guesses),
+		finished: participation?.finished ?? false,
+		solved: participation?.solved ?? false
 	};
 }

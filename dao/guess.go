@@ -11,12 +11,14 @@ import (
 
 // CreateGuess inserts a single guess attempt row
 func (dao *DAO) CreateGuess(ctx context.Context, g *models.Guess) error {
-	g.RefreshId()
+	if g.ID == "" {
+		g.RefreshId()
+	}
 	g.RefreshCreatedAt()
 
 	return createGeneric(ctx, dao, *newBuilderOptions(models.GUESS_TABLE).WithData(map[string]interface{}{
 		models.BASE_ID: g.ID, "round_id": g.RoundID, "user_id": g.UserID,
-		"attempt_number": g.AttemptNumber, "word": g.Word, "result": g.Result,
+		"attempt": g.Attempt, "word": g.Word, "result": g.Result, "outcome": g.Outcome,
 		models.BASE_CREATED_AT: g.CreatedAt,
 	}))
 }
@@ -28,7 +30,7 @@ func (dao *DAO) GetGuess(ctx context.Context, roundID, userID string, attempt in
 	return getGeneric[models.Guess](ctx, dao, *newBuilderOptions(models.GUESS_TABLE).
 		WithColumns(models.GuessColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{
-			"round_id": roundID, "user_id": userID, "attempt_number": attempt,
+			"round_id": roundID, "user_id": userID, "attempt": attempt,
 		})).
 		WithLimit(1))
 }
@@ -40,7 +42,7 @@ func (dao *DAO) ListGuesses(ctx context.Context, dbOpts *Options) ([]*models.Gue
 	if dbOpts == nil {
 		dbOpts = NewOptions()
 	}
-	dbOpts = dbOpts.WithOrderBy("attempt_number ASC")
+	dbOpts = dbOpts.WithOrderBy("attempt ASC")
 
 	return listGeneric[models.Guess](ctx, dao, *newBuilderOptions(models.GUESS_TABLE).
 		WithColumns(models.GuessColumns()...).

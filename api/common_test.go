@@ -169,7 +169,7 @@ func createTestUserWithPassword(t *testing.T, router *Router, ctx context.Contex
 func createTestGroupWithMember(t *testing.T, router *Router, ctx context.Context, userID string, groupRole types.GroupRole, name string) *models.Group {
 	t.Helper()
 
-	group := &models.Group{Name: name, CreatedBy: userID, IntervalHours: 24, Timezone: "UTC"}
+	group := &models.Group{Name: name, CreatedBy: userID}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
 
 	groupMember := &models.GroupMember{

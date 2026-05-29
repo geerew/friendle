@@ -49,10 +49,8 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 	}
 
 	group := &models.Group{
-		Name:          strings.TrimSpace(req.Name),
-		CreatedBy:     principal.UserID,
-		IntervalHours: 24,
-		Timezone:      "UTC",
+		Name:      strings.TrimSpace(req.Name),
+		CreatedBy: principal.UserID,
 	}
 	if err := r.appDao.CreateGroup(ctx, group); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to create group", err)
@@ -133,38 +131,29 @@ func (r *Router) searchGroups(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getGroup returns group detail and round summary for a member
+// getGroup returns group settings, members, and join requests for a member
 func (r *Router) getGroup(c *fiber.Ctx) error {
 	principal, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
 	m, _ := r.appDao.GetGroupMember(ctx, groupID, principal.UserID)
 	role := types.GroupRoleUser
-	isAdmin := principal.SiteRole == types.SiteRoleAdmin
+	isSiteAdmin := principal.SiteRole == types.SiteRoleAdmin
 	if m != nil {
 		role = m.GroupRole
 	}
 
-	load := dao.GroupDetailLoad{
-		Members:        true,
-		Leaderboard:    true,
-		CurrentRound:   true,
-		PreviousRounds: true,
-		RoundLimit:     10,
-	}
-	if isAdmin || (m != nil && m.GroupRole == types.GroupRoleAdmin) {
+	load := dao.GroupLoad{Members: true}
+	if isSiteAdmin || (m != nil && m.GroupRole == types.GroupRoleAdmin) {
 		load.JoinRequests = true
 	}
 
-	detail, err := r.appDao.GetGroupDetail(ctx, groupID, load)
-	if err != nil || detail == nil || detail.Group == nil {
+	group, err := r.appDao.GetGroupLoaded(ctx, groupID, load)
+	if err != nil || group == nil {
 		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
 	}
 
-	resp := groupResponseHelper(detail.Group, role)
-	resp.Round = r.roundSummary(ctx, detail.Group, principal.UserID)
-
-	return c.JSON(resp)
+	return c.JSON(groupResponseHelper(group, role))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -186,10 +175,6 @@ func (r *Router) updateGroup(c *fiber.Ctx) error {
 
 	if req.Name != nil {
 		g.Name = strings.TrimSpace(*req.Name)
-	}
-
-	if req.IntervalHours != nil {
-		g.IntervalHours = *req.IntervalHours
 	}
 
 	if err := r.appDao.UpdateGroup(ctx, g); err != nil {

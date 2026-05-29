@@ -38,7 +38,7 @@ func TestSearchGroupsOrder(t *testing.T) {
 	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	for _, name := range []string{"1", "10", "11", "2"} {
-		group := &models.Group{Name: name, CreatedBy: "user", IntervalHours: 24, Timezone: "UTC"}
+		group := &models.Group{Name: name, CreatedBy: "user"}
 		require.NoError(t, router.appDao.CreateGroup(ctx, group))
 		time.Sleep(time.Millisecond)
 	}
@@ -69,7 +69,7 @@ func TestSearchGroupsOrder(t *testing.T) {
 func TestCancelJoinRequest(t *testing.T) {
 	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
-	group := &models.Group{Name: "Join Me", CreatedBy: "user", IntervalHours: 24, Timezone: "UTC"}
+	group := &models.Group{Name: "Join Me", CreatedBy: "user"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
 
 	createReq, err := http.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/join-requests", nil)
@@ -106,7 +106,7 @@ func TestCreateJoinRequestAuthorization(t *testing.T) {
 	}
 	require.NoError(t, router.appDao.CreateUser(ctx, other))
 
-	group := &models.Group{Name: "Shared", CreatedBy: other.ID, IntervalHours: 24, Timezone: "UTC"}
+	group := &models.Group{Name: "Shared", CreatedBy: other.ID}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
 
 	// Test error due to a regular user requesting join for another user
@@ -152,7 +152,7 @@ func TestAdminAddGroupMember(t *testing.T) {
 	}
 	require.NoError(t, router.appDao.CreateUser(ctx, member))
 
-	group := &models.Group{Name: "Admin Add", CreatedBy: "admin", IntervalHours: 24, Timezone: "UTC"}
+	group := &models.Group{Name: "Admin Add", CreatedBy: "admin"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
 
 	// Test error due to site admin attempting a join request for another user
@@ -232,7 +232,7 @@ func TestGetGroup(t *testing.T) {
 		require.NoError(t, json.Unmarshal(body, &resp))
 		require.Equal(t, group.ID, resp["id"])
 		require.Equal(t, "Detail Group", resp["name"])
-		require.NotNil(t, resp["round"])
+		require.NotNil(t, resp["members"])
 	})
 
 	// Test successfully fetching a group as site admin without membership

@@ -41,7 +41,6 @@
 	{:else if group}
 		<div class="rounded border border-border bg-bg-secondary px-4 py-3 text-sm text-text-muted">
 			<p>{formatMemberCount(group.memberCount ?? group.members?.length ?? 0)}</p>
-			<p>Round every {group.intervalHours}h ({group.timezone})</p>
 			{#if round}
 				<p class="mt-2 capitalize">Today: {round.status.replace('_', ' ')}</p>
 				{#if round.pickerUsername}

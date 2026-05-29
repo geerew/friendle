@@ -18,15 +18,15 @@ const (
 	ROUND_WORD_PLAIN     = "word_plain"
 	ROUND_STATUS         = "status"
 
-	ROUND_TABLE_ID              = ROUND_TABLE + "." + BASE_ID
-	ROUND_TABLE_CREATED_AT      = ROUND_TABLE + "." + BASE_CREATED_AT
-	ROUND_TABLE_UPDATED_AT      = ROUND_TABLE + "." + BASE_UPDATED_AT
-	ROUND_TABLE_GROUP_ID        = ROUND_TABLE + "." + ROUND_GROUP_ID
-	ROUND_TABLE_ROUND_DATE      = ROUND_TABLE + "." + ROUND_ROUND_DATE
-	ROUND_TABLE_PICKER_USER_ID  = ROUND_TABLE + "." + ROUND_PICKER_USER_ID
-	ROUND_TABLE_WORD_HASH       = ROUND_TABLE + "." + ROUND_WORD_HASH
-	ROUND_TABLE_WORD_PLAIN      = ROUND_TABLE + "." + ROUND_WORD_PLAIN
-	ROUND_TABLE_STATUS          = ROUND_TABLE + "." + ROUND_STATUS
+	ROUND_TABLE_ID             = ROUND_TABLE + "." + BASE_ID
+	ROUND_TABLE_CREATED_AT     = ROUND_TABLE + "." + BASE_CREATED_AT
+	ROUND_TABLE_UPDATED_AT     = ROUND_TABLE + "." + BASE_UPDATED_AT
+	ROUND_TABLE_GROUP_ID       = ROUND_TABLE + "." + ROUND_GROUP_ID
+	ROUND_TABLE_ROUND_DATE     = ROUND_TABLE + "." + ROUND_ROUND_DATE
+	ROUND_TABLE_PICKER_USER_ID = ROUND_TABLE + "." + ROUND_PICKER_USER_ID
+	ROUND_TABLE_WORD_HASH      = ROUND_TABLE + "." + ROUND_WORD_HASH
+	ROUND_TABLE_WORD_PLAIN     = ROUND_TABLE + "." + ROUND_WORD_PLAIN
+	ROUND_TABLE_STATUS         = ROUND_TABLE + "." + ROUND_STATUS
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,6 +41,7 @@ type Round struct {
 	WordPlain    *string           `db:"word_plain"`     // Mutable
 	Status       types.RoundStatus `db:"status"`         // Mutable
 
+	// Relations
 	Picker         *User                 `db:"-"`
 	Participations []*RoundParticipation `db:"-"`
 }
