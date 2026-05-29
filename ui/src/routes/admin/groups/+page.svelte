@@ -1,10 +1,25 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { listGroups } from '$lib/api/admin-api';
-	import { AppShell, DeleteGroup, ListRow, Pagination, RightChevronIcon, TrashIcon } from '$lib/components';
+	import {
+		AppShell,
+		DeleteGroup,
+		ListRow,
+		Pagination,
+		RightChevronIcon,
+		SortMenu,
+		TrashIcon
+	} from '$lib/components';
 	import { Button } from '$lib/components/ui';
 	import type { AdminGroupModel } from '$lib/models/admin-group-model';
+	import type { SortColumns, SortDirection } from '$lib/types/sort';
 	import { formatMemberCount } from '$lib/utils';
+
+	const sortColumns = [
+		{ label: 'Created', column: 'groups.created_at', asc: 'Oldest', desc: 'Newest' },
+		{ label: 'Name', column: 'groups.name', asc: 'A–Z', desc: 'Z–A' },
+		{ label: 'Members', column: 'member_count', asc: 'Fewest', desc: 'Most' }
+	] as const satisfies SortColumns;
 
 	let groups = $state<AdminGroupModel[]>([]);
 	let page = $state(1);
@@ -14,10 +29,14 @@
 	let error = $state<string | null>(null);
 	let deleteOpen = $state(false);
 	let groupToDelete = $state<AdminGroupModel | null>(null);
+	let selectedSortColumn = $state<(typeof sortColumns)[number]['column']>('groups.created_at');
+	let selectedSortDirection = $state<SortDirection>('desc');
 
 	$effect(() => {
 		page;
 		perPage;
+		selectedSortColumn;
+		selectedSortDirection;
 		void loadGroups();
 	});
 
@@ -26,7 +45,11 @@
 		error = null;
 
 		try {
-			const data = await listGroups({ page, perPage });
+			const data = await listGroups({
+				page,
+				perPage,
+				orderBy: `${selectedSortColumn} ${selectedSortDirection}`
+			});
 			groups = data.items;
 			totalItems = data.totalItems;
 		} catch (err) {
@@ -34,6 +57,10 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	function handleSortUpdate(): void {
+		page = 1;
 	}
 
 	function openDeleteGroup(group: AdminGroupModel): void {
@@ -75,6 +102,15 @@
 			{#if error}
 				<p class="text-sm text-error">{error}</p>
 			{/if}
+
+			<div class="flex justify-end">
+				<SortMenu
+					columns={[...sortColumns]}
+					bind:selectedColumn={selectedSortColumn}
+					bind:selectedDirection={selectedSortDirection}
+					onUpdate={handleSortUpdate}
+				/>
+			</div>
 
 			<div class="flex flex-col gap-3">
 				{#if groups.length === 0}

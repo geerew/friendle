@@ -16,4 +16,6 @@ export const AdminGroupPaginationSchema = object({
 
 export type AdminGroupPaginationModel = InferOutput<typeof AdminGroupPaginationSchema>;
 
-export type AdminGroupReqParams = PaginationReqParams;
+export type AdminGroupReqParams = PaginationReqParams & {
+	orderBy?: string;
+};

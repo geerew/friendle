@@ -4,6 +4,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -53,7 +54,9 @@ func (r *Router) adminListGroups(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
 
-	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
+	dbOpts := dao.NewOptions().
+		WithOrderBy(utils.StringSplit(c.Query("orderBy", ""), ",")...).
+		WithPagination(paginationFromCtx(c))
 	groups, err := r.appDao.ListAdminGroups(ctx, dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
