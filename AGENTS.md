@@ -26,7 +26,7 @@ See [README.md](README.md) for architecture, CLI commands, bootstrapping, and Do
 | `cron/` | Scheduled jobs (e.g. card cache warm) |
 | `utils/` | Shared packages (`cardcache`, `media`, `logger`, …) |
 | `ui/` | SvelteKit frontend |
-| `app/` | App-level wiring |
+| `app/` | App-level wiring (`Config`, bootstrap state, log components) |
 | `docker/` | Container build and compose docs |
 
 Packages under `utils/` (and similar modules) should use **`base.go`** as the module’s starting file and expose **`New`** as the constructor—not names like `NewCardCache`.
@@ -98,7 +98,7 @@ Separate logical sections with a blank line and this comment on its own line:
 ```
 
 Use it between types, vars, constructors, and major function groups—see
-`utils/cardcache/base.go` for the canonical pattern.
+`app/base.go` for the canonical pattern.
 
 **Always separate with a divider, even when items are closely related:**
 
@@ -233,6 +233,37 @@ func groupSearchResponsesFromRows(
 
 ```go
 func groupSearchResponsesFromRows(rows []*models.GroupSearchRow, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
+```
+
+**One-line function bodies**
+
+Do not put the entire function on one line—definition and body together—even for trivial
+methods. Give each function its own multi-line body and separate consecutive functions with
+a section divider (§1).
+
+**Avoid:**
+
+```go
+func (a *App) Close() error { return nil }
+
+func (a *App) IsBootstrapped() bool { return a.bootstrapped.Load() == 1 }
+func (a *App) SetBootstrapped()     { a.bootstrapped.Store(1) }
+```
+
+**Prefer:**
+
+```go
+// Close releases application resources
+func (a *App) Close() error {
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsBootstrapped reports whether the application has completed first-run setup
+func (a *App) IsBootstrapped() bool {
+	return a.bootstrapped.Load() == 1
+}
 ```
 
 **Visibility**

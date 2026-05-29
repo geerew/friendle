@@ -30,7 +30,15 @@ type testPrincipal struct {
 func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Context, *testPrincipal) {
 	t.Helper()
 
-	application := app.NewTestApp(t)
+	appConfig := &app.Config{
+		HttpAddr:     "127.0.0.1:9081",
+		DataDir:      t.TempDir(),
+		AppMode:      app.AppModeTest,
+		EnableSignup: true,
+	}
+	application, err := app.New(context.Background(), appConfig)
+	require.NoError(t, err)
+
 	principal := &testPrincipal{userID: id, role: role}
 
 	stack := testMiddleware(principal)
@@ -54,10 +62,6 @@ func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Conte
 		}
 
 		require.NoError(t, router.appDao.CreateUser(context.Background(), &user))
-
-		if role == types.UserRoleAdmin {
-			router.app.IsBootstrapped()
-		}
 	}
 
 	if id != "" {

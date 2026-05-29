@@ -43,7 +43,7 @@ var serveCmd = &cobra.Command{
 			Debug:        debug,
 		}
 
-		application, err := app.NewApp(ctx, appConfig)
+		application, err := app.New(ctx, appConfig)
 		if err != nil {
 			os.Stderr.WriteString("Failed to initialize app: " + err.Error() + "\n")
 			os.Exit(1)

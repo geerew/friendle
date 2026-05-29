@@ -134,8 +134,7 @@ func TestAuth_Bootstrap(t *testing.T) {
 		dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "admin"})
 		err := router.appDao.DeleteUsers(ctx, dbOpts)
 		require.NoError(t, err)
-
-		router.app.UnsetBootstrapped()
+		require.NoError(t, router.app.RefreshBootstrapped())
 
 		// Generate a bootstrap token using the app's data directory and filesystem
 		bootstrapToken, err := auth.GenerateBootstrapToken(router.app.Config.DataDir, router.app.FS)
@@ -164,8 +163,7 @@ func TestAuth_Bootstrap(t *testing.T) {
 		dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "admin"})
 		err := router.appDao.DeleteUsers(context.Background(), dbOpts)
 		require.NoError(t, err)
-
-		router.app.UnsetBootstrapped()
+		require.NoError(t, router.app.RefreshBootstrapped())
 
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/bootstrap/invalid-token", strings.NewReader(`{"username": "test", "password": "abcd1234" }`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)

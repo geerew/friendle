@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
-	"testing"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/cron"
@@ -17,19 +16,11 @@ import (
 	"github.com/geerew/friendle/utils/types"
 	"github.com/geerew/friendle/utils/wordgame"
 	"github.com/spf13/afero"
-	"github.com/stretchr/testify/require"
 )
 
-type App struct {
-	Logger     *logger.Logger
-	FS         *filesystem.FS
-	DbManager  *database.DatabaseManager
-	Dictionary *wordgame.Dictionary
-	Cron       *cron.Cron
-	Config     *Config
-	bootstrapped atomic.Int32
-}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// AppMode selects runtime behaviour for filesystem, logging, and database setup
 type AppMode int
 
 const (
@@ -38,6 +29,9 @@ const (
 	AppModeTest
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Config holds application-wide settings passed to New
 type Config struct {
 	HttpAddr     string
 	DataDir      string
@@ -46,7 +40,23 @@ type Config struct {
 	AppMode      AppMode
 }
 
-func NewApp(ctx context.Context, config *Config) (*App, error) {
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// App wires shared runtime dependencies for the API, cron jobs, and CLI
+type App struct {
+	Logger       *logger.Logger
+	FS           *filesystem.FS
+	DbManager    *database.DatabaseManager
+	Dictionary   *wordgame.Dictionary
+	Cron         *cron.Cron
+	Config       *Config
+	bootstrapped atomic.Int32
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// New creates the application, runs first-start bootstrap checks, and returns a ready App
+func New(ctx context.Context, config *Config) (*App, error) {
 	logLevel := logger.LevelInfo
 	if config.Debug {
 		logLevel = logger.LevelDebug
@@ -56,10 +66,11 @@ func NewApp(ctx context.Context, config *Config) (*App, error) {
 	if config.AppMode == AppModeTest {
 		appLogger = logger.NilLogger()
 	} else {
-		appLogger = logger.New(&logger.LoggerConfig{
+		loggerConfig := &logger.LoggerConfig{
 			Level:         logLevel,
 			ConsoleOutput: true,
-		})
+		}
+		appLogger = logger.New(loggerConfig)
 	}
 
 	var fs *filesystem.FS
@@ -69,11 +80,13 @@ func NewApp(ctx context.Context, config *Config) (*App, error) {
 		fs = filesystem.New(afero.NewOsFs())
 	}
 
-	dbManager, err := database.NewSQLiteManager(&database.DatabaseManagerConfig{
+	dbConfig := &database.DatabaseManagerConfig{
 		DataDir: config.DataDir,
 		FS:      fs,
 		Testing: config.AppMode == AppModeTest,
-	})
+	}
+
+	dbManager, err := database.NewSQLiteManager(dbConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create database manager: %w", err)
 	}
@@ -83,61 +96,86 @@ func NewApp(ctx context.Context, config *Config) (*App, error) {
 		return nil, fmt.Errorf("failed to load dictionary: %w", err)
 	}
 
-	app := &App{
+	cronConfig := &cron.CronConfig{
+		DataDb:  dbManager.DataDb,
+		FS:      fs,
+		DataDir: config.DataDir,
+		Logger:  appLogger.WithComponent(string(ComponentCron)),
+	}
+	cronScheduler := cron.NewCronScheduler(cronConfig)
+
+	application := &App{
 		Logger:     appLogger,
 		FS:         fs,
 		DbManager:  dbManager,
 		Dictionary: dict,
 		Config:     config,
-		Cron: cron.NewCronScheduler(&cron.CronConfig{
-			DataDb: dbManager.DataDb,
-			FS:     fs,
-			DataDir: config.DataDir,
-			Logger: appLogger.WithComponent(string(ComponentCron)),
-		}),
+		Cron:       cronScheduler,
 	}
 
-	if err := app.bootstrap(); err != nil {
+	if err := application.bootstrap(); err != nil {
 		return nil, err
 	}
 
-	return app, nil
+	return application, nil
 }
 
-func NewTestApp(t *testing.T) *App {
-	t.Helper()
-	app, err := NewApp(context.Background(), &Config{
-		HttpAddr:     "127.0.0.1:9081",
-		DataDir:      "./friendle_data",
-		AppMode:      AppModeTest,
-		EnableSignup: true,
-	})
-	require.NoError(t, err)
-	return app
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Close releases application resources
+func (a *App) Close() error {
+	return nil
 }
 
-func (a *App) Close() error { return nil }
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func (a *App) IsBootstrapped() bool { return a.bootstrapped.Load() == 1 }
-func (a *App) SetBootstrapped()     { a.bootstrapped.Store(1) }
-func (a *App) UnsetBootstrapped()   { a.bootstrapped.Store(0) }
+// IsBootstrapped reports whether the application has a site admin and completed first-run setup
+func (a *App) IsBootstrapped() bool {
+	return a.bootstrapped.Load() == 1
+}
 
-func (a *App) bootstrap() error {
-	appDao := dao.New(a.DbManager.DataDb)
-	count, err := appDao.CountUsers(
-		context.Background(),
-		dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_SITE_ROLE: types.SiteRoleAdmin}),
-	)
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// SetBootstrapped marks the application as bootstrapped after the first admin is created
+func (a *App) SetBootstrapped() {
+	a.bootstrapped.Store(1)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// RefreshBootstrapped syncs the in-memory bootstrapped flag with the site admin count in the database
+func (a *App) RefreshBootstrapped() error {
+	count, err := a.siteAdminCount(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to count admin users: %w", err)
+		return err
 	}
 
 	if count == 0 {
 		a.bootstrapped.Store(0)
+	} else {
+		a.bootstrapped.Store(1)
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// bootstrap checks for a site admin, generates a bootstrap token when missing, and syncs state
+func (a *App) bootstrap() error {
+	count, err := a.siteAdminCount(context.Background())
+	if err != nil {
+		return err
+	}
+
+	if count == 0 {
+		a.bootstrapped.Store(0)
+
 		bootstrapToken, err := auth.GenerateBootstrapToken(a.Config.DataDir, a.FS)
 		if err != nil {
 			return fmt.Errorf("failed to generate bootstrap token: %w", err)
 		}
+
 		bootstrapURL := fmt.Sprintf("http://%s/auth/bootstrap/%s", a.Config.HttpAddr, bootstrapToken.Token)
 		a.Logger.WithComponent(string(ComponentApp)).Info().
 			Str("bootstrap_url", bootstrapURL).
@@ -148,5 +186,21 @@ func (a *App) bootstrap() error {
 		_ = auth.DeleteBootstrapToken(a.Config.DataDir, a.FS)
 		a.Logger.WithComponent(string(ComponentApp)).Info().Msg("Application bootstrapped")
 	}
+
 	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// siteAdminCount returns how many site admins exist in the database
+func (a *App) siteAdminCount(ctx context.Context) (int, error) {
+	appDao := dao.New(a.DbManager.DataDb)
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_SITE_ROLE: types.SiteRoleAdmin})
+
+	count, err := appDao.CountUsers(ctx, dbOpts)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count admin users: %w", err)
+	}
+
+	return count, nil
 }
