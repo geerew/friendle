@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/geerew/friendle/utils/filesystem"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -16,14 +15,14 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestGenerateRecoveryToken(t *testing.T) {
-	fs := filesystem.New(afero.NewMemMapFs())
+	appFs := afero.NewMemMapFs()
 	dataDir := "/test-data"
 	username := "admin"
 	password := "newpassword123"
 
 	// Test successfully generating a recovery token
 	t.Run("simple", func(t *testing.T) {
-		token, err := GenerateRecoveryToken(fs, username, password, dataDir)
+		token, err := GenerateRecoveryToken(appFs, username, password, dataDir)
 		require.NoError(t, err)
 		require.NotNil(t, token)
 		require.Equal(t, username, token.Username)
@@ -36,11 +35,11 @@ func TestGenerateRecoveryToken(t *testing.T) {
 		require.InDelta(t, (5 * time.Minute).Seconds(), token.ExpiresAt.Sub(token.CreatedAt).Seconds(), 2)
 
 		tokenPath := filepath.Join(dataDir, ".recovery-token")
-		exists, err := afero.Exists(fs, tokenPath)
+		exists, err := afero.Exists(appFs, tokenPath)
 		require.NoError(t, err)
 		require.True(t, exists)
 
-		storedData, err := afero.ReadFile(fs, tokenPath)
+		storedData, err := afero.ReadFile(appFs, tokenPath)
 		require.NoError(t, err)
 		var stored RecoveryToken
 		require.NoError(t, json.Unmarshal(storedData, &stored))
@@ -53,26 +52,26 @@ func TestGenerateRecoveryToken(t *testing.T) {
 
 	// Test successfully overwriting an existing recovery token
 	t.Run("overwrite", func(t *testing.T) {
-		first, err := GenerateRecoveryToken(fs, username, "first-pass123", dataDir)
+		first, err := GenerateRecoveryToken(appFs, username, "first-pass123", dataDir)
 		require.NoError(t, err)
 
-		second, err := GenerateRecoveryToken(fs, username, "second-pass123", dataDir)
+		second, err := GenerateRecoveryToken(appFs, username, "second-pass123", dataDir)
 		require.NoError(t, err)
 		require.NotEqual(t, first.Token, second.Token)
 		require.NotEqual(t, first.PasswordHash, second.PasswordHash)
 
-		validated, err := ValidateRecoveryToken(fs, second.Token, dataDir)
+		validated, err := ValidateRecoveryToken(appFs, second.Token, dataDir)
 		require.NoError(t, err)
 		require.True(t, ComparePassword(validated.PasswordHash, "second-pass123"))
 
-		_, err = ValidateRecoveryToken(fs, first.Token, dataDir)
+		_, err = ValidateRecoveryToken(appFs, first.Token, dataDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid token")
 	})
 
 	// Test error when the password is longer than bcrypt allows
 	t.Run("password longer than 72 bytes returns error", func(t *testing.T) {
-		_, err := GenerateRecoveryToken(fs, username, strings.Repeat("a", 73), dataDir)
+		_, err := GenerateRecoveryToken(appFs, username, strings.Repeat("a", 73), dataDir)
 		require.ErrorIs(t, err, bcrypt.ErrPasswordTooLong)
 	})
 }
@@ -80,17 +79,17 @@ func TestGenerateRecoveryToken(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestValidateRecoveryToken(t *testing.T) {
-	fs := filesystem.New(afero.NewMemMapFs())
+	appFs := afero.NewMemMapFs()
 	dataDir := "/test-data"
 	username := "admin"
 	password := "newpassword123"
 
 	// Test successfully validating a token
 	t.Run("valid token", func(t *testing.T) {
-		original, err := GenerateRecoveryToken(fs, username, password, dataDir)
+		original, err := GenerateRecoveryToken(appFs, username, password, dataDir)
 		require.NoError(t, err)
 
-		validated, err := ValidateRecoveryToken(fs, original.Token, dataDir)
+		validated, err := ValidateRecoveryToken(appFs, original.Token, dataDir)
 		require.NoError(t, err)
 		require.Equal(t, original.Username, validated.Username)
 		require.Equal(t, original.Token, validated.Token)
@@ -100,39 +99,39 @@ func TestValidateRecoveryToken(t *testing.T) {
 
 	// Test error when an invalid token is provided
 	t.Run("invalid token", func(t *testing.T) {
-		_, err := GenerateRecoveryToken(fs, username, password, dataDir)
+		_, err := GenerateRecoveryToken(appFs, username, password, dataDir)
 		require.NoError(t, err)
 
-		_, err = ValidateRecoveryToken(fs, "invalid-token", dataDir)
+		_, err = ValidateRecoveryToken(appFs, "invalid-token", dataDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid token")
 	})
 
 	// Test error when an empty token is provided
 	t.Run("empty token", func(t *testing.T) {
-		_, err := GenerateRecoveryToken(fs, username, password, dataDir)
+		_, err := GenerateRecoveryToken(appFs, username, password, dataDir)
 		require.NoError(t, err)
 
-		_, err = ValidateRecoveryToken(fs, "", dataDir)
+		_, err = ValidateRecoveryToken(appFs, "", dataDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid token")
 	})
 
 	// Test error when a token with the same length but wrong bytes is provided
 	t.Run("wrong token same length", func(t *testing.T) {
-		original, err := GenerateRecoveryToken(fs, username, password, dataDir)
+		original, err := GenerateRecoveryToken(appFs, username, password, dataDir)
 		require.NoError(t, err)
 
 		wrong := []byte(original.Token)
 		wrong[0] ^= 0xff
-		_, err = ValidateRecoveryToken(fs, string(wrong), dataDir)
+		_, err = ValidateRecoveryToken(appFs, string(wrong), dataDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid token")
 	})
 
 	// Test error when the token file does not exist
 	t.Run("token file not found", func(t *testing.T) {
-		_, err := ValidateRecoveryToken(fs, "any-token", "/non-existent-dir")
+		_, err := ValidateRecoveryToken(appFs, "any-token", "/non-existent-dir")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "recovery token file not found")
 	})
@@ -150,9 +149,9 @@ func TestValidateRecoveryToken(t *testing.T) {
 		tokenPath := filepath.Join(dataDir, ".recovery-token")
 		tokenData, err := json.Marshal(expired)
 		require.NoError(t, err)
-		require.NoError(t, afero.WriteFile(fs, tokenPath, tokenData, 0600))
+		require.NoError(t, afero.WriteFile(appFs, tokenPath, tokenData, 0600))
 
-		_, err = ValidateRecoveryToken(fs, expired.Token, dataDir)
+		_, err = ValidateRecoveryToken(appFs, expired.Token, dataDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "token expired")
 	})
@@ -160,20 +159,20 @@ func TestValidateRecoveryToken(t *testing.T) {
 	// Test error when the token file is not valid JSON
 	t.Run("invalid token file JSON", func(t *testing.T) {
 		tokenPath := filepath.Join(dataDir, ".recovery-token")
-		require.NoError(t, afero.WriteFile(fs, tokenPath, []byte(`{not json`), 0600))
+		require.NoError(t, afero.WriteFile(appFs, tokenPath, []byte(`{not json`), 0600))
 
-		_, err := ValidateRecoveryToken(fs, "any-token", dataDir)
+		_, err := ValidateRecoveryToken(appFs, "any-token", dataDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse token")
 	})
 
 	// Test error when the token file is deleted after generation
 	t.Run("token file deleted", func(t *testing.T) {
-		original, err := GenerateRecoveryToken(fs, username, password, dataDir)
+		original, err := GenerateRecoveryToken(appFs, username, password, dataDir)
 		require.NoError(t, err)
-		require.NoError(t, DeleteRecoveryToken(fs, dataDir))
+		require.NoError(t, DeleteRecoveryToken(appFs, dataDir))
 
-		_, err = ValidateRecoveryToken(fs, original.Token, dataDir)
+		_, err = ValidateRecoveryToken(appFs, original.Token, dataDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "recovery token file not found")
 	})
@@ -182,30 +181,30 @@ func TestValidateRecoveryToken(t *testing.T) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func TestDeleteRecoveryToken(t *testing.T) {
-	fs := filesystem.New(afero.NewMemMapFs())
+	appFs := afero.NewMemMapFs()
 	dataDir := "/test-data"
 	tokenPath := filepath.Join(dataDir, ".recovery-token")
 
 	// Test successfully deleting an existing token file
 	t.Run("existing file", func(t *testing.T) {
-		_, err := GenerateRecoveryToken(fs, "admin", "password123", dataDir)
+		_, err := GenerateRecoveryToken(appFs, "admin", "password123", dataDir)
 		require.NoError(t, err)
 
-		exists, err := afero.Exists(fs, tokenPath)
+		exists, err := afero.Exists(appFs, tokenPath)
 		require.NoError(t, err)
 		require.True(t, exists)
 
-		err = DeleteRecoveryToken(fs, dataDir)
+		err = DeleteRecoveryToken(appFs, dataDir)
 		require.NoError(t, err)
 
-		exists, err = afero.Exists(fs, tokenPath)
+		exists, err = afero.Exists(appFs, tokenPath)
 		require.NoError(t, err)
 		require.False(t, exists)
 	})
 
 	// Test no error when deleting a non-existent token file
 	t.Run("missing file", func(t *testing.T) {
-		err := DeleteRecoveryToken(fs, dataDir)
+		err := DeleteRecoveryToken(appFs, dataDir)
 		require.NoError(t, err)
 	})
 }
