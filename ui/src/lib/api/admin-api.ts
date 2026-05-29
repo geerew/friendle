@@ -8,6 +8,7 @@ import {
 } from '$lib/models/admin-group-model';
 import {
 	AdminUserPaginationSchema,
+	type AdminUserCreateModel,
 	type AdminUserPaginationModel,
 	type AdminUserReqParams
 } from '$lib/models/admin-user-model';
@@ -29,6 +30,20 @@ export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserP
 
 	const data = (await response.json()) as { message?: string };
 	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+export async function createUser(data: AdminUserCreateModel): Promise<void> {
+	const response = await apiFetch('/api/admin/users', {
+		method: 'POST',
+		body: JSON.stringify(data)
+	});
+
+	if (response.ok || response.status === 201) {
+		return;
+	}
+
+	const body = (await response.json()) as { message?: string };
+	throw new ApiError(body.message || 'Request failed', response.status);
 }
 
 export async function listGroups(params?: AdminGroupReqParams): Promise<AdminGroupPaginationModel> {

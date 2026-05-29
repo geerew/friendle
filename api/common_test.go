@@ -81,7 +81,7 @@ func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Conte
 	}
 
 	// In tests, if we have a user, consider the app bootstrapped
-	// (even if the user is not an admin, so protectedRoute can handle the check)
+	// (even if the user is not an admin, so route access middleware can handle the check)
 	if id != "" {
 		router.app.SetBootstrapped()
 	}

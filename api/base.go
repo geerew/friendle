@@ -127,7 +127,6 @@ func (r *Router) initRoutes() {
 
 	// API routes
 	r.initAuthRoutes()
-	r.initUserRoutes()
 	r.initGroupRoutes()
 	r.initRoundRoutes()
 	r.initAdminRoutes()

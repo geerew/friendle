@@ -7,6 +7,7 @@ import (
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
+	"github.com/geerew/friendle/utils/auth"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,23 +19,23 @@ func (r *Router) initAdminRoutes() {
 	a := r.apiGroup("admin")
 
 	// Users
-	a.Get("/users", r.requireAuth, r.requireSiteAdmin, r.getAdminUsers)
-	a.Delete("/users/:id", r.requireAuth, r.requireSiteAdmin, r.deleteAdminUser)
+	a.Get("/users", r.require(accessSiteAdmin), r.getUsers)
+	a.Post("/users", r.require(accessSiteAdmin), r.createUser)
+	a.Put("/users/:id", r.require(accessSiteAdmin), r.updateUser)
+	a.Delete("/users/:id", r.require(accessSiteAdmin), r.deleteUser)
+	a.Delete("/users/:id/sessions", r.require(accessSiteAdmin), r.deleteUserSessions)
 
 	// Groups
-	a.Get("/groups", r.requireAuth, r.requireSiteAdmin, r.getAdminGroups)
-	a.Delete("/groups/:id", r.requireAuth, r.requireSiteAdmin, r.deleteAdminGroup)
-	a.Post("/groups/:id/members", r.requireAuth, r.requireSiteAdmin, r.createAdminGroupMember)
+	a.Get("/groups", r.require(accessSiteAdmin), r.getGroups)
+	a.Delete("/groups/:id", r.require(accessSiteAdmin), r.deleteGroup)
+	a.Post("/groups/:id/members", r.require(accessSiteAdmin), r.createGroupMember)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getAdminUsers returns paginated users for site admins
-func (r *Router) getAdminUsers(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+// getUsers returns a paginated site-wide user list
+func (r *Router) getUsers(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
 
 	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
 	users, err := r.appDao.ListAdminUsers(ctx, dbOpts)
@@ -52,9 +53,7 @@ func (r *Router) getAdminUsers(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
 	}
 
-	pResult, err := dbOpts.Pagination.BuildResult(
-		adminUserResponseHelper(users, userGroupSummariesByUserID(groupRows)),
-	)
+	pResult, err := dbOpts.Pagination.BuildResult(adminUserResponseHelper(users, userGroupSummariesByUserID(groupRows)))
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
 	}
@@ -64,12 +63,129 @@ func (r *Router) getAdminUsers(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getAdminGroups returns paginated groups for site admins
-func (r *Router) getAdminGroups(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+// createUser creates a user from the site admin API
+func (r *Router) createUser(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	userReq := &userRequest{}
+
+	if err := c.BodyParser(userReq); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
+
+	if userReq.Username == "" || userReq.Password == "" {
+		return errorResponse(c, fiber.StatusBadRequest, "A username and password are required", nil)
+	}
+
+	if err := validatePassword(userReq.Password); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
+	}
+
+	if userReq.Role == "" {
+		userReq.Role = types.UserRoleUser.String()
+	}
+
+	passwordHash, err := auth.GeneratePassword(userReq.Password)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error hashing password", err)
+	}
+
+	user := &models.User{
+		Username:     userReq.Username,
+		DisplayName:  userReq.Username,
+		PasswordHash: passwordHash,
+		SiteRole:     types.NewUserRole(userReq.Role),
+	}
+
+	if userReq.DisplayName != "" {
+		user.DisplayName = userReq.DisplayName
+	}
+
+	if err := r.appDao.CreateUser(ctx, user); err != nil {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
+			return errorResponse(c, fiber.StatusBadRequest, "Username already exists", nil)
+		}
+
+		return errorResponse(c, fiber.StatusInternalServerError, "Error creating user", err)
+	}
+
+	return c.SendStatus(fiber.StatusCreated)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// updateUser updates a user and refreshes sessions when the site role changes
+func (r *Router) updateUser(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	userReq := &userRequest{}
+	if err := c.BodyParser(userReq); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	if userReq.DisplayName == "" && userReq.Password == "" && userReq.Role == "" {
+		return errorResponse(c, fiber.StatusBadRequest, "No data to update", nil)
+	}
+
+	_, ctx := principalAndCtx(c)
+
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: id})
+	user, err := r.appDao.GetUser(ctx, dbOpts)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error looking up user", err)
+	}
+
+	if user == nil {
+		return errorResponse(c, fiber.StatusNotFound, "User not found", nil)
+	}
+
+	if userReq.DisplayName != "" {
+		user.DisplayName = userReq.DisplayName
+	}
+
+	if userReq.Password != "" {
+		if err := validatePassword(userReq.Password); err != nil {
+			return errorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
+		}
+		passwordHash, err := auth.GeneratePassword(userReq.Password)
+		if err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "Error hashing password", err)
+		}
+		user.PasswordHash = passwordHash
+	}
+
+	if userReq.Role != "" {
+		if user.SiteRole.String() == userReq.Role {
+			userReq.Role = ""
+		} else {
+			user.SiteRole = types.NewUserRole(userReq.Role)
+		}
+	}
+
+	err = r.appDao.UpdateUser(ctx, user)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error updating user", err)
+	}
+
+	if userReq.Role != "" {
+		if err := r.sessionManager.UpdateSessionRoleForUser(id, user.SiteRole); err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "Error updating user sessions", err)
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&userResponse{
+		ID:          user.ID,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		SiteRole:    user.SiteRole,
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getGroups returns a paginated site-wide group list
+func (r *Router) getGroups(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
 
 	dbOpts := dao.NewOptions().
 		WithOrderBy(utils.StringSplit(c.Query("orderBy", ""), ",")...).
@@ -89,14 +205,11 @@ func (r *Router) getAdminGroups(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// deleteAdminUser deletes a user and their sessions
-func (r *Router) deleteAdminUser(c *fiber.Ctx) error {
+// deleteUser deletes a user and their sessions
+func (r *Router) deleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	_, ctx := principalAndCtx(c)
 
 	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: id})
 	if err := r.appDao.DeleteUsers(ctx, dbOpts); err != nil {
@@ -112,14 +225,25 @@ func (r *Router) deleteAdminUser(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// deleteAdminGroup deletes a group
-func (r *Router) deleteAdminGroup(c *fiber.Ctx) error {
+// deleteUserSessions revokes all sessions for a user
+func (r *Router) deleteUserSessions(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	_, ctx, err := principalCtx(c)
+	err := r.sessionManager.DeleteUserSessions(id)
 	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting user sessions", err)
 	}
+
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// deleteGroup deletes a group
+func (r *Router) deleteGroup(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	_, ctx := principalAndCtx(c)
 
 	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})
 	if err := r.appDao.DeleteGroups(ctx, dbOpts); err != nil {
@@ -131,12 +255,9 @@ func (r *Router) deleteAdminGroup(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// createAdminGroupMember adds a user to a group as site admin
-func (r *Router) createAdminGroupMember(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+// createGroupMember adds a user to a group from the site admin API
+func (r *Router) createGroupMember(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
 
 	req := &adminAddGroupMemberRequest{}
 	if err := c.BodyParser(req); err != nil || strings.TrimSpace(req.UserID) == "" {
@@ -167,10 +288,10 @@ func (r *Router) createAdminGroupMember(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to add member", err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"id":        member.ID,
-		"userId":    userID,
-		"groupId":   groupID,
-		"groupRole": role,
+	return c.Status(fiber.StatusCreated).JSON(&adminGroupMemberResponse{
+		ID:        member.ID,
+		UserID:    userID,
+		GroupID:   groupID,
+		GroupRole: role,
 	})
 }

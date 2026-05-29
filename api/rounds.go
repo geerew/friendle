@@ -20,52 +20,35 @@ func (r *Router) initRoundRoutes() {
 	g := r.apiGroup("groups")
 
 	// Rounds
-	g.Get("/:id/rounds/current", r.requireAuth, r.requireGroupMember, r.getGroupRound)
-	g.Post("/:id/rounds/current/word", r.requireAuth, r.requireGroupMember, r.createGroupRoundWord)
-	g.Post("/:id/rounds/current/guesses", r.requireAuth, r.requireGroupMember, r.createGroupRoundGuess)
-	g.Get("/:id/rounds/current/reveal", r.requireAuth, r.requireGroupMember, r.getGroupRoundReveal)
+	g.Get("/:id/rounds/current", r.require(accessGroupMember), r.getGroupRound)
+	g.Post("/:id/rounds/current/word", r.require(accessGroupMember), r.createGroupRoundWord)
+	g.Post("/:id/rounds/current/guesses", r.require(accessGroupMember), r.createGroupRoundGuess)
+	g.Get("/:id/rounds/current/reveal", r.require(accessGroupMember), r.getGroupRoundReveal)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // getGroupRound returns the current round state for the caller
 func (r *Router) getGroupRound(c *fiber.Ctx) error {
-	p, ctx, _ := principalCtx(c)
+	p, ctx := principalAndCtx(c)
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
 	round, err := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
 	if err != nil || round == nil {
-		return c.JSON(fiber.Map{"status": "none"})
+		return c.JSON(groupRoundResponseHelper(nil, nil, p.UserID))
 	}
 
 	guess, _ := r.appDao.GetGuess(ctx, round.ID, p.UserID)
-	yourRole := "guesser"
-	if round.PickerUserID == p.UserID {
-		yourRole = "picker"
-	}
 
-	resp := fiber.Map{
-		"roundId": round.ID, "status": round.Status, "yourRole": yourRole,
-		"attemptsUsed": 0, "finished": false, "rows": []interface{}{},
-	}
-	if guess != nil {
-		var rows []interface{}
-		_ = json.Unmarshal([]byte(guess.RowsJSON), &rows)
-		resp["attemptsUsed"] = guess.AttemptsUsed
-		resp["finished"] = guess.Finished
-		resp["rows"] = rows
-		resp["solved"] = guess.Solved
-	}
-
-	return c.JSON(resp)
+	return c.JSON(groupRoundResponseHelper(round, guess, p.UserID))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // createGroupRoundWord submits the picker's word for the current round
 func (r *Router) createGroupRoundWord(c *fiber.Ctx) error {
-	p, ctx, _ := principalCtx(c)
+	p, ctx := principalAndCtx(c)
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
@@ -107,7 +90,7 @@ func (r *Router) createGroupRoundWord(c *fiber.Ctx) error {
 
 // createGroupRoundGuess submits a guess for the current round
 func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
-	p, ctx, _ := principalCtx(c)
+	p, ctx := principalAndCtx(c)
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
@@ -157,11 +140,9 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 	answer := *round.WordPlain
 	result := wordgame.Grade(word, answer)
 	won := wordgame.IsWin(result)
-	var rows []map[string]interface{}
+	var rows []guessRowResponse
 	_ = json.Unmarshal([]byte(guess.RowsJSON), &rows)
-	rows = append(rows, map[string]interface{}{
-		"word": word, "result": result,
-	})
+	rows = append(rows, guessRowResponse{Word: word, Result: result})
 	guess.AttemptsUsed++
 	guess.Solved = won
 	b, _ := json.Marshal(rows)
@@ -179,8 +160,11 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 		_ = r.appDao.UpdateRound(ctx, round)
 	}
 
-	return c.JSON(fiber.Map{
-		"result": result, "attempt": guess.AttemptsUsed, "won": won, "finished": guess.Finished,
+	return c.JSON(&groupRoundGuessResponse{
+		Result:   result,
+		Attempt:  guess.AttemptsUsed,
+		Won:      won,
+		Finished: guess.Finished,
 	})
 }
 
@@ -188,7 +172,7 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 
 // getGroupRoundReveal returns the completed round word and guess summaries
 func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
-	_, ctx, _ := principalCtx(c)
+	_, ctx := principalAndCtx(c)
 	groupID := c.Params("id")
 	roundDate := time.Now().Format("2006-01-02")
 
@@ -202,20 +186,20 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 	}
 
 	picker, _ := r.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: round.PickerUserID}))
-	resp := fiber.Map{
-		"status":       round.Status,
-		"pickerUserId": round.PickerUserID,
+	resp := &groupRoundRevealResponse{
+		Status:       round.Status,
+		PickerUserID: round.PickerUserID,
+		Guesses:      []groupRoundRevealGuessResponse{},
 	}
 	if picker != nil {
-		resp["pickerDisplayName"] = picker.DisplayName
+		resp.PickerDisplayName = picker.DisplayName
 	}
 
 	if round.Status == models.RoundCompleted && round.WordPlain != nil {
-		resp["word"] = *round.WordPlain
+		resp.Word = *round.WordPlain
 	}
 
 	guesses, _ := r.appDao.ListGuessesForRound(ctx, round.ID)
-	var summaries []fiber.Map
 	for _, g := range guesses {
 		if g.UserID == round.PickerUserID {
 			continue
@@ -227,12 +211,11 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 			name = u.DisplayName
 		}
 
-		summaries = append(summaries, fiber.Map{
-			"userId": g.UserID, "displayName": name,
-			"attemptsUsed": g.AttemptsUsed, "solved": g.Solved, "score": g.Score,
+		resp.Guesses = append(resp.Guesses, groupRoundRevealGuessResponse{
+			UserID: g.UserID, DisplayName: name,
+			AttemptsUsed: g.AttemptsUsed, Solved: g.Solved, Score: g.Score,
 		})
 	}
-	resp["guesses"] = summaries
 
 	return c.JSON(resp)
 }
@@ -240,11 +223,11 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // roundSummary returns a summary of the current round for a group member
-func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID string) fiber.Map {
+func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID string) *groupRoundSummaryResponse {
 	roundDate := time.Now().Format("2006-01-02")
 	round, _ := r.appDao.GetCurrentRound(ctx, g.ID, roundDate)
 	if round == nil {
-		return fiber.Map{"status": "none"}
+		return &groupRoundSummaryResponse{Status: "none"}
 	}
 
 	m, _ := r.appDao.GetGroupMember(ctx, g.ID, userID)
@@ -253,14 +236,15 @@ func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID strin
 		yourRole = "picker"
 	}
 
-	out := fiber.Map{
-		"status": round.Status, "yourRole": yourRole,
+	out := &groupRoundSummaryResponse{
+		Status:   string(round.Status),
+		YourRole: yourRole,
 	}
 	if round.Status == models.RoundCompleted || round.Status == models.RoundSkipped {
-		out["canReveal"] = true
+		out.CanReveal = true
 	}
 	if m != nil {
-		out["groupRole"] = m.GroupRole
+		out.GroupRole = m.GroupRole
 	}
 
 	return out

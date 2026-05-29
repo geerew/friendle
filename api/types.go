@@ -1,13 +1,16 @@
 package api
 
 import (
+	"encoding/json"
+
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
-	"github.com/gofiber/fiber/v2"
+	"github.com/geerew/friendle/utils/wordgame"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// userRequest is the body for site-admin user create and update endpoints
 type userRequest struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"displayName"`
@@ -15,12 +18,17 @@ type userRequest struct {
 	Role        string `json:"siteRole"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// userResponse is a user returned by the API
 type userResponse struct {
 	ID          string         `json:"id"`
 	Username    string         `json:"username"`
 	DisplayName string         `json:"displayName"`
 	SiteRole    types.SiteRole `json:"siteRole"`
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // userResponseHelper maps users to API responses
 func userResponseHelper(users []*models.User) []*userResponse {
@@ -39,6 +47,7 @@ func userResponseHelper(users []*models.User) []*userResponse {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// adminUserResponse is a user row enriched for the site admin list
 type adminUserResponse struct {
 	ID          string                      `json:"id"`
 	Username    string                      `json:"username"`
@@ -47,6 +56,8 @@ type adminUserResponse struct {
 	GroupCount  int                         `json:"groupCount"`
 	Groups      []*userGroupSummaryResponse `json:"groups"`
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // adminUserResponseHelper maps admin user rows to API responses
 func adminUserResponseHelper(
@@ -72,12 +83,15 @@ func adminUserResponseHelper(
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// userGroupSummaryResponse is a group summary for a user's memberships
 type userGroupSummaryResponse struct {
 	ID          string          `json:"id"`
 	Name        string          `json:"name"`
 	MemberCount int             `json:"memberCount"`
 	GroupRole   types.GroupRole `json:"groupRole,omitempty"`
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // userGroupSummaryResponsesFromRows maps group summary rows to API responses
 func userGroupSummaryResponsesFromRows(rows []*models.UserGroupSummaryRow) []*userGroupSummaryResponse {
@@ -98,6 +112,8 @@ func userGroupSummaryResponsesFromRows(rows []*models.UserGroupSummaryRow) []*us
 	return responses
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // userGroupSummariesByUserID groups summary rows by user ID
 func userGroupSummariesByUserID(rows []*models.UserGroupSummaryRow) map[string][]*models.UserGroupSummaryRow {
 	byUser := make(map[string][]*models.UserGroupSummaryRow)
@@ -110,42 +126,197 @@ func userGroupSummariesByUserID(rows []*models.UserGroupSummaryRow) map[string][
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// createGroupRequest is the body for creating a group
 type createGroupRequest struct {
 	Name string `json:"name"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// updateGroupRequest is the body for updating a group
 type updateGroupRequest struct {
 	Name          *string `json:"name"`
 	IntervalHours *int    `json:"intervalHours"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createGroupJoinRequest is the optional body for a join request
 type createGroupJoinRequest struct {
 	UserID string `json:"userId"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// adminAddGroupMemberRequest is the body for a site-admin direct member add
 type adminAddGroupMemberRequest struct {
 	UserID    string `json:"userId"`
 	GroupRole string `json:"groupRole"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// submitRoundWordRequest is the body for submitting the picker's word
 type submitRoundWordRequest struct {
 	Word string `json:"word"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// submitRoundGuessRequest is the body for submitting a guess
 type submitRoundGuessRequest struct {
 	Word string `json:"word"`
 }
 
-// groupResponseHelper builds a group detail response map
-func groupResponseHelper(g *models.Group, role types.GroupRole) fiber.Map {
-	return fiber.Map{
-		"id": g.ID, "name": g.Name, "intervalHours": g.IntervalHours,
-		"timezone": g.Timezone, "groupRole": role,
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupResponse is a group returned by the API
+type groupResponse struct {
+	ID            string          `json:"id"`
+	Name          string          `json:"name"`
+	IntervalHours int             `json:"intervalHours"`
+	Timezone      string          `json:"timezone"`
+	GroupRole     types.GroupRole `json:"groupRole"`
+	Round         *groupRoundSummaryResponse `json:"round,omitempty"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupResponseHelper maps a group to an API response
+func groupResponseHelper(g *models.Group, role types.GroupRole) *groupResponse {
+	return &groupResponse{
+		ID:            g.ID,
+		Name:          g.Name,
+		IntervalHours: g.IntervalHours,
+		Timezone:      g.Timezone,
+		GroupRole:     role,
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// groupRoundSummaryResponse is a summary of today's round on a group detail response
+type groupRoundSummaryResponse struct {
+	Status    string          `json:"status"`
+	YourRole  string          `json:"yourRole,omitempty"`
+	CanReveal bool            `json:"canReveal,omitempty"`
+	GroupRole types.GroupRole `json:"groupRole,omitempty"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// joinRequestResponse is a join request returned by the API
+type joinRequestResponse struct {
+	ID     string                  `json:"id,omitempty"`
+	Status models.JoinRequestStatus `json:"status"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// adminGroupMemberResponse is a member added directly by a site admin
+type adminGroupMemberResponse struct {
+	ID        string          `json:"id"`
+	UserID    string          `json:"userId"`
+	GroupID   string          `json:"groupId"`
+	GroupRole types.GroupRole `json:"groupRole"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// guessRowResponse is one submitted guess row for the current round
+type guessRowResponse struct {
+	Word   string                `json:"word"`
+	Result []wordgame.TileState  `json:"result"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundResponse is the current round state for the caller
+type groupRoundResponse struct {
+	RoundID      string             `json:"roundId,omitempty"`
+	Status       string             `json:"status"`
+	YourRole     string             `json:"yourRole,omitempty"`
+	AttemptsUsed int                `json:"attemptsUsed,omitempty"`
+	Finished     bool               `json:"finished,omitempty"`
+	Solved       bool               `json:"solved,omitempty"`
+	Rows         []guessRowResponse `json:"rows,omitempty"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundResponseHelper builds the current round response for a member
+func groupRoundResponseHelper(round *models.Round, guess *models.Guess, userID string) *groupRoundResponse {
+	if round == nil {
+		return &groupRoundResponse{Status: "none"}
+	}
+
+	yourRole := "guesser"
+	if round.PickerUserID == userID {
+		yourRole = "picker"
+	}
+
+	resp := &groupRoundResponse{
+		RoundID:      round.ID,
+		Status:       string(round.Status),
+		YourRole:     yourRole,
+		AttemptsUsed: 0,
+		Finished:     false,
+		Rows:         []guessRowResponse{},
+	}
+	if guess != nil {
+		var rows []guessRowResponse
+		_ = json.Unmarshal([]byte(guess.RowsJSON), &rows)
+		resp.AttemptsUsed = guess.AttemptsUsed
+		resp.Finished = guess.Finished
+		resp.Solved = guess.Solved
+		resp.Rows = rows
+	}
+
+	return resp
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundGuessResponse is returned after submitting a guess
+type groupRoundGuessResponse struct {
+	Result   []wordgame.TileState `json:"result"`
+	Attempt  int                  `json:"attempt"`
+	Won      bool                 `json:"won"`
+	Finished bool                 `json:"finished"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundRevealGuessResponse is one guesser's result on a completed round
+type groupRoundRevealGuessResponse struct {
+	UserID       string `json:"userId"`
+	DisplayName  string `json:"displayName"`
+	AttemptsUsed int    `json:"attemptsUsed"`
+	Solved       bool   `json:"solved"`
+	Score        int    `json:"score"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupRoundRevealResponse is the reveal payload for a finished round
+type groupRoundRevealResponse struct {
+	Status            models.RoundStatus             `json:"status"`
+	PickerUserID      string                         `json:"pickerUserId"`
+	PickerDisplayName string                         `json:"pickerDisplayName,omitempty"`
+	Word              string                         `json:"word,omitempty"`
+	Guesses           []groupRoundRevealGuessResponse `json:"guesses"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// versionResponse is the application version payload
+type versionResponse struct {
+	Version string `json:"version"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupSearchResponse is a group row enriched for name search results
 type groupSearchResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -153,6 +324,8 @@ type groupSearchResponse struct {
 	IsMember    bool   `json:"isMember"`
 	JoinPending bool   `json:"joinPending"`
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // groupSearchResponsesFromRows maps search rows to API responses with membership flags
 func groupSearchResponsesFromRows(
@@ -180,6 +353,8 @@ func groupSearchResponsesFromRows(
 	return responses
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // stringSet converts a slice of IDs into a lookup set
 func stringSet(ids []string) map[string]struct{} {
 	set := make(map[string]struct{}, len(ids))
@@ -192,38 +367,54 @@ func stringSet(ids []string) map[string]struct{} {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// signupStatusResponse reports whether self-service registration is enabled
 type signupStatusResponse struct {
 	Enabled bool `json:"enabled"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// registerRequest is the body for user registration
 type registerRequest struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"displayName"`
 	Password    string `json:"password"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// loginRequest is the body for user login
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// selfUpdateRequest is the body for updating the authenticated user's profile
 type selfUpdateRequest struct {
 	DisplayName     string `json:"displayName"`
 	CurrentPassword string `json:"currentPassword"`
 	Password        string `json:"password"`
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// selfDeleteRequest is the body for deleting the authenticated user's account
 type selfDeleteRequest struct {
 	CurrentPassword string `json:"currentPassword"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// adminGroupResponse is a group row enriched for the site admin list
 type adminGroupResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	MemberCount int    `json:"memberCount"`
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // adminGroupResponseHelper maps admin group rows to API responses
 func adminGroupResponseHelper(groups []*models.AdminGroupListRow) []*adminGroupResponse {

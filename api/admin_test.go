@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/Masterminds/squirrel"
@@ -41,6 +42,59 @@ func TestAdminListUsers(t *testing.T) {
 		require.Equal(t, http.StatusForbidden, status)
 		require.Contains(t, string(body), "Site admin required")
 	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAdminCreateUser exercises site admin user creation
+func TestAdminCreateUser(t *testing.T) {
+	// Test successfully creating a user
+	t.Run("201", func(t *testing.T) {
+		router, _ := setupAdmin(t)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/users", strings.NewReader(`{"username": "testuser", "password": "password123"}`))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, _, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+	})
+
+	// Test error due to a non-admin caller
+	t.Run("403", func(t *testing.T) {
+		router, _ := setupUser(t)
+
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodPost, "/api/admin/users", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, status)
+		require.Contains(t, string(body), "Site admin required")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestAdminUpdateUser exercises site admin user updates
+func TestAdminUpdateUser(t *testing.T) {
+	router, ctx := setupAdmin(t)
+
+	user := &models.User{
+		Username:     "test",
+		DisplayName:  "Test",
+		PasswordHash: "test-password-hash",
+		SiteRole:     types.UserRoleUser,
+	}
+	require.NoError(t, router.appDao.CreateUser(ctx, user))
+
+	req := httptest.NewRequest(http.MethodPut, "/api/admin/users/"+user.ID, strings.NewReader(`{"displayName": "Bob"}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	status, _, err := requestHelper(t, router, req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, status)
+
+	record, err := router.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: user.ID}))
+	require.NoError(t, err)
+	require.Equal(t, "Bob", record.DisplayName)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

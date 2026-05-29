@@ -24,9 +24,9 @@ func (r *Router) initAuthRoutes() {
 	authGroup.Post("/login", r.login)
 	authGroup.Post("/logout", r.logout)
 
-	authGroup.Get("/me", r.getMe)
-	authGroup.Put("/me", r.updateMe)
-	authGroup.Delete("/me", r.deleteMe)
+	authGroup.Get("/me", r.require(accessAuth), r.getMe)
+	authGroup.Put("/me", r.require(accessAuth), r.updateMe)
+	authGroup.Delete("/me", r.require(accessAuth), r.deleteMe)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -182,10 +182,7 @@ func (r *Router) logout(c *fiber.Ctx) error {
 
 // getMe returns the authenticated user's profile
 func (r *Router) getMe(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Missing principal", nil)
-	}
+	principal, ctx := principalAndCtx(c)
 
 	user, err := r.getUserByPrincipal(ctx, principal)
 	if err != nil {
@@ -204,10 +201,7 @@ func (r *Router) getMe(c *fiber.Ctx) error {
 
 // updateMe updates the authenticated user's profile or password
 func (r *Router) updateMe(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Missing principal", nil)
-	}
+	principal, ctx := principalAndCtx(c)
 
 	user, err := r.getUserByPrincipal(ctx, principal)
 	if err != nil {
@@ -256,10 +250,7 @@ func (r *Router) updateMe(c *fiber.Ctx) error {
 
 // deleteMe deletes the authenticated user's account
 func (r *Router) deleteMe(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Missing principal", nil)
-	}
+	principal, ctx := principalAndCtx(c)
 
 	user, err := r.getUserByPrincipal(ctx, principal)
 	if err != nil {

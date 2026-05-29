@@ -17,34 +17,31 @@ func (r *Router) initGroupRoutes() {
 	g := r.apiGroup("groups")
 
 	// Groups
-	g.Post("/", r.requireAuth, r.createGroup)
-	g.Get("/", r.requireAuth, r.getGroups)
-	g.Get("/search", r.requireAuth, r.getGroupsSearch)
-	g.Get("/:id", r.requireAuth, r.getGroup)
-	g.Patch("/:id", r.requireAuth, r.requireGroupAdmin, r.updateGroup)
+	g.Post("/", r.require(accessAuth), r.createGroup)
+	g.Get("/", r.require(accessAuth), r.getMyGroups)
+	g.Get("/search", r.require(accessAuth), r.searchGroups)
+	g.Get("/:id", r.require(accessGroupMember), r.getGroup)
+	g.Patch("/:id", r.require(accessGroupAdmin), r.updateGroup)
 
 	// Join requests
-	g.Post("/:id/join-requests", r.requireAuth, r.createGroupJoinRequest)
-	g.Delete("/:id/join-requests/:userId", r.requireAuth, r.deleteGroupJoinRequest)
-	g.Get("/:id/join-requests", r.requireAuth, r.requireGroupAdmin, r.getGroupJoinRequests)
-	g.Post("/:id/join-requests/:rid/approve", r.requireAuth, r.requireGroupAdmin, r.updateGroupJoinRequestApprove)
-	g.Post("/:id/join-requests/:rid/reject", r.requireAuth, r.requireGroupAdmin, r.updateGroupJoinRequestReject)
+	g.Post("/:id/join-requests", r.require(accessAuth), r.createGroupJoinRequest)
+	g.Delete("/:id/join-requests/:userId", r.require(accessAuth), r.deleteGroupJoinRequest)
+	g.Get("/:id/join-requests", r.require(accessGroupAdmin), r.getGroupJoinRequests)
+	g.Post("/:id/join-requests/:rid/approve", r.require(accessGroupAdmin), r.updateGroupJoinRequestApprove)
+	g.Post("/:id/join-requests/:rid/reject", r.require(accessGroupAdmin), r.updateGroupJoinRequestReject)
 
 	// Members
-	g.Delete("/:id/members/:userId", r.requireAuth, r.requireGroupAdmin, r.deleteGroupMember)
+	g.Delete("/:id/members/:userId", r.require(accessGroupAdmin), r.deleteGroupMember)
 
 	// Leaderboard
-	g.Get("/:id/leaderboard", r.requireAuth, r.requireGroupMember, r.getGroupLeaderboard)
+	g.Get("/:id/leaderboard", r.require(accessGroupMember), r.getGroupLeaderboard)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // createGroup creates a group and adds the caller as group admin
 func (r *Router) createGroup(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	principal, ctx := principalAndCtx(c)
 
 	req := &createGroupRequest{}
 	if err := c.BodyParser(req); err != nil || strings.TrimSpace(req.Name) == "" {
@@ -75,12 +72,9 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getGroups returns groups the caller belongs to
-func (r *Router) getGroups(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+// getMyGroups returns groups the caller belongs to
+func (r *Router) getMyGroups(c *fiber.Ctx) error {
+	principal, ctx := principalAndCtx(c)
 
 	rows, err := r.appDao.ListUserGroupSummariesForUserIDs(ctx, []string{principal.UserID})
 	if err != nil {
@@ -92,12 +86,9 @@ func (r *Router) getGroups(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getGroupsSearch searches groups by name
-func (r *Router) getGroupsSearch(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+// searchGroups searches groups by name
+func (r *Router) searchGroups(c *fiber.Ctx) error {
+	principal, ctx := principalAndCtx(c)
 
 	q := strings.TrimSpace(c.Query("q"))
 	if q == "" {
@@ -142,18 +133,11 @@ func (r *Router) getGroupsSearch(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getGroup returns a group the caller belongs to
+// getGroup returns group detail and round summary for a member
 func (r *Router) getGroup(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	principal, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
-	if _, err := r.membership(ctx, groupID, principal.UserID); err != nil {
-		return errorResponse(c, fiber.StatusForbidden, "Not a member", nil)
-	}
-
 	g, err := r.appDao.GetGroup(ctx, groupID)
 	if err != nil || g == nil {
 		return errorResponse(c, fiber.StatusNotFound, "Group not found", nil)
@@ -167,7 +151,7 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 
 	summary := r.roundSummary(ctx, g, principal.UserID)
 	resp := groupResponseHelper(g, role)
-	resp["round"] = summary
+	resp.Round = summary
 
 	return c.JSON(resp)
 }
@@ -176,10 +160,7 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 
 // updateGroup updates a group
 func (r *Router) updateGroup(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	_, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
 	g, err := r.appDao.GetGroup(ctx, groupID)
@@ -211,10 +192,7 @@ func (r *Router) updateGroup(c *fiber.Ctx) error {
 
 // createGroupJoinRequest creates a pending join request for the caller
 func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	principal, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
 
@@ -234,7 +212,7 @@ func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
 	}
 
 	if existing, _ := r.appDao.GetJoinRequestByUser(ctx, groupID, principal.UserID); existing != nil && existing.Status == models.JoinPending {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "pending"})
+		return c.Status(fiber.StatusOK).JSON(&joinRequestResponse{Status: models.JoinPending})
 	}
 
 	jr := &models.GroupJoinRequest{GroupID: groupID, UserID: principal.UserID, Status: models.JoinPending}
@@ -242,17 +220,14 @@ func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Request failed", err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"id": jr.ID, "status": jr.Status})
+	return c.Status(fiber.StatusCreated).JSON(&joinRequestResponse{ID: jr.ID, Status: jr.Status})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // deleteGroupJoinRequest cancels a pending join request
 func (r *Router) deleteGroupJoinRequest(c *fiber.Ctx) error {
-	principal, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	principal, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
 	targetUserID := c.Params("userId")
@@ -285,10 +260,7 @@ func (r *Router) deleteGroupJoinRequest(c *fiber.Ctx) error {
 
 // getGroupJoinRequests returns pending join requests for a group
 func (r *Router) getGroupJoinRequests(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	_, ctx := principalAndCtx(c)
 
 	list, err := r.appDao.ListPendingJoinRequests(ctx, c.Params("id"))
 	if err != nil {
@@ -316,10 +288,7 @@ func (r *Router) updateGroupJoinRequestReject(c *fiber.Ctx) error {
 
 // deleteGroupMember removes a member from a group
 func (r *Router) deleteGroupMember(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	_, ctx := principalAndCtx(c)
 
 	if err := r.appDao.DeleteGroupMember(ctx, c.Params("id"), c.Params("userId")); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Remove failed", err)
@@ -332,10 +301,7 @@ func (r *Router) deleteGroupMember(c *fiber.Ctx) error {
 
 // getGroupLeaderboard returns the leaderboard for a group
 func (r *Router) getGroupLeaderboard(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	_, ctx := principalAndCtx(c)
 
 	rows, err := r.appDao.Leaderboard(ctx, c.Params("id"))
 	if err != nil {
@@ -349,10 +315,7 @@ func (r *Router) getGroupLeaderboard(c *fiber.Ctx) error {
 
 // resolveGroupJoinRequest updates a join request status and optionally adds a member
 func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status models.JoinRequestStatus, role types.GroupRole) error {
-	_, ctx, err := principalCtx(c)
-	if err != nil {
-		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-	}
+	_, ctx := principalAndCtx(c)
 
 	jr, err := r.appDao.GetJoinRequest(ctx, c.Params("rid"))
 	if err != nil || jr == nil {

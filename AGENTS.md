@@ -97,7 +97,40 @@ Separate logical sections with a blank line and this comment on its own line:
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ```
 
-Use it between types, vars, constructors, and major function groups—see `utils/cardcache/base.go` for the canonical pattern.
+Use it between types, vars, constructors, and major function groups—see
+`utils/cardcache/base.go` for the canonical pattern.
+
+**Always separate with a divider, even when items are closely related:**
+
+- Each **type** definition from the next (including consecutive request/response
+  structs in `api/types.go`)
+- A **type** and its **helper function** (e.g. `userResponse` and
+  `userResponseHelper`)—the helper gets its own section after the type
+- Each **function** from the next, including helpers that share a purpose (e.g.
+  `userGroupSummaryResponsesFromRows` and `userGroupSummariesByUserID`)
+
+**Example:**
+
+```go
+// userResponse is a user returned by the API
+type userResponse struct {
+	// ...
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// userResponseHelper maps users to API responses
+func userResponseHelper(users []*models.User) []*userResponse {
+	// ...
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// adminUserResponse is a user row enriched for the site admin list
+type adminUserResponse struct {
+	// ...
+}
+```
 
 ### 2. Spacious control flow
 

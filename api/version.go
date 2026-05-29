@@ -17,8 +17,6 @@ func (r *Router) initVersionRoutes() {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // getVersion returns the application version
 func (r *Router) getVersion(c *fiber.Ctx) error {
 	// If running in dev mode, always return "dev" regardless of build version
@@ -29,7 +27,5 @@ func (r *Router) getVersion(c *fiber.Ctx) error {
 		currentVersion = version.GetVersion()
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"version": currentVersion,
-	})
+	return c.Status(fiber.StatusOK).JSON(&versionResponse{Version: currentVersion})
 }
