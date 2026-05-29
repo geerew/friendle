@@ -25,18 +25,6 @@ func (dao *DAO) CreateGuess(ctx context.Context, g *models.Guess) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetGuess returns a specific guess attempt for a user in a round
-func (dao *DAO) GetGuess(ctx context.Context, roundID, userID string, attempt int) (*models.Guess, error) {
-	return getGeneric[models.Guess](ctx, dao, *newBuilderOptions(models.GUESS_TABLE).
-		WithColumns(models.GuessColumns()...).
-		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{
-			"round_id": roundID, "user_id": userID, "attempt": attempt,
-		})).
-		WithLimit(1))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // ListGuesses returns guess rows matching the given options
 func (dao *DAO) ListGuesses(ctx context.Context, dbOpts *Options) ([]*models.Guess, error) {
 	if dbOpts == nil {
@@ -57,13 +45,6 @@ func (dao *DAO) ListGuessesForRoundUser(ctx context.Context, roundID, userID str
 		"round_id": roundID,
 		"user_id":  userID,
 	}))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// ListGuessesForRound returns all guesses for a round
-func (dao *DAO) ListGuessesForRound(ctx context.Context, roundID string) ([]*models.Guess, error) {
-	return dao.ListGuesses(ctx, NewOptions().WithWhere(squirrel.Eq{"round_id": roundID}))
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -46,15 +46,6 @@ func (dao *DAO) ListGroupMembers(ctx context.Context, groupID string) ([]*models
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListGroupsForUser returns memberships for a user
-func (dao *DAO) ListGroupsForUser(ctx context.Context, userID string) ([]*models.GroupMember, error) {
-	return listGeneric[models.GroupMember](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
-		WithColumns(models.GroupMemberColumns()...).
-		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"user_id": userID})))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // DeleteGroupMember removes a user from a group
 func (dao *DAO) DeleteGroupMember(ctx context.Context, groupID, userID string) error {
 	if groupID == "" || userID == "" {

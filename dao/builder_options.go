@@ -1,6 +1,5 @@
 package dao
 
-// TODO Tidy to to make this more consistent. Use the builder pattern for all options
 import (
 	"github.com/Masterminds/squirrel"
 )
@@ -55,13 +54,13 @@ type builderOptions struct {
 
 	// Columns to select
 	//
-	// Example: []string{"id", "title", "created_at"}
+	// Example: []string{"id", "display_name", "created_at"}
 	Columns []string
 
 	// Data is a key/value map of data to insert into the table during an INSERT or
 	// UPDATE
 	//
-	// Example: map[string]interface{}{"id": "123", "title": "Test", "created_at": time.Now()}
+	// Example: map[string]interface{}{"id": "123", "display_name": "Alice", "created_at": time.Now()}
 	Data map[string]interface{}
 
 	// Columns to group by

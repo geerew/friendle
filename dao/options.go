@@ -14,7 +14,7 @@ import (
 type Options struct {
 	// OrderBy can be used to order the results
 	//
-	// Example: []string{"id DESC", "title ASC"}
+	// Example: []string{"id DESC", "display_name ASC"}
 	OrderBy []string
 
 	// OrderByClause can be used to set a custom ORDER BY clause, for example
@@ -28,21 +28,10 @@ type Options struct {
 	//   EQ:   squirrel.Eq{"id": "123"}
 	//   IN:   squirrel.Eq{"id": []string{"123", "456"}}
 	//   OR:   squirrel.Or{squirrel.Expr("id = ?", "123"), squirrel.Expr("id = ?", "456")}
-	//   AND:  squirrel.And{squirrel.Eq{"id": "123"}, squirrel.Eq{"title": "devops"}}
-	//   LIKE: squirrel.Like{"title": "%dev%"}
+	//   AND:  squirrel.And{squirrel.Eq{"id": "123"}, squirrel.Eq{"display_name": "Alice"}}
+	//   LIKE: squirrel.Like{"display_name": "%ali%"}
 	//   NOT:  squirrel.NotEq{"id": "123"}
 	Where squirrel.Sqlizer
-
-	// IncludeUserProgress indicates whether to include user progress when querying courses or
-	// assets
-	//
-	// Valid when querying courses or assets
-	IncludeUserProgress bool
-
-	// IncludeAssetMetadata indicates whether to include asset metadata when querying assets
-	//
-	// Valid when querying assets
-	IncludeAssetMetadata bool
 
 	// Pagination applies OFFSET/LIMIT to list queries. When set, listGeneric runs a COUNT
 	// query and updates the same instance via SetCount before selecting the page.
@@ -107,29 +96,5 @@ func (o *Options) WithPagination(p *pagination.Pagination) *Options {
 // Calling multiple times will override the previous WithApiQuery call
 func (o *Options) WithApiQuery(q string) *Options {
 	o.ApiQuery = q
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithUserProgress enables progress inclusion in queries
-//
-// Can be used when querying assets and courses
-//
-//   - For assets, it adds an additional db query (asset progress)
-//   - For courses, it adds 2 additional db queries (course progress and course favourite)
-func (o *Options) WithUserProgress() *Options {
-	o.IncludeUserProgress = true
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithAssetMetadata enables asset metadata inclusion in queries
-//
-// Can be used when querying assets and will add an additional db query to the asset metadata
-// table
-func (o *Options) WithAssetMetadata() *Options {
-	o.IncludeAssetMetadata = true
 	return o
 }

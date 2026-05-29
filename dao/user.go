@@ -97,6 +97,8 @@ func (dao *DAO) ListUsers(ctx context.Context, dbOpts *Options) ([]*models.User,
 	return listGeneric[models.User](ctx, dao, *builderOpts)
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // ListAdminUsers returns users for the site admin list
 func (dao *DAO) ListAdminUsers(ctx context.Context, dbOpts *Options) ([]*AdminUserRow, error) {
 	u := models.USER_TABLE

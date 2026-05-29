@@ -6,8 +6,6 @@ import (
 	"errors"
 
 	"github.com/geerew/friendle/database"
-	"github.com/geerew/friendle/utils"
-	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,7 +31,7 @@ func (dao *DAO) RunInTransaction(ctx context.Context, fn func(ctx context.Contex
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create is a generic function to create a record in the database
+// createGeneric inserts a row using the configured builder options
 func createGeneric(ctx context.Context, dao *DAO, builderOpts builderOptions) error {
 	sqlStr, args, err := insertBuilder(builderOpts)
 	if err != nil {
@@ -46,7 +44,7 @@ func createGeneric(ctx context.Context, dao *DAO, builderOpts builderOptions) er
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Count is a generic function to count the number of rows in a table as determined by the model
+// countGeneric counts rows matching the configured builder options
 func countGeneric(ctx context.Context, dao *DAO, builderOpts builderOptions) (int, error) {
 	sqlStr, args, err := countBuilder(builderOpts)
 	if err != nil {
@@ -117,7 +115,7 @@ func listGeneric[T any](ctx context.Context, dao *DAO, builderOpts builderOption
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// updateGeneric is a generic function to update a record in the database
+// updateGeneric updates rows matching the configured builder options
 func updateGeneric(ctx context.Context, dao *DAO, builderOpts builderOptions) (bool, error) {
 	sqlStr, args, err := updateBuilder(builderOpts)
 	if err != nil {
@@ -155,18 +153,6 @@ func pluck[T any](ctx context.Context, dao *DAO, builderOpts builderOptions) ([]
 	}
 
 	return out, nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// principalFromCtx is a helper method to get the principal from the context
-func principalFromCtx(ctx context.Context) (types.Principal, error) {
-	principal, ok := ctx.Value(types.PrincipalContextKey).(types.Principal)
-	if !ok {
-		return types.Principal{}, utils.ErrPrincipal
-	}
-
-	return principal, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

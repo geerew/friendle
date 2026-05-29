@@ -46,23 +46,3 @@ ORDER BY total_score DESC`
 
 	return out, rows.Err()
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Leaderboard returns leaderboard entries as maps for backward compatibility
-func (dao *DAO) Leaderboard(ctx context.Context, groupID string) ([]map[string]interface{}, error) {
-	entries, err := dao.ListLeaderboardEntries(ctx, groupID)
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]map[string]interface{}, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, map[string]interface{}{
-			"userId": e.UserID, "displayName": e.DisplayName,
-			"totalScore": e.TotalScore, "roundsPlayed": e.RoundsPlayed,
-		})
-	}
-
-	return out, nil
-}

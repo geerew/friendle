@@ -47,16 +47,6 @@ func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Grou
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SearchGroups searches groups by name
-func (dao *DAO) SearchGroups(ctx context.Context, q string) ([]*models.Group, error) {
-	like := "%" + q + "%"
-	return listGeneric[models.Group](ctx, dao, *newBuilderOptions(models.GROUP_TABLE).
-		WithColumns(models.GroupColumns()...).
-		SetDbOpts(NewOptions().WithWhere(squirrel.Like{"LOWER(name)": like})))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // UpdateGroup updates mutable group fields
 func (dao *DAO) UpdateGroup(ctx context.Context, g *models.Group) error {
 	g.RefreshUpdatedAt()
