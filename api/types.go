@@ -383,6 +383,13 @@ type selfDeleteRequest struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// adminRecoveryRequest is the body for POST /api/admin/recovery
+type adminRecoveryRequest struct {
+	Token string `json:"token"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // adminGroupResponse is a group row enriched for the site admin list
 type adminGroupResponse struct {
 	ID          string `json:"id"`

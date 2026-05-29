@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -62,7 +61,7 @@ var serveCmd = &cobra.Command{
 		router := api.New(application, nil)
 
 		var wg sync.WaitGroup
-		wg.Add(1)
+		wg.Add(2)
 
 		// Listen for shutdown signals
 		go func() {
@@ -102,12 +101,6 @@ func init() {
 	serveCmd.Flags().Bool("enable-signup", false, "Allow users to create new accounts")
 	serveCmd.Flags().Bool("debug", false, "Enable debug logging")
 
-	// Bind flags
-	viper.SetEnvPrefix("FRIENDLE")
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	viper.AutomaticEnv()
-
-	// Bind each flag
 	_ = viper.BindPFlag("dev", serveCmd.Flags().Lookup("dev"))
 	_ = viper.BindPFlag("http", serveCmd.Flags().Lookup("http"))
 	_ = viper.BindPFlag("data-dir", serveCmd.Flags().Lookup("data-dir"))
