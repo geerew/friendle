@@ -18,7 +18,7 @@ import (
 
 // Test successfully listing the caller's groups
 func TestListMyGroups(t *testing.T) {
-	router, _, _ := setup(t, "user", types.UserRoleUser)
+	router, _, _ := setup(t, "user", types.SiteRoleUser)
 
 	for _, path := range []string{"/api/groups", "/api/groups/"} {
 		req, err := http.NewRequest(http.MethodGet, path, nil)
@@ -35,7 +35,7 @@ func TestListMyGroups(t *testing.T) {
 
 // Test search results are ordered by relevance
 func TestSearchGroupsOrder(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	for _, name := range []string{"1", "10", "11", "2"} {
 		group := &models.Group{Name: name, CreatedBy: "user", IntervalHours: 24, Timezone: "UTC"}
@@ -67,7 +67,7 @@ func TestSearchGroupsOrder(t *testing.T) {
 
 // Test successfully cancelling a pending join request
 func TestCancelJoinRequest(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	group := &models.Group{Name: "Join Me", CreatedBy: "user", IntervalHours: 24, Timezone: "UTC"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
@@ -96,13 +96,13 @@ func TestCancelJoinRequest(t *testing.T) {
 
 // Test join request authorization rules
 func TestCreateJoinRequestAuthorization(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	other := &models.User{
 		Username:     "other",
 		DisplayName:  "Other",
 		PasswordHash: "password",
-		SiteRole:     types.UserRoleUser,
+		SiteRole:     types.SiteRoleUser,
 	}
 	require.NoError(t, router.appDao.CreateUser(ctx, other))
 
@@ -134,7 +134,7 @@ func TestCreateJoinRequestAuthorization(t *testing.T) {
 		jr, err := router.appDao.GetJoinRequestByUser(ctx, group.ID, "user")
 		require.NoError(t, err)
 		require.NotNil(t, jr)
-		require.Equal(t, models.JoinPending, jr.Status)
+		require.Equal(t, types.JoinPending, jr.Status)
 	})
 }
 
@@ -142,13 +142,13 @@ func TestCreateJoinRequestAuthorization(t *testing.T) {
 
 // Test site admin direct member add bypasses join requests
 func TestAdminAddGroupMember(t *testing.T) {
-	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+	router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 	member := &models.User{
 		Username:     "member",
 		DisplayName:  "Member",
 		PasswordHash: "password",
-		SiteRole:     types.UserRoleUser,
+		SiteRole:     types.SiteRoleUser,
 	}
 	require.NoError(t, router.appDao.CreateUser(ctx, member))
 
@@ -193,7 +193,7 @@ func TestAdminAddGroupMember(t *testing.T) {
 
 // TestCreateGroup exercises group creation
 func TestCreateGroup(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	body := bytes.NewBufferString(`{"name":"My Group"}`)
 	req, err := http.NewRequest(http.MethodPost, "/api/groups/", body)
@@ -220,7 +220,7 @@ func TestCreateGroup(t *testing.T) {
 func TestGetGroup(t *testing.T) {
 	// Test successfully fetching a group as a member
 	t.Run("member", func(t *testing.T) {
-		router, ctx, _ := setup(t, "user", types.UserRoleUser)
+		router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Detail Group")
 
@@ -237,9 +237,9 @@ func TestGetGroup(t *testing.T) {
 
 	// Test successfully fetching a group as site admin without membership
 	t.Run("site admin", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
-		member := &models.User{Username: "member", DisplayName: "Member", SiteRole: types.UserRoleUser}
+		member := &models.User{Username: "member", DisplayName: "Member", SiteRole: types.SiteRoleUser}
 		createTestUser(t, router, ctx, member)
 
 		group := createTestGroupWithMember(t, router, ctx, member.ID, types.GroupRoleAdmin, "Admin View Group")
@@ -258,7 +258,7 @@ func TestGetGroup(t *testing.T) {
 
 // TestUpdateGroup exercises group updates by a group admin
 func TestUpdateGroup(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Old Name")
 
@@ -284,9 +284,9 @@ func TestUpdateGroup(t *testing.T) {
 
 // TestUpdateGroupJoinRequestApprove exercises approving a join request
 func TestUpdateGroupJoinRequestApprove(t *testing.T) {
-	router, ctx, principal := setup(t, "user", types.UserRoleUser)
+	router, ctx, principal := setup(t, "user", types.SiteRoleUser)
 
-	gadmin := &models.User{Username: "gadmin", DisplayName: "Group Admin", SiteRole: types.UserRoleUser}
+	gadmin := &models.User{Username: "gadmin", DisplayName: "Group Admin", SiteRole: types.SiteRoleUser}
 	createTestUser(t, router, ctx, gadmin)
 
 	group := createTestGroupWithMember(t, router, ctx, gadmin.ID, types.GroupRoleAdmin, "Approve Group")
@@ -302,7 +302,7 @@ func TestUpdateGroupJoinRequestApprove(t *testing.T) {
 	require.NotNil(t, jr)
 
 	principal.userID = gadmin.ID
-	principal.role = types.UserRoleUser
+	principal.role = types.SiteRoleUser
 
 	approveReq, err := http.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/join-requests/"+jr.ID+"/approve", nil)
 	require.NoError(t, err)
@@ -319,9 +319,9 @@ func TestUpdateGroupJoinRequestApprove(t *testing.T) {
 
 // TestUpdateGroupJoinRequestReject exercises rejecting a join request
 func TestUpdateGroupJoinRequestReject(t *testing.T) {
-	router, ctx, principal := setup(t, "user", types.UserRoleUser)
+	router, ctx, principal := setup(t, "user", types.SiteRoleUser)
 
-	gadmin := &models.User{Username: "greject", DisplayName: "Group Admin", SiteRole: types.UserRoleUser}
+	gadmin := &models.User{Username: "greject", DisplayName: "Group Admin", SiteRole: types.SiteRoleUser}
 	createTestUser(t, router, ctx, gadmin)
 
 	group := createTestGroupWithMember(t, router, ctx, gadmin.ID, types.GroupRoleAdmin, "Reject Group")
@@ -337,7 +337,7 @@ func TestUpdateGroupJoinRequestReject(t *testing.T) {
 	require.NotNil(t, jr)
 
 	principal.userID = gadmin.ID
-	principal.role = types.UserRoleUser
+	principal.role = types.SiteRoleUser
 
 	rejectReq, err := http.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/join-requests/"+jr.ID+"/reject", nil)
 	require.NoError(t, err)
@@ -351,18 +351,18 @@ func TestUpdateGroupJoinRequestReject(t *testing.T) {
 
 	updated, err := router.appDao.GetJoinRequest(ctx, jr.ID)
 	require.NoError(t, err)
-	require.Equal(t, models.JoinRejected, updated.Status)
+	require.Equal(t, types.JoinRejected, updated.Status)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // TestDeleteGroupMember exercises removing a member from a group
 func TestDeleteGroupMember(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Members Group")
 
-	member := &models.User{Username: "member", DisplayName: "Member", SiteRole: types.UserRoleUser}
+	member := &models.User{Username: "member", DisplayName: "Member", SiteRole: types.SiteRoleUser}
 	createTestUser(t, router, ctx, member)
 	require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
 		GroupID: group.ID, UserID: member.ID, GroupRole: types.GroupRoleUser,
@@ -383,7 +383,7 @@ func TestDeleteGroupMember(t *testing.T) {
 
 // TestGetGroupLeaderboard exercises the group leaderboard endpoint
 func TestGetGroupLeaderboard(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Leaderboard Group")
 

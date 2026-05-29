@@ -113,7 +113,7 @@ func verifyAdminUser(username, dataDir string) error {
 		return fmt.Errorf("user '%s' not found", username)
 	}
 
-	if user.SiteRole != types.UserRoleAdmin {
+	if user.SiteRole != types.SiteRoleAdmin {
 		return fmt.Errorf("user '%s' is not an admin user", username)
 	}
 

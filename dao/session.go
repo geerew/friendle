@@ -123,7 +123,7 @@ func (dao *DAO) BulkUpdateSessions(ctx context.Context, sessions []*models.Sessi
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // UpdateSessionRoleForUser updates the role for all sessions belonging to a user
-func (dao *DAO) UpdateSessionRoleForUser(ctx context.Context, userID string, newRole types.UserRole) error {
+func (dao *DAO) UpdateSessionRoleForUser(ctx context.Context, userID string, newRole types.SiteRole) error {
 	if userID == "" {
 		return utils.ErrUserId
 	}

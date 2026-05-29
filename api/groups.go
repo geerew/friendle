@@ -211,11 +211,11 @@ func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Already a member", nil)
 	}
 
-	if existing, _ := r.appDao.GetJoinRequestByUser(ctx, groupID, principal.UserID); existing != nil && existing.Status == models.JoinPending {
-		return c.Status(fiber.StatusOK).JSON(&joinRequestResponse{Status: models.JoinPending})
+	if existing, _ := r.appDao.GetJoinRequestByUser(ctx, groupID, principal.UserID); existing != nil && existing.Status == types.JoinPending {
+		return c.Status(fiber.StatusOK).JSON(&joinRequestResponse{Status: types.JoinPending})
 	}
 
-	jr := &models.GroupJoinRequest{GroupID: groupID, UserID: principal.UserID, Status: models.JoinPending}
+	jr := &models.GroupJoinRequest{GroupID: groupID, UserID: principal.UserID, Status: types.JoinPending}
 	if err := r.appDao.CreateJoinRequest(ctx, jr); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Request failed", err)
 	}
@@ -245,7 +245,7 @@ func (r *Router) deleteGroupJoinRequest(c *fiber.Ctx) error {
 	}
 
 	jr, err := r.appDao.GetJoinRequestByUser(ctx, groupID, targetUserID)
-	if err != nil || jr == nil || jr.Status != models.JoinPending {
+	if err != nil || jr == nil || jr.Status != types.JoinPending {
 		return errorResponse(c, fiber.StatusNotFound, "Pending request not found", nil)
 	}
 
@@ -274,14 +274,14 @@ func (r *Router) getGroupJoinRequests(c *fiber.Ctx) error {
 
 // updateGroupJoinRequestApprove approves a pending join request
 func (r *Router) updateGroupJoinRequestApprove(c *fiber.Ctx) error {
-	return r.resolveGroupJoinRequest(c, models.JoinApproved, types.GroupRoleUser)
+	return r.resolveGroupJoinRequest(c, types.JoinApproved, types.GroupRoleUser)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // updateGroupJoinRequestReject rejects a pending join request
 func (r *Router) updateGroupJoinRequestReject(c *fiber.Ctx) error {
-	return r.resolveGroupJoinRequest(c, models.JoinRejected, "")
+	return r.resolveGroupJoinRequest(c, types.JoinRejected, "")
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -314,7 +314,7 @@ func (r *Router) getGroupLeaderboard(c *fiber.Ctx) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // resolveGroupJoinRequest updates a join request status and optionally adds a member
-func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status models.JoinRequestStatus, role types.GroupRole) error {
+func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status types.JoinRequestStatus, role types.GroupRole) error {
 	_, ctx := principalAndCtx(c)
 
 	jr, err := r.appDao.GetJoinRequest(ctx, c.Params("rid"))
@@ -326,7 +326,7 @@ func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status models.JoinRequest
 		return errorResponse(c, fiber.StatusInternalServerError, "Update failed", err)
 	}
 
-	if status == models.JoinApproved && role != "" {
+	if status == types.JoinApproved && role != "" {
 		_ = r.appDao.CreateGroupMember(ctx, &models.GroupMember{
 			GroupID: jr.GroupID, UserID: jr.UserID, GroupRole: role,
 		})

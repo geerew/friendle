@@ -369,36 +369,31 @@ func TestFormatETag(t *testing.T) {
 }
 ```
 
-See `cron/course_availability_test.go` and `dao/asset_keyframes_test.go`.
+See `dao/user_test.go` and `utils/types/date_time_test.go`.
 
 **Table-driven tests** when exercising many inputs. Prefer separate tables (or `t.Run` blocks) for **success** and **error** paths—not one mixed table unless cases truly share the same setup.
 
 ```go
-func TestAsset_NewAsset(t *testing.T) {
-	// Test successfully creating an Asset from valid extensions
+func TestNewSiteRole(t *testing.T) {
+	// Test successfully parsing known site role strings
 	t.Run("success", func(t *testing.T) {
 		tests := []struct {
-			ext      string
-			expected AssetType
+			input    string
+			expected SiteRole
 		}{
-			{"mp4", AssetVideo},
-			{"pdf", AssetPDF},
+			{"site_admin", SiteRoleAdmin},
+			{"admin", SiteRoleAdmin},
+			{"site_user", SiteRoleUser},
 		}
 
 		for _, tt := range tests {
-			a, err := NewAsset(tt.ext)
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, a)
+			require.Equal(t, tt.expected, NewSiteRole(tt.input))
 		}
 	})
 
-	// Test error due to an invalid extension
-	t.Run("error", func(t *testing.T) {
-		_, err := NewAsset("test")
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid asset extension")
+	// Test unknown role defaults to site user
+	t.Run("default", func(t *testing.T) {
+		require.Equal(t, SiteRoleUser, NewSiteRole("unknown"))
 	})
 }
 ```
-
-See `utils/types/asset_test.go` and `utils/types/date_time_test.go`.

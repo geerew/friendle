@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils/types"
 	"github.com/geerew/friendle/utils/wordgame"
 	"github.com/gofiber/fiber/v2"
 )
@@ -53,7 +54,7 @@ func (r *Router) createGroupRoundWord(c *fiber.Ctx) error {
 	roundDate := time.Now().Format("2006-01-02")
 
 	round, _ := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
-	if round == nil || round.Status != models.RoundAwaitingWord {
+	if round == nil || round.Status != types.RoundAwaitingWord {
 		return errorResponse(c, fiber.StatusBadRequest, "No round awaiting word", nil)
 	}
 
@@ -78,7 +79,7 @@ func (r *Router) createGroupRoundWord(c *fiber.Ctx) error {
 	hash := wordgame.HashWord(r.app.Config.DataDir, word)
 	round.WordHash = &hash
 	round.WordPlain = &word
-	round.Status = models.RoundActive
+	round.Status = types.RoundActive
 	if err := r.appDao.UpdateRound(ctx, round); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to save word", err)
 	}
@@ -95,7 +96,7 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 	roundDate := time.Now().Format("2006-01-02")
 
 	round, _ := r.appDao.GetCurrentRound(ctx, groupID, roundDate)
-	if round == nil || round.Status != models.RoundActive {
+	if round == nil || round.Status != types.RoundActive {
 		return errorResponse(c, fiber.StatusBadRequest, "Round not active", nil)
 	}
 
@@ -156,7 +157,7 @@ func (r *Router) createGroupRoundGuess(c *fiber.Ctx) error {
 	_ = r.appDao.UpdateGuess(ctx, guess)
 
 	if r.allGuessersDone(ctx, round) {
-		round.Status = models.RoundCompleted
+		round.Status = types.RoundCompleted
 		_ = r.appDao.UpdateRound(ctx, round)
 	}
 
@@ -181,7 +182,7 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusNotFound, "No round", nil)
 	}
 
-	if round.Status != models.RoundCompleted && round.Status != models.RoundSkipped {
+	if round.Status != types.RoundCompleted && round.Status != types.RoundSkipped {
 		return errorResponse(c, fiber.StatusBadRequest, "Round not finished", nil)
 	}
 
@@ -195,7 +196,7 @@ func (r *Router) getGroupRoundReveal(c *fiber.Ctx) error {
 		resp.PickerDisplayName = picker.DisplayName
 	}
 
-	if round.Status == models.RoundCompleted && round.WordPlain != nil {
+	if round.Status == types.RoundCompleted && round.WordPlain != nil {
 		resp.Word = *round.WordPlain
 	}
 
@@ -240,7 +241,7 @@ func (r *Router) roundSummary(ctx context.Context, g *models.Group, userID strin
 		Status:   string(round.Status),
 		YourRole: yourRole,
 	}
-	if round.Status == models.RoundCompleted || round.Status == models.RoundSkipped {
+	if round.Status == types.RoundCompleted || round.Status == types.RoundSkipped {
 		out.CanReveal = true
 	}
 

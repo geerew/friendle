@@ -20,7 +20,7 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// AssetProgress defines the model for an asset progress
+// Session defines the model for a server-side session record
 type Session struct {
 	ID      string `db:"id"`      // Immutable
 	UserId  string `db:"user_id"` // Immutable

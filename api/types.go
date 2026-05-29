@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 
+	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/geerew/friendle/utils/wordgame"
@@ -43,7 +44,7 @@ type adminUserResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // adminUserResponseHelper maps admin user rows to API responses
-func adminUserResponseHelper(users []*models.AdminUserListRow, groupsByUser map[string][]*models.UserGroupSummaryRow) []*adminUserResponse {
+func adminUserResponseHelper(users []*dao.AdminUserRow, groupsByUser map[string][]*dao.UserGroupSummaryRow) []*adminUserResponse {
 	responses := make([]*adminUserResponse, 0, len(users))
 	for _, user := range users {
 		groupRows := groupsByUser[user.ID]
@@ -74,7 +75,7 @@ type userGroupSummaryResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // userGroupSummaryResponsesFromRows maps group summary rows to API responses
-func userGroupSummaryResponsesFromRows(rows []*models.UserGroupSummaryRow) []*userGroupSummaryResponse {
+func userGroupSummaryResponsesFromRows(rows []*dao.UserGroupSummaryRow) []*userGroupSummaryResponse {
 	if len(rows) == 0 {
 		return []*userGroupSummaryResponse{}
 	}
@@ -95,8 +96,8 @@ func userGroupSummaryResponsesFromRows(rows []*models.UserGroupSummaryRow) []*us
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // userGroupSummariesByUserID groups summary rows by user ID
-func userGroupSummariesByUserID(rows []*models.UserGroupSummaryRow) map[string][]*models.UserGroupSummaryRow {
-	byUser := make(map[string][]*models.UserGroupSummaryRow)
+func userGroupSummariesByUserID(rows []*dao.UserGroupSummaryRow) map[string][]*dao.UserGroupSummaryRow {
+	byUser := make(map[string][]*dao.UserGroupSummaryRow)
 	for _, row := range rows {
 		byUser[row.UserID] = append(byUser[row.UserID], row)
 	}
@@ -188,7 +189,7 @@ type groupRoundSummaryResponse struct {
 // joinRequestResponse is a join request returned by the API
 type joinRequestResponse struct {
 	ID     string                   `json:"id,omitempty"`
-	Status models.JoinRequestStatus `json:"status"`
+	Status types.JoinRequestStatus `json:"status"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -280,7 +281,7 @@ type groupRoundRevealGuessResponse struct {
 
 // groupRoundRevealResponse is the reveal payload for a finished round
 type groupRoundRevealResponse struct {
-	Status            models.RoundStatus              `json:"status"`
+	Status            types.RoundStatus               `json:"status"`
 	PickerUserID      string                          `json:"pickerUserId"`
 	PickerDisplayName string                          `json:"pickerDisplayName,omitempty"`
 	Word              string                          `json:"word,omitempty"`
@@ -308,7 +309,7 @@ type groupSearchResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // groupSearchResponsesFromRows maps search rows to API responses with membership flags
-func groupSearchResponsesFromRows(rows []*models.GroupSearchRow, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
+func groupSearchResponsesFromRows(rows []*dao.GroupSearchRow, memberGroupIDs map[string]struct{}, pendingGroupIDs map[string]struct{}) []*groupSearchResponse {
 	if len(rows) == 0 {
 		return []*groupSearchResponse{}
 	}
@@ -400,7 +401,7 @@ type adminGroupResponse struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // adminGroupResponseHelper maps admin group rows to API responses
-func adminGroupResponseHelper(groups []*models.AdminGroupListRow) []*adminGroupResponse {
+func adminGroupResponseHelper(groups []*dao.AdminGroupRow) []*adminGroupResponse {
 	responses := make([]*adminGroupResponse, 0, len(groups))
 	for _, g := range groups {
 		responses = append(responses, &adminGroupResponse{

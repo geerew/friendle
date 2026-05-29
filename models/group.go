@@ -1,100 +1,48 @@
 package models
 
-import "github.com/geerew/friendle/utils/types"
+import "fmt"
 
-const GROUP_TABLE = "groups"
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+const (
+	GROUP_TABLE = "groups"
+
+	GROUP_NAME           = "name"
+	GROUP_CREATED_BY     = "created_by"
+	GROUP_INTERVAL_HOURS = "interval_hours"
+	GROUP_TIMEZONE       = "timezone"
+
+	GROUP_TABLE_ID              = GROUP_TABLE + "." + BASE_ID
+	GROUP_TABLE_CREATED_AT      = GROUP_TABLE + "." + BASE_CREATED_AT
+	GROUP_TABLE_UPDATED_AT      = GROUP_TABLE + "." + BASE_UPDATED_AT
+	GROUP_TABLE_NAME            = GROUP_TABLE + "." + GROUP_NAME
+	GROUP_TABLE_CREATED_BY      = GROUP_TABLE + "." + GROUP_CREATED_BY
+	GROUP_TABLE_INTERVAL_HOURS  = GROUP_TABLE + "." + GROUP_INTERVAL_HOURS
+	GROUP_TABLE_TIMEZONE        = GROUP_TABLE + "." + GROUP_TIMEZONE
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Group defines the model for a friend group
 type Group struct {
 	Base
-	Name          string `db:"name"`
-	CreatedBy     string `db:"created_by"`
-	IntervalHours int    `db:"interval_hours"`
-	Timezone      string `db:"timezone"`
+	Name          string `db:"name"`           // Mutable
+	CreatedBy     string `db:"created_by"`     // Immutable
+	IntervalHours int    `db:"interval_hours"` // Mutable
+	Timezone      string `db:"timezone"`       // Mutable
 }
 
-const GROUP_MEMBER_TABLE = "group_members"
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-type GroupMember struct {
-	Base
-	GroupID     string           `db:"group_id"`
-	UserID      string           `db:"user_id"`
-	GroupRole   types.GroupRole  `db:"group_role"`
-	TimesPicked int              `db:"times_picked"`
-	PickerSkips int              `db:"picker_skips"`
-}
-
-const JOIN_REQUEST_TABLE = "group_join_requests"
-
-type JoinRequestStatus string
-
-const (
-	JoinPending  JoinRequestStatus = "pending"
-	JoinApproved JoinRequestStatus = "approved"
-	JoinRejected JoinRequestStatus = "rejected"
-)
-
-type GroupJoinRequest struct {
-	Base
-	GroupID string            `db:"group_id"`
-	UserID  string            `db:"user_id"`
-	Status  JoinRequestStatus `db:"status"`
-}
-
-// AdminGroupListRow is a groups row enriched for the site admin list
-type AdminGroupListRow struct {
-	ID          string `db:"id"`
-	Name        string `db:"name"`
-	MemberCount int    `db:"member_count"`
-}
-
-// UserGroupSummaryRow is a group summary for a user's memberships
-type UserGroupSummaryRow struct {
-	UserID      string          `db:"user_id"`
-	ID          string          `db:"id"`
-	Name        string          `db:"name"`
-	MemberCount int             `db:"member_count"`
-	GroupRole   types.GroupRole `db:"group_role"`
-}
-
-// GroupSearchRow is a group row enriched for name search results
-type GroupSearchRow struct {
-	ID          string `db:"id"`
-	Name        string `db:"name"`
-	MemberCount int    `db:"member_count"`
-}
-
-const ROUND_TABLE = "rounds"
-
-type RoundStatus string
-
-const (
-	RoundAwaitingWord RoundStatus = "awaiting_word"
-	RoundActive       RoundStatus = "active"
-	RoundCompleted    RoundStatus = "completed"
-	RoundSkipped      RoundStatus = "skipped"
-)
-
-type Round struct {
-	Base
-	GroupID      string      `db:"group_id"`
-	RoundDate    string      `db:"round_date"`
-	PickerUserID string      `db:"picker_user_id"`
-	WordHash     *string     `db:"word_hash"`
-	WordPlain    *string     `db:"word_plain"`
-	Status       RoundStatus `db:"status"`
-}
-
-const GUESS_TABLE = "guesses"
-
-type Guess struct {
-	Base
-	RoundID      string `db:"round_id"`
-	UserID       string `db:"user_id"`
-	AttemptsUsed int    `db:"attempts_used"`
-	Solved       bool   `db:"solved"`
-	RowsJSON     string `db:"rows_json"`
-	Score        int    `db:"score"`
-	Finished     bool   `db:"finished"`
-	FirstGuessAt *string `db:"first_guess_at"`
-	CompletedAt  *string `db:"completed_at"`
+// GroupColumns returns the columns for use in a SELECT query
+func GroupColumns() []string {
+	return []string{
+		fmt.Sprintf("%s AS %s", GROUP_TABLE_ID, BASE_ID),
+		fmt.Sprintf("%s AS %s", GROUP_TABLE_CREATED_AT, BASE_CREATED_AT),
+		fmt.Sprintf("%s AS %s", GROUP_TABLE_UPDATED_AT, BASE_UPDATED_AT),
+		fmt.Sprintf("%s AS %s", GROUP_TABLE_NAME, GROUP_NAME),
+		fmt.Sprintf("%s AS %s", GROUP_TABLE_CREATED_BY, GROUP_CREATED_BY),
+		fmt.Sprintf("%s AS %s", GROUP_TABLE_INTERVAL_HOURS, GROUP_INTERVAL_HOURS),
+		fmt.Sprintf("%s AS %s", GROUP_TABLE_TIMEZONE, GROUP_TIMEZONE),
+	}
 }

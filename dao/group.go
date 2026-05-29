@@ -28,24 +28,24 @@ func (dao *DAO) CreateGroup(ctx context.Context, g *models.Group) error {
 
 func (dao *DAO) GetGroup(ctx context.Context, id string) (*models.Group, error) {
 	return getGeneric[models.Group](ctx, dao, *newBuilderOptions(models.GROUP_TABLE).
-		WithColumns(groupColumns()...).
+		WithColumns(models.GroupColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})).
 		WithLimit(1))
 }
 
 func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Group, error) {
 	return listGeneric[models.Group](ctx, dao, *newBuilderOptions(models.GROUP_TABLE).
-		WithColumns(groupColumns()...).SetDbOpts(dbOpts))
+		WithColumns(models.GroupColumns()...).SetDbOpts(dbOpts))
 }
 
 // ListAdminGroups returns groups with member counts for the site admin list
-func (dao *DAO) ListAdminGroups(ctx context.Context, dbOpts *Options) ([]*models.AdminGroupListRow, error) {
+func (dao *DAO) ListAdminGroups(ctx context.Context, dbOpts *Options) ([]*AdminGroupRow, error) {
 	g := models.GROUP_TABLE
 	gm := models.GROUP_MEMBER_TABLE
 
 	applyDefaultOrderBy(dbOpts, defaultAdminGroupsListOrderBy)
 
-	return listGeneric[models.AdminGroupListRow](ctx, dao, *newBuilderOptions(g).
+	return listGeneric[AdminGroupRow](ctx, dao, *newBuilderOptions(g).
 		WithColumns(
 			g+"."+models.BASE_ID+" AS id",
 			g+".name AS name",
@@ -56,7 +56,7 @@ func (dao *DAO) ListAdminGroups(ctx context.Context, dbOpts *Options) ([]*models
 		SetDbOpts(dbOpts))
 }
 
-func (dao *DAO) SearchGroupSummaries(ctx context.Context, q string, dbOpts *Options) ([]*models.GroupSearchRow, error) {
+func (dao *DAO) SearchGroupSummaries(ctx context.Context, q string, dbOpts *Options) ([]*GroupSearchRow, error) {
 	g := models.GROUP_TABLE
 	gm := models.GROUP_MEMBER_TABLE
 	like := "%" + q + "%"
@@ -73,7 +73,7 @@ func (dao *DAO) SearchGroupSummaries(ctx context.Context, q string, dbOpts *Opti
 		searchOpts = searchOpts.WithPagination(dbOpts.Pagination)
 	}
 
-	return listGeneric[models.GroupSearchRow](ctx, dao, *newBuilderOptions(g).
+	return listGeneric[GroupSearchRow](ctx, dao, *newBuilderOptions(g).
 		WithColumns(
 			g+"."+models.BASE_ID+" AS id",
 			g+".name AS name",
@@ -94,7 +94,7 @@ func searchGroupRelevanceOrder(g, q string) squirrel.Sqlizer {
 func (dao *DAO) SearchGroups(ctx context.Context, q string) ([]*models.Group, error) {
 	like := "%" + q + "%"
 	return listGeneric[models.Group](ctx, dao, *newBuilderOptions(models.GROUP_TABLE).
-		WithColumns(groupColumns()...).
+		WithColumns(models.GroupColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Like{"LOWER(name)": like})))
 }
 
@@ -105,15 +105,6 @@ func (dao *DAO) UpdateGroup(ctx context.Context, g *models.Group) error {
 		models.BASE_UPDATED_AT: g.UpdatedAt,
 	}).SetDbOpts(NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: g.ID})))
 	return err
-}
-
-func groupColumns() []string {
-	return []string{
-		models.GROUP_TABLE + "." + models.BASE_ID + " AS " + models.BASE_ID,
-		models.GROUP_TABLE + "." + models.BASE_CREATED_AT + " AS " + models.BASE_CREATED_AT,
-		models.GROUP_TABLE + "." + models.BASE_UPDATED_AT + " AS " + models.BASE_UPDATED_AT,
-		"name", "created_by", "interval_hours", "timezone",
-	}
 }
 
 func (dao *DAO) CreateGroupMember(ctx context.Context, m *models.GroupMember) error {
@@ -131,34 +122,34 @@ func (dao *DAO) CreateGroupMember(ctx context.Context, m *models.GroupMember) er
 
 func (dao *DAO) GetGroupMember(ctx context.Context, groupID, userID string) (*models.GroupMember, error) {
 	return getGeneric[models.GroupMember](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
-		WithColumns(memberColumns()...).
+		WithColumns(models.GroupMemberColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "user_id": userID})).
 		WithLimit(1))
 }
 
 func (dao *DAO) ListGroupMembers(ctx context.Context, groupID string) ([]*models.GroupMember, error) {
 	return listGeneric[models.GroupMember](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
-		WithColumns(memberColumns()...).
+		WithColumns(models.GroupMemberColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID})))
 }
 
 func (dao *DAO) ListGroupsForUser(ctx context.Context, userID string) ([]*models.GroupMember, error) {
 	return listGeneric[models.GroupMember](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
-		WithColumns(memberColumns()...).
+		WithColumns(models.GroupMemberColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"user_id": userID})))
 }
 
 // ListUserGroupSummariesForUserIDs returns group summaries for the given user IDs, ordered by
 // user then group name
-func (dao *DAO) ListUserGroupSummariesForUserIDs(ctx context.Context, userIDs []string) ([]*models.UserGroupSummaryRow, error) {
+func (dao *DAO) ListUserGroupSummariesForUserIDs(ctx context.Context, userIDs []string) ([]*UserGroupSummaryRow, error) {
 	if len(userIDs) == 0 {
-		return []*models.UserGroupSummaryRow{}, nil
+		return []*UserGroupSummaryRow{}, nil
 	}
 
 	gm := models.GROUP_MEMBER_TABLE
 	g := models.GROUP_TABLE
 
-	return listGeneric[models.UserGroupSummaryRow](ctx, dao, *newBuilderOptions(gm).
+	return listGeneric[UserGroupSummaryRow](ctx, dao, *newBuilderOptions(gm).
 		WithColumns(
 			gm+".user_id AS user_id",
 			g+"."+models.BASE_ID+" AS id",
@@ -190,16 +181,6 @@ func (dao *DAO) IncrementTimesPicked(ctx context.Context, memberID string) error
 	return err
 }
 
-func memberColumns() []string {
-	t := models.GROUP_MEMBER_TABLE
-	return []string{
-		t + "." + models.BASE_ID + " AS " + models.BASE_ID,
-		t + "." + models.BASE_CREATED_AT + " AS " + models.BASE_CREATED_AT,
-		t + "." + models.BASE_UPDATED_AT + " AS " + models.BASE_UPDATED_AT,
-		"group_id", "user_id", "group_role", "times_picked", "picker_skips",
-	}
-}
-
 func (dao *DAO) CreateJoinRequest(ctx context.Context, r *models.GroupJoinRequest) error {
 	if r.ID == "" {
 		r.RefreshId()
@@ -207,7 +188,7 @@ func (dao *DAO) CreateJoinRequest(ctx context.Context, r *models.GroupJoinReques
 	r.RefreshCreatedAt()
 	r.RefreshUpdatedAt()
 	if r.Status == "" {
-		r.Status = models.JoinPending
+		r.Status = types.JoinPending
 	}
 	return createGeneric(ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).WithData(map[string]interface{}{
 		models.BASE_ID: r.ID, "group_id": r.GroupID, "user_id": r.UserID, "status": r.Status,
@@ -217,13 +198,13 @@ func (dao *DAO) CreateJoinRequest(ctx context.Context, r *models.GroupJoinReques
 
 func (dao *DAO) GetJoinRequest(ctx context.Context, id string) (*models.GroupJoinRequest, error) {
 	return getGeneric[models.GroupJoinRequest](ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).
-		WithColumns(joinColumns()...).
+		WithColumns(models.GroupJoinRequestColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})).WithLimit(1))
 }
 
 func (dao *DAO) GetJoinRequestByUser(ctx context.Context, groupID, userID string) (*models.GroupJoinRequest, error) {
 	return getGeneric[models.GroupJoinRequest](ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).
-		WithColumns(joinColumns()...).
+		WithColumns(models.GroupJoinRequestColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "user_id": userID})).WithLimit(1))
 }
 
@@ -270,7 +251,7 @@ func (dao *DAO) ListPendingJoinGroupIDsForUser(ctx context.Context, userID strin
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{
 			"user_id":  userID,
 			"group_id": groupIDs,
-			"status":   models.JoinPending,
+			"status":   types.JoinPending,
 		})))
 	if err != nil {
 		return nil, err
@@ -286,11 +267,11 @@ func (dao *DAO) ListPendingJoinGroupIDsForUser(ctx context.Context, userID strin
 
 func (dao *DAO) ListPendingJoinRequests(ctx context.Context, groupID string) ([]*models.GroupJoinRequest, error) {
 	return listGeneric[models.GroupJoinRequest](ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).
-		WithColumns(joinColumns()...).
-		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "status": models.JoinPending})))
+		WithColumns(models.GroupJoinRequestColumns()...).
+		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "status": types.JoinPending})))
 }
 
-func (dao *DAO) UpdateJoinRequestStatus(ctx context.Context, id string, status models.JoinRequestStatus) error {
+func (dao *DAO) UpdateJoinRequestStatus(ctx context.Context, id string, status types.JoinRequestStatus) error {
 	now := types.NowDateTime().String()
 	_, err := updateGeneric(ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).WithData(map[string]interface{}{
 		"status": status, models.BASE_UPDATED_AT: now,
@@ -308,22 +289,12 @@ func (dao *DAO) DeletePendingJoinRequest(ctx context.Context, groupID, userID st
 		NewOptions().WithWhere(squirrel.Eq{
 			"group_id": groupID,
 			"user_id":  userID,
-			"status":   models.JoinPending,
+			"status":   types.JoinPending,
 		}))
 	sqlStr, args, _ := deleteBuilder(*builderOpts)
 	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
 
 	return err
-}
-
-func joinColumns() []string {
-	t := models.JOIN_REQUEST_TABLE
-	return []string{
-		t + "." + models.BASE_ID + " AS " + models.BASE_ID,
-		t + "." + models.BASE_CREATED_AT + " AS " + models.BASE_CREATED_AT,
-		t + "." + models.BASE_UPDATED_AT + " AS " + models.BASE_UPDATED_AT,
-		"group_id", "user_id", "status",
-	}
 }
 
 func (dao *DAO) CreateRound(ctx context.Context, r *models.Round) error {
@@ -348,13 +319,13 @@ func (dao *DAO) CreateRound(ctx context.Context, r *models.Round) error {
 
 func (dao *DAO) GetRound(ctx context.Context, id string) (*models.Round, error) {
 	return getGeneric[models.Round](ctx, dao, *newBuilderOptions(models.ROUND_TABLE).
-		WithColumns(roundColumns()...).
+		WithColumns(models.RoundColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})).WithLimit(1))
 }
 
 func (dao *DAO) GetCurrentRound(ctx context.Context, groupID, roundDate string) (*models.Round, error) {
 	return getGeneric[models.Round](ctx, dao, *newBuilderOptions(models.ROUND_TABLE).
-		WithColumns(roundColumns()...).
+		WithColumns(models.RoundColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "round_date": roundDate})).
 		WithLimit(1))
 }
@@ -377,21 +348,11 @@ func (dao *DAO) UpdateRound(ctx context.Context, r *models.Round) error {
 
 func (dao *DAO) ListActiveRounds(ctx context.Context) ([]*models.Round, error) {
 	return listGeneric[models.Round](ctx, dao, *newBuilderOptions(models.ROUND_TABLE).
-		WithColumns(roundColumns()...).
+		WithColumns(models.RoundColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Or{
-			squirrel.Eq{"status": models.RoundAwaitingWord},
-			squirrel.Eq{"status": models.RoundActive},
+			squirrel.Eq{"status": types.RoundAwaitingWord},
+			squirrel.Eq{"status": types.RoundActive},
 		})))
-}
-
-func roundColumns() []string {
-	t := models.ROUND_TABLE
-	return []string{
-		t + "." + models.BASE_ID + " AS " + models.BASE_ID,
-		t + "." + models.BASE_CREATED_AT + " AS " + models.BASE_CREATED_AT,
-		t + "." + models.BASE_UPDATED_AT + " AS " + models.BASE_UPDATED_AT,
-		"group_id", "round_date", "picker_user_id", "word_hash", "word_plain", "status",
-	}
 }
 
 func (dao *DAO) CreateGuess(ctx context.Context, g *models.Guess) error {
@@ -411,14 +372,14 @@ func (dao *DAO) CreateGuess(ctx context.Context, g *models.Guess) error {
 
 func (dao *DAO) GetGuess(ctx context.Context, roundID, userID string) (*models.Guess, error) {
 	return getGeneric[models.Guess](ctx, dao, *newBuilderOptions(models.GUESS_TABLE).
-		WithColumns(guessColumns()...).
+		WithColumns(models.GuessColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"round_id": roundID, "user_id": userID})).
 		WithLimit(1))
 }
 
 func (dao *DAO) ListGuessesForRound(ctx context.Context, roundID string) ([]*models.Guess, error) {
 	return listGeneric[models.Guess](ctx, dao, *newBuilderOptions(models.GUESS_TABLE).
-		WithColumns(guessColumns()...).
+		WithColumns(models.GuessColumns()...).
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"round_id": roundID})))
 }
 
@@ -431,17 +392,6 @@ func (dao *DAO) UpdateGuess(ctx context.Context, g *models.Guess) error {
 		models.BASE_UPDATED_AT: g.UpdatedAt,
 	}).SetDbOpts(NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: g.ID})))
 	return err
-}
-
-func guessColumns() []string {
-	t := models.GUESS_TABLE
-	return []string{
-		t + "." + models.BASE_ID + " AS " + models.BASE_ID,
-		t + "." + models.BASE_CREATED_AT + " AS " + models.BASE_CREATED_AT,
-		t + "." + models.BASE_UPDATED_AT + " AS " + models.BASE_UPDATED_AT,
-		"round_id", "user_id", "attempts_used", "solved", "rows_json", "score", "finished",
-		"first_guess_at", "completed_at",
-	}
 }
 
 func (dao *DAO) Leaderboard(ctx context.Context, groupID string) ([]map[string]interface{}, error) {

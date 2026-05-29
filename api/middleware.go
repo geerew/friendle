@@ -281,7 +281,6 @@ func sessionMiddleware(r *Router) fiber.Handler {
 		c.Locals(types.PrincipalContextKey, types.Principal{
 			UserID:   userID,
 			SiteRole: role,
-			Role:     role,
 		})
 
 		return c.Next()

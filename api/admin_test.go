@@ -22,7 +22,7 @@ import (
 func TestAdminListUsers(t *testing.T) {
 	// Test successfully listing users for a site admin
 	t.Run("success", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/admin/users", nil))
 		require.NoError(t, err)
@@ -36,7 +36,7 @@ func TestAdminListUsers(t *testing.T) {
 
 	// Test error due to a non-admin caller
 	t.Run("403", func(t *testing.T) {
-		router, _, _ := setup(t, "user", types.UserRoleUser)
+		router, _, _ := setup(t, "user", types.SiteRoleUser)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/admin/users", nil))
 		require.NoError(t, err)
@@ -51,7 +51,7 @@ func TestAdminListUsers(t *testing.T) {
 func TestAdminCreateUser(t *testing.T) {
 	// Test successfully creating a user
 	t.Run("201", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/admin/users", strings.NewReader(`{"username": "testuser", "password": "password123"}`))
 		req.Header.Set("Content-Type", "application/json")
@@ -63,7 +63,7 @@ func TestAdminCreateUser(t *testing.T) {
 
 	// Test error due to a non-admin caller
 	t.Run("403", func(t *testing.T) {
-		router, _, _ := setup(t, "user", types.UserRoleUser)
+		router, _, _ := setup(t, "user", types.SiteRoleUser)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodPost, "/api/admin/users", nil))
 		require.NoError(t, err)
@@ -76,13 +76,13 @@ func TestAdminCreateUser(t *testing.T) {
 
 // TestAdminUpdateUser exercises site admin user updates
 func TestAdminUpdateUser(t *testing.T) {
-	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+	router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 	user := &models.User{
 		Username:     "test",
 		DisplayName:  "Test",
 		PasswordHash: "test-password-hash",
-		SiteRole:     types.UserRoleUser,
+		SiteRole:     types.SiteRoleUser,
 	}
 	require.NoError(t, router.appDao.CreateUser(ctx, user))
 
@@ -102,7 +102,7 @@ func TestAdminUpdateUser(t *testing.T) {
 
 // TestAdminListGroups exercises admin group listing and pagination
 func TestAdminListGroups(t *testing.T) {
-	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+	router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 	group := &models.Group{Name: "Admin Test Group", CreatedBy: "admin"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
@@ -143,9 +143,9 @@ func TestAdminListGroups(t *testing.T) {
 
 // TestDeleteAdminUser exercises site admin user deletion
 func TestDeleteAdminUser(t *testing.T) {
-	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+	router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
-	target := &models.User{Username: "delete-me", DisplayName: "Delete Me", SiteRole: types.UserRoleUser}
+	target := &models.User{Username: "delete-me", DisplayName: "Delete Me", SiteRole: types.SiteRoleUser}
 	createTestUser(t, router, ctx, target)
 
 	status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/admin/users/"+target.ID, nil))
@@ -161,7 +161,7 @@ func TestDeleteAdminUser(t *testing.T) {
 
 // TestDeleteAdminGroup exercises site admin group deletion
 func TestDeleteAdminGroup(t *testing.T) {
-	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+	router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 	group := &models.Group{Name: "Delete Group", CreatedBy: "admin"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
@@ -181,7 +181,7 @@ func TestDeleteAdminGroup(t *testing.T) {
 func TestAdminRecovery(t *testing.T) {
 	// Test successfully resetting an admin password
 	t.Run("200", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		recoveryToken, err := auth.GenerateRecoveryToken(router.app.FS, "admin", "newpass1234", router.app.Config.DataDir)
 		require.NoError(t, err)
@@ -203,7 +203,7 @@ func TestAdminRecovery(t *testing.T) {
 
 	// Test error due to an invalid recovery token
 	t.Run("401", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/admin/recovery", strings.NewReader(`{"token":"invalid"}`))
 		req.Header.Set("Content-Type", "application/json")

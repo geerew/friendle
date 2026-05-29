@@ -20,7 +20,7 @@ func Test_CreateUser(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		dao, ctx := setup(t)
 
-		user := &models.User{Username: "admin", DisplayName: "Admin", PasswordHash: "password", SiteRole: types.UserRoleAdmin}
+		user := &models.User{Username: "admin", DisplayName: "Admin", PasswordHash: "password", SiteRole: types.SiteRoleAdmin}
 		require.NoError(t, dao.CreateUser(ctx, user))
 	})
 
@@ -32,7 +32,7 @@ func Test_CreateUser(t *testing.T) {
 		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "test-user"})
 		require.NoError(t, dao.DeleteUsers(ctx, dbOpts))
 
-		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.UserRoleUser}
+		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.SiteRoleUser}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		require.ErrorContains(t, dao.CreateUser(ctx, user), "UNIQUE constraint failed: "+models.USER_TABLE_USERNAME)
@@ -48,7 +48,7 @@ func Test_CreateUser(t *testing.T) {
 	t.Run("empty username", func(t *testing.T) {
 		dao, ctx := setup(t)
 
-		user := &models.User{Username: "", DisplayName: "Admin", PasswordHash: "password", SiteRole: types.UserRoleAdmin}
+		user := &models.User{Username: "", DisplayName: "Admin", PasswordHash: "password", SiteRole: types.SiteRoleAdmin}
 		require.ErrorIs(t, dao.CreateUser(ctx, user), utils.ErrUsername)
 	})
 
@@ -56,7 +56,7 @@ func Test_CreateUser(t *testing.T) {
 	t.Run("empty password", func(t *testing.T) {
 		dao, ctx := setup(t)
 
-		user := &models.User{Username: "admin", DisplayName: "Admin", PasswordHash: "", SiteRole: types.UserRoleAdmin}
+		user := &models.User{Username: "admin", DisplayName: "Admin", PasswordHash: "", SiteRole: types.SiteRoleAdmin}
 		require.ErrorIs(t, dao.CreateUser(ctx, user), utils.ErrUserPassword)
 	})
 }
@@ -72,7 +72,7 @@ func Test_GetUser(t *testing.T) {
 		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "test-user"})
 		require.NoError(t, dao.DeleteUsers(ctx, dbOpts))
 
-		user := &models.User{Username: "admin", DisplayName: "Admin", PasswordHash: "password", SiteRole: types.UserRoleAdmin}
+		user := &models.User{Username: "admin", DisplayName: "Admin", PasswordHash: "password", SiteRole: types.SiteRoleAdmin}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		dbOpts = NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: user.ID})
@@ -113,7 +113,7 @@ func Test_ListUsers(t *testing.T) {
 				Username:     fmt.Sprintf("user%d", i),
 				DisplayName:  fmt.Sprintf("User %d", i),
 				PasswordHash: "password",
-				SiteRole:         types.UserRoleUser,
+				SiteRole:         types.SiteRoleUser,
 			}
 			users = append(users, user)
 			require.NoError(t, dao.CreateUser(ctx, user))
@@ -157,7 +157,7 @@ func Test_ListUsers(t *testing.T) {
 				Username:     fmt.Sprintf("user%d", i),
 				DisplayName:  fmt.Sprintf("User %d", i),
 				PasswordHash: "password",
-				SiteRole:         types.UserRoleUser,
+				SiteRole:         types.SiteRoleUser,
 			}
 			users = append(users, user)
 			require.NoError(t, dao.CreateUser(ctx, user))
@@ -199,7 +199,7 @@ func Test_ListUsers(t *testing.T) {
 			Username:     "test-user",
 			DisplayName:  "Test User",
 			PasswordHash: "password",
-			SiteRole:         types.UserRoleUser,
+			SiteRole:         types.SiteRoleUser,
 		}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
@@ -224,7 +224,7 @@ func Test_ListUsers(t *testing.T) {
 				Username:     fmt.Sprintf("user%d", i),
 				DisplayName:  fmt.Sprintf("User %d", i),
 				PasswordHash: "password",
-				SiteRole:         types.UserRoleUser,
+				SiteRole:         types.SiteRoleUser,
 			}
 			users = append(users, user)
 			require.NoError(t, dao.CreateUser(ctx, user))
@@ -266,7 +266,7 @@ func Test_UpdateUser(t *testing.T) {
 		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "test-user"})
 		require.NoError(t, dao.DeleteUsers(ctx, dbOpts))
 
-		OriginalUser := &models.User{Username: "Admin", DisplayName: "Michael", SiteRole: types.UserRoleAdmin, PasswordHash: "password"}
+		OriginalUser := &models.User{Username: "Admin", DisplayName: "Michael", SiteRole: types.SiteRoleAdmin, PasswordHash: "password"}
 		require.NoError(t, dao.CreateUser(ctx, OriginalUser))
 
 		time.Sleep(1 * time.Millisecond)
@@ -275,7 +275,7 @@ func Test_UpdateUser(t *testing.T) {
 			Base:         OriginalUser.Base,
 			Username:     "nimda",            // Immutable
 			DisplayName:  "Bob",              // Mutable
-			SiteRole:         types.UserRoleUser, // Mutable
+			SiteRole:         types.SiteRoleUser, // Mutable
 			PasswordHash: "new password",     // Mutable
 		}
 		require.NoError(t, dao.UpdateUser(ctx, updatedUser))
@@ -296,7 +296,7 @@ func Test_UpdateUser(t *testing.T) {
 	t.Run("invalid", func(t *testing.T) {
 		dao, ctx := setup(t)
 
-		user := &models.User{Username: "Admin", DisplayName: "Michael", SiteRole: types.UserRoleAdmin, PasswordHash: "password"}
+		user := &models.User{Username: "Admin", DisplayName: "Michael", SiteRole: types.SiteRoleAdmin, PasswordHash: "password"}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		// Empty ID
@@ -319,7 +319,7 @@ func Test_DeleteUsers(t *testing.T) {
 		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "test-user"})
 		require.NoError(t, dao.DeleteUsers(ctx, dbOpts))
 
-		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.UserRoleUser}
+		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.SiteRoleUser}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		opts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: user.ID})
@@ -338,7 +338,7 @@ func Test_DeleteUsers(t *testing.T) {
 		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "test-user"})
 		require.NoError(t, dao.DeleteUsers(ctx, dbOpts))
 
-		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.UserRoleUser}
+		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.SiteRoleUser}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		opts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: "non-existent"})
@@ -358,7 +358,7 @@ func Test_DeleteUsers(t *testing.T) {
 		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "test-user"})
 		require.NoError(t, dao.DeleteUsers(ctx, dbOpts))
 
-		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.UserRoleUser}
+		user := &models.User{Username: "test-user", DisplayName: "Test User", PasswordHash: "password", SiteRole: types.SiteRoleUser}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
 		require.ErrorIs(t, dao.DeleteUsers(ctx, nil), utils.ErrWhere)

@@ -34,7 +34,7 @@ func setup(tb testing.TB) (*DAO, context.Context) {
 		Username:     "test-user",
 		DisplayName:  "Test User",
 		PasswordHash: "test-password",
-		SiteRole:         types.UserRoleAdmin,
+		SiteRole:         types.SiteRoleAdmin,
 	}
 	require.NoError(tb, dao.CreateUser(context.Background(), user))
 

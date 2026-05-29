@@ -9,6 +9,7 @@ import (
 	"github.com/geerew/friendle/database"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/logger"
+	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,7 +72,7 @@ func (rs *RoundScheduler) advanceGroup(ctx context.Context, g *models.Group) {
 		GroupID:      g.ID,
 		RoundDate:    roundDate,
 		PickerUserID: picker.UserID,
-		Status:       models.RoundAwaitingWord,
+		Status:       types.RoundAwaitingWord,
 	}
 	if err := rs.dao.CreateRound(ctx, round); err != nil {
 		rs.logger.Error().Err(err).Str("group", g.ID).Msg("create round")
@@ -95,10 +96,10 @@ func (rs *RoundScheduler) pickMember(ctx context.Context, groupID string) (*mode
 // closeRound finalizes a stale round from a previous day
 func (rs *RoundScheduler) closeRound(ctx context.Context, r *models.Round) {
 	switch r.Status {
-	case models.RoundAwaitingWord:
-		r.Status = models.RoundSkipped
+	case types.RoundAwaitingWord:
+		r.Status = types.RoundSkipped
 		_ = rs.dao.UpdateRound(ctx, r)
-	case models.RoundActive:
+	case types.RoundActive:
 		rs.completeRound(ctx, r)
 	}
 }
@@ -117,7 +118,7 @@ func (rs *RoundScheduler) completeRound(ctx context.Context, r *models.Round) {
 		_ = rs.dao.UpdateGuess(ctx, g)
 	}
 
-	r.Status = models.RoundCompleted
+	r.Status = types.RoundCompleted
 	_ = rs.dao.UpdateRound(ctx, r)
 }
 

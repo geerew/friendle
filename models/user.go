@@ -6,6 +6,8 @@ import (
 	"github.com/geerew/friendle/utils/types"
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 const (
 	USER_TABLE = "users"
 
@@ -23,14 +25,20 @@ const (
 	USER_TABLE_SITE_ROLE     = USER_TABLE + "." + USER_SITE_ROLE
 )
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// User defines the model for a user account
 type User struct {
 	Base
-	Username     string         `db:"username"`
-	DisplayName  string         `db:"display_name"`
-	PasswordHash string         `db:"password_hash"`
-	SiteRole     types.SiteRole `db:"site_role"`
+	Username     string         `db:"username"`      // Immutable
+	DisplayName  string         `db:"display_name"`  // Mutable
+	PasswordHash string         `db:"password_hash"` // Mutable
+	SiteRole     types.SiteRole `db:"site_role"`     // Mutable
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UserColumns returns the columns for use in a SELECT query
 func UserColumns() []string {
 	return []string{
 		fmt.Sprintf("%s AS %s", USER_TABLE_ID, BASE_ID),
@@ -41,12 +49,4 @@ func UserColumns() []string {
 		fmt.Sprintf("%s AS %s", USER_TABLE_PASSWORD_HASH, USER_PASSWORD_HASH),
 		fmt.Sprintf("%s AS %s", USER_TABLE_SITE_ROLE, USER_SITE_ROLE),
 	}
-}
-
-// AdminUserListRow is a user row enriched for the site admin list
-type AdminUserListRow struct {
-	ID          string         `db:"id"`
-	Username    string         `db:"username"`
-	DisplayName string         `db:"display_name"`
-	SiteRole    types.SiteRole `db:"site_role"`
 }

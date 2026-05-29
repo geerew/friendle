@@ -24,7 +24,7 @@ func TestAuth_Register(t *testing.T) {
 
 	// Test successfully registering a new user
 	t.Run("201 (created)", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		router.app.SetBootstrapped()
 
@@ -39,12 +39,12 @@ func TestAuth_Register(t *testing.T) {
 		record, err := router.appDao.GetUser(ctx, dbOpts)
 		require.NoError(t, err)
 		require.NotEqual(t, "password", record.PasswordHash)
-		require.Equal(t, types.UserRoleUser, record.SiteRole)
+		require.Equal(t, types.SiteRoleUser, record.SiteRole)
 	})
 
 	// Test error due to invalid data
 	t.Run("400 (bind error)", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -57,7 +57,7 @@ func TestAuth_Register(t *testing.T) {
 
 	// Test error due to missing but valid data data
 	t.Run("400 (invalid data)", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		// Missing username and password
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(`{}`))
@@ -98,7 +98,7 @@ func TestAuth_Register(t *testing.T) {
 
 	// Test error due to user already existing (case-insensitive)
 	t.Run("400 (existing user)", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(`{"username": "test", "password": "abcd1234" }`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -128,7 +128,7 @@ func TestAuth_Register(t *testing.T) {
 func TestAuth_Bootstrap(t *testing.T) {
 	// Test successfully bootstrapping the application
 	t.Run("201 (created)", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		// Clear the admin user to make it unbootstrapped
 		dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "admin"})
@@ -152,12 +152,12 @@ func TestAuth_Bootstrap(t *testing.T) {
 		record, err3 := router.appDao.GetUser(ctx, dbOpts2)
 		require.NoError(t, err3)
 		require.NotEqual(t, "password", record.PasswordHash)
-		require.Equal(t, types.UserRoleAdmin, record.SiteRole)
+		require.Equal(t, types.SiteRoleAdmin, record.SiteRole)
 		require.True(t, router.app.IsBootstrapped())
 	})
 
 	t.Run("401 (invalid token)", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		// Clear the admin user to make it unbootstrapped
 		dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_USERNAME: "admin"})
@@ -174,7 +174,7 @@ func TestAuth_Bootstrap(t *testing.T) {
 	})
 
 	t.Run("403 (already bootstrapped)", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		// Generate a bootstrap token using the app's data directory and filesystem
 		bootstrapToken, err := auth.GenerateBootstrapToken(router.app.Config.DataDir, router.app.FS)
@@ -194,7 +194,7 @@ func TestAuth_Bootstrap(t *testing.T) {
 // TestAuth_Login exercises user login
 func TestAuth_Login(t *testing.T) {
 	t.Run("200 (success)", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		passwordHash, err := auth.GeneratePassword("abcd1234")
 		require.NoError(t, err)
@@ -203,7 +203,7 @@ func TestAuth_Login(t *testing.T) {
 			Username:     "test",
 			DisplayName:  "Test",
 			PasswordHash: passwordHash,
-			SiteRole:         types.UserRoleAdmin,
+			SiteRole:         types.SiteRoleAdmin,
 		}
 		require.NoError(t, router.appDao.CreateUser(ctx, user))
 
@@ -220,7 +220,7 @@ func TestAuth_Login(t *testing.T) {
 	})
 
 	t.Run("400 (bind error)", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -232,7 +232,7 @@ func TestAuth_Login(t *testing.T) {
 	})
 
 	t.Run("400 (invalid data)", func(t *testing.T) {
-		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		// Missing both
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{}`))
@@ -272,7 +272,7 @@ func TestAuth_Login(t *testing.T) {
 	})
 
 	t.Run("401 (invalid user)", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		passwordHash, err := auth.GeneratePassword("abcd1234")
 		require.NoError(t, err)
@@ -281,7 +281,7 @@ func TestAuth_Login(t *testing.T) {
 			Username:     "test",
 			DisplayName:  "Test",
 			PasswordHash: passwordHash,
-			SiteRole:         types.UserRoleAdmin,
+			SiteRole:         types.SiteRoleAdmin,
 		}
 		require.NoError(t, router.appDao.CreateUser(ctx, user))
 
@@ -295,7 +295,7 @@ func TestAuth_Login(t *testing.T) {
 	})
 
 	t.Run("401 (invalid password)", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		passwordHash, err := auth.GeneratePassword("abcd1234")
 		require.NoError(t, err)
@@ -304,7 +304,7 @@ func TestAuth_Login(t *testing.T) {
 			Username:     "test",
 			DisplayName:  "Test",
 			PasswordHash: passwordHash,
-			SiteRole:         types.UserRoleAdmin,
+			SiteRole:         types.SiteRoleAdmin,
 		}
 		require.NoError(t, router.appDao.CreateUser(ctx, user))
 
@@ -322,7 +322,7 @@ func TestAuth_Login(t *testing.T) {
 
 // TestAuth_SignupStatus exercises the signup status endpoint
 func TestAuth_SignupStatus(t *testing.T) {
-	router, _, _ := setup(t, "", types.UserRoleUser)
+	router, _, _ := setup(t, "", types.SiteRoleUser)
 
 	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/auth/signup-status", nil))
 	require.NoError(t, err)
@@ -337,7 +337,7 @@ func TestAuth_SignupStatus(t *testing.T) {
 
 // TestAuth_GetMe exercises the current user profile endpoint
 func TestAuth_GetMe(t *testing.T) {
-	router, _, _ := setup(t, "user", types.UserRoleUser)
+	router, _, _ := setup(t, "user", types.SiteRoleUser)
 
 	status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/auth/me", nil))
 	require.NoError(t, err)
@@ -354,7 +354,7 @@ func TestAuth_GetMe(t *testing.T) {
 func TestAuth_UpdateMe(t *testing.T) {
 	// Test successfully updating display name
 	t.Run("display name", func(t *testing.T) {
-		router, ctx, _ := setup(t, "user", types.UserRoleUser)
+		router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 		req := httptest.NewRequest(http.MethodPut, "/api/auth/me", strings.NewReader(`{"displayName":"Updated Name"}`))
 		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
@@ -379,7 +379,7 @@ func TestAuth_UpdateMe(t *testing.T) {
 func TestAuth_DeleteMe(t *testing.T) {
 	// Test successfully deleting your own account
 	t.Run("success", func(t *testing.T) {
-		router, ctx, _ := setup(t, "user", types.UserRoleUser)
+		router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 
 		user, err := router.appDao.GetUser(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: "user"}))
 		require.NoError(t, err)
@@ -407,12 +407,12 @@ func TestAuth_DeleteMe(t *testing.T) {
 func TestAuth_Logout(t *testing.T) {
 	// Test successfully logging out after login
 	t.Run("204", func(t *testing.T) {
-		router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
 
 		createTestUserWithPassword(t, router, ctx, &models.User{
 			Username:    "logout-user",
 			DisplayName: "Logout",
-			SiteRole:    types.UserRoleUser,
+			SiteRole:    types.SiteRoleUser,
 		}, "abcd1234")
 
 		loginReq := httptest.NewRequest(

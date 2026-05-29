@@ -372,7 +372,7 @@ func Test_UpdateSessionRoleForUser(t *testing.T) {
 
 			// Set the user role in the session data
 			values := map[string]interface{}{
-				"role": types.UserRoleUser.String(),
+				"role": types.SiteRoleUser.String(),
 			}
 
 			var out bytes.Buffer
@@ -384,7 +384,7 @@ func Test_UpdateSessionRoleForUser(t *testing.T) {
 			time.Sleep(1 * time.Millisecond)
 		}
 
-		require.NoError(t, dao.UpdateSessionRoleForUser(ctx, "user-123", types.UserRoleAdmin))
+		require.NoError(t, dao.UpdateSessionRoleForUser(ctx, "user-123", types.SiteRoleAdmin))
 
 		records, err := dao.ListSessions(ctx, nil)
 		require.Nil(t, err)
@@ -396,7 +396,7 @@ func Test_UpdateSessionRoleForUser(t *testing.T) {
 			var values map[string]interface{}
 			require.NoError(t, gob.NewDecoder(buf).Decode(&values))
 
-			require.Equal(t, types.UserRoleAdmin.String(), values["role"], "Role should be updated to admin")
+			require.Equal(t, types.SiteRoleAdmin.String(), values["role"], "Role should be updated to admin")
 		}
 	})
 

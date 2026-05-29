@@ -102,9 +102,9 @@ func (r *Router) register(c *fiber.Ctx) error {
 
 	// The first user will always be an admin
 	if !r.app.IsBootstrapped() {
-		user.SiteRole = types.UserRoleAdmin
+		user.SiteRole = types.SiteRoleAdmin
 	} else {
-		user.SiteRole = types.UserRoleUser
+		user.SiteRole = types.SiteRoleUser
 	}
 
 	err = r.appDao.CreateUser(c.UserContext(), user)
@@ -266,9 +266,9 @@ func (r *Router) deleteMe(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Invalid password", nil)
 	}
 
-	if user.SiteRole == types.UserRoleAdmin {
+	if user.SiteRole == types.SiteRoleAdmin {
 		// Count the number of admin users and fail if there is only one
-		dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_SITE_ROLE: types.UserRoleAdmin})
+		dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_SITE_ROLE: types.SiteRoleAdmin})
 		adminCount, err := r.appDao.CountUsers(ctx, dbOpts)
 		if err != nil {
 			return errorResponse(c, fiber.StatusInternalServerError, "Error counting admin users", err)

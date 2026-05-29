@@ -1,13 +1,5 @@
 -- +goose Up
 
-CREATE TABLE params (
-    id         TEXT PRIMARY KEY NOT NULL,
-    key        TEXT UNIQUE NOT NULL,
-    value      TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
-    updated_at TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))
-);
-
 CREATE TABLE users (
     id            TEXT PRIMARY KEY NOT NULL,
     username      TEXT UNIQUE NOT NULL COLLATE NOCASE,
@@ -77,15 +69,13 @@ CREATE TABLE rounds (
     UNIQUE(group_id, round_date)
 );
 
-CREATE TABLE guesses (
+CREATE TABLE round_participations (
     id              TEXT PRIMARY KEY NOT NULL,
     round_id        TEXT NOT NULL,
     user_id         TEXT NOT NULL,
-    attempts_used   INTEGER NOT NULL DEFAULT 0,
     solved          BOOLEAN NOT NULL DEFAULT FALSE,
-    rows_json       TEXT NOT NULL DEFAULT '[]',
-    score           INTEGER NOT NULL DEFAULT 0,
     finished        BOOLEAN NOT NULL DEFAULT FALSE,
+    score           INTEGER NOT NULL DEFAULT 0,
     first_guess_at  TEXT,
     completed_at    TEXT,
     created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
@@ -95,21 +85,36 @@ CREATE TABLE guesses (
     UNIQUE(round_id, user_id)
 );
 
+CREATE TABLE guesses (
+    id              TEXT PRIMARY KEY NOT NULL,
+    round_id        TEXT NOT NULL,
+    user_id         TEXT NOT NULL,
+    attempt_number  INTEGER NOT NULL CHECK(attempt_number BETWEEN 1 AND 6),
+    word            TEXT NOT NULL,
+    result          TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
+    FOREIGN KEY (round_id) REFERENCES rounds (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    UNIQUE(round_id, user_id, attempt_number)
+);
+
 CREATE INDEX idx_sessions_expires ON sessions(expires);
 CREATE INDEX idx_sessions_user ON sessions(user_id);
 CREATE INDEX idx_group_members_group ON group_members(group_id);
 CREATE INDEX idx_group_members_user ON group_members(user_id);
 CREATE INDEX idx_join_requests_group_status ON group_join_requests(group_id, status);
 CREATE INDEX idx_rounds_group_date ON rounds(group_id, round_date);
-CREATE INDEX idx_guesses_round ON guesses(round_id);
+CREATE INDEX idx_rounds_group_status ON rounds(group_id, status);
+CREATE INDEX idx_participations_round ON round_participations(round_id);
+CREATE INDEX idx_guesses_round_user ON guesses(round_id, user_id);
 
 -- +goose Down
 
 DROP TABLE IF EXISTS guesses;
+DROP TABLE IF EXISTS round_participations;
 DROP TABLE IF EXISTS rounds;
 DROP TABLE IF EXISTS group_join_requests;
 DROP TABLE IF EXISTS group_members;
 DROP TABLE IF EXISTS groups;
 DROP TABLE IF EXISTS sessions;
 DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS params;

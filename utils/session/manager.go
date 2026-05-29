@@ -55,7 +55,7 @@ func (s *SessionManager) Get(c *fiber.Ctx) (*fs.Session, error) {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // SetSession sets the session for a user
-func (s *SessionManager) SetSession(c *fiber.Ctx, userId string, userRole types.UserRole) error {
+func (s *SessionManager) SetSession(c *fiber.Ctx, userId string, userRole types.SiteRole) error {
 	session, err := s.Get(c)
 	if err != nil {
 		return err
@@ -100,6 +100,6 @@ func (s *SessionManager) DeleteUserSessions(id string) error {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // UpdateSessionRoleForUser updates the role for all sessions belonging to a user
-func (s *SessionManager) UpdateSessionRoleForUser(userID string, newRole types.UserRole) error {
+func (s *SessionManager) UpdateSessionRoleForUser(userID string, newRole types.SiteRole) error {
 	return s.dao.UpdateSessionRoleForUser(context.Background(), userID, newRole)
 }

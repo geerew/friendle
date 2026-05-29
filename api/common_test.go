@@ -21,13 +21,13 @@ import (
 // testPrincipal holds mutable auth state for test middleware
 type testPrincipal struct {
 	userID string
-	role   types.UserRole
+	role   types.SiteRole
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // setup creates a test router
-func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Context, *testPrincipal) {
+func setup(t *testing.T, id string, role types.SiteRole) (*Router, context.Context, *testPrincipal) {
 	t.Helper()
 
 	appConfig := &app.Config{

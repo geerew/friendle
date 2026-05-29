@@ -20,7 +20,7 @@ import (
 func TestGetGroupRound(t *testing.T) {
 	// Test successfully returning none when no round exists
 	t.Run("none", func(t *testing.T) {
-		router, ctx, _ := setup(t, "user", types.UserRoleUser)
+		router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Round Group")
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/rounds/current", nil))
@@ -34,13 +34,13 @@ func TestGetGroupRound(t *testing.T) {
 
 	// Test successfully returning an awaiting-word round
 	t.Run("awaiting word", func(t *testing.T) {
-		router, ctx, _ := setup(t, "user", types.UserRoleUser)
+		router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Active Round")
 
 		roundDate := time.Now().Format("2006-01-02")
 		round := &models.Round{
 			GroupID: group.ID, RoundDate: roundDate, PickerUserID: "user",
-			Status: models.RoundAwaitingWord,
+			Status: types.RoundAwaitingWord,
 		}
 		require.NoError(t, router.appDao.CreateRound(ctx, round))
 
@@ -50,7 +50,7 @@ func TestGetGroupRound(t *testing.T) {
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(body, &resp))
-		require.Equal(t, string(models.RoundAwaitingWord), resp["status"])
+		require.Equal(t, string(types.RoundAwaitingWord), resp["status"])
 		require.Equal(t, "picker", resp["yourRole"])
 	})
 }
@@ -59,13 +59,13 @@ func TestGetGroupRound(t *testing.T) {
 
 // TestCreateGroupRoundWord exercises submitting the picker's word
 func TestCreateGroupRoundWord(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Word Group")
 
 	roundDate := time.Now().Format("2006-01-02")
 	round := &models.Round{
 		GroupID: group.ID, RoundDate: roundDate, PickerUserID: "user",
-		Status: models.RoundAwaitingWord,
+		Status: types.RoundAwaitingWord,
 	}
 	require.NoError(t, router.appDao.CreateRound(ctx, round))
 
@@ -79,7 +79,7 @@ func TestCreateGroupRoundWord(t *testing.T) {
 
 	updated, err := router.appDao.GetCurrentRound(ctx, group.ID, roundDate)
 	require.NoError(t, err)
-	require.Equal(t, models.RoundActive, updated.Status)
+	require.Equal(t, types.RoundActive, updated.Status)
 	require.NotNil(t, updated.WordPlain)
 	require.Equal(t, "ABOUT", *updated.WordPlain)
 }
@@ -88,10 +88,10 @@ func TestCreateGroupRoundWord(t *testing.T) {
 
 // TestCreateGroupRoundGuess exercises submitting a guess
 func TestCreateGroupRoundGuess(t *testing.T) {
-	router, ctx, principal := setup(t, "user", types.UserRoleUser)
+	router, ctx, principal := setup(t, "user", types.SiteRoleUser)
 
-	picker := &models.User{Username: "picker", DisplayName: "Picker", SiteRole: types.UserRoleUser}
-	guesser := &models.User{Username: "guesser", DisplayName: "Guesser", SiteRole: types.UserRoleUser}
+	picker := &models.User{Username: "picker", DisplayName: "Picker", SiteRole: types.SiteRoleUser}
+	guesser := &models.User{Username: "guesser", DisplayName: "Guesser", SiteRole: types.SiteRoleUser}
 	createTestUser(t, router, ctx, picker)
 	createTestUser(t, router, ctx, guesser)
 
@@ -108,12 +108,12 @@ func TestCreateGroupRoundGuess(t *testing.T) {
 	roundDate := time.Now().Format("2006-01-02")
 	round := &models.Round{
 		GroupID: group.ID, RoundDate: roundDate, PickerUserID: picker.ID,
-		Status: models.RoundActive, WordPlain: &word,
+		Status: types.RoundActive, WordPlain: &word,
 	}
 	require.NoError(t, router.appDao.CreateRound(ctx, round))
 
 	principal.userID = guesser.ID
-	principal.role = types.UserRoleUser
+	principal.role = types.SiteRoleUser
 
 	body := bytes.NewBufferString(`{"word":"about"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/rounds/current/guesses", body)
@@ -133,14 +133,14 @@ func TestCreateGroupRoundGuess(t *testing.T) {
 
 // TestGetGroupRoundReveal exercises the round reveal endpoint
 func TestGetGroupRoundReveal(t *testing.T) {
-	router, ctx, _ := setup(t, "user", types.UserRoleUser)
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
 	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Reveal Group")
 
 	word := "ABOUT"
 	roundDate := time.Now().Format("2006-01-02")
 	round := &models.Round{
 		GroupID: group.ID, RoundDate: roundDate, PickerUserID: "user",
-		Status: models.RoundCompleted, WordPlain: &word,
+		Status: types.RoundCompleted, WordPlain: &word,
 	}
 	require.NoError(t, router.appDao.CreateRound(ctx, round))
 
@@ -150,6 +150,6 @@ func TestGetGroupRoundReveal(t *testing.T) {
 
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(body, &resp))
-	require.Equal(t, string(models.RoundCompleted), resp["status"])
+	require.Equal(t, string(types.RoundCompleted), resp["status"])
 	require.Equal(t, "ABOUT", resp["word"])
 }

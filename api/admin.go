@@ -85,7 +85,7 @@ func (r *Router) createUser(c *fiber.Ctx) error {
 	}
 
 	if userReq.Role == "" {
-		userReq.Role = types.UserRoleUser.String()
+		userReq.Role = types.SiteRoleUser.String()
 	}
 
 	passwordHash, err := auth.GeneratePassword(userReq.Password)
@@ -97,7 +97,7 @@ func (r *Router) createUser(c *fiber.Ctx) error {
 		Username:     userReq.Username,
 		DisplayName:  userReq.Username,
 		PasswordHash: passwordHash,
-		SiteRole:     types.NewUserRole(userReq.Role),
+		SiteRole:     types.NewSiteRole(userReq.Role),
 	}
 
 	if userReq.DisplayName != "" {
@@ -161,7 +161,7 @@ func (r *Router) updateUser(c *fiber.Ctx) error {
 		if user.SiteRole.String() == userReq.Role {
 			userReq.Role = ""
 		} else {
-			user.SiteRole = types.NewUserRole(userReq.Role)
+			user.SiteRole = types.NewSiteRole(userReq.Role)
 		}
 	}
 
@@ -324,7 +324,7 @@ func (r *Router) createAdminRecovery(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusNotFound, "User not found", nil)
 	}
 
-	if user.SiteRole != types.UserRoleAdmin {
+	if user.SiteRole != types.SiteRoleAdmin {
 		return errorResponse(c, fiber.StatusForbidden, "User is not an admin", nil)
 	}
 
