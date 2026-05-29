@@ -17,13 +17,77 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-const requestPathLocalsKey = "request_path"
+// DefaultMiddleware returns the production middleware stack
+func DefaultMiddleware(r *Router) []fiber.Handler {
+	return []fiber.Handler{
+		requestLoggingMiddleware(r.logger),
+		corsMiddleWare(),
+		requestPathMiddleware(r),
+		bootstrapMiddleware(r),
+		sessionMiddleware(r),
+		uiAuthMiddleware(r),
+	}
+}
 
-// requestPathInfo classifies the incoming path once per request
-type requestPathInfo struct {
-	uiAsset bool
-	authUI  bool
-	api     bool
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// accessLevel is a bitmask of access checks; requireAccess passes when any set bit matches
+type accessLevel uint8
+
+const (
+	accessAuth accessLevel = 1 << iota
+	accessSiteAdmin
+	accessGroupMember
+	accessGroupAdmin
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const (
+	accessGroupMemberScope = accessSiteAdmin | accessGroupMember
+	accessGroupAdminScope  = accessSiteAdmin | accessGroupAdmin
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// requireAccess returns per-route API authorization middleware. It assumes sessionMiddleware has
+// already attached a principal for logged-in callers; it does not perform UI redirects
+func (r *Router) requireAccess(level accessLevel) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if level == 0 {
+			return errorResponse(c, fiber.StatusInternalServerError, "Unknown access level", nil)
+		}
+
+		p, ctx, err := principalCtx(c)
+		if err != nil {
+			return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+		}
+
+		if level&accessAuth != 0 {
+			return c.Next()
+		}
+
+		if level&accessSiteAdmin != 0 && p.SiteRole == types.SiteRoleAdmin {
+			return c.Next()
+		}
+
+		groupID := c.Params("id")
+
+		if level&accessGroupMember != 0 {
+			if _, err := r.membership(ctx, groupID, p.UserID); err == nil {
+				return c.Next()
+			}
+		}
+
+		if level&accessGroupAdmin != 0 {
+			m, err := r.appDao.GetGroupMember(ctx, groupID, p.UserID)
+			if err == nil && m != nil && m.GroupRole == types.GroupRoleAdmin {
+				return c.Next()
+			}
+		}
+
+		return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,6 +164,17 @@ func requestLoggingMiddleware(log *logger.Logger) fiber.Handler {
 
 		return err
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const requestPathLocalsKey = "request_path"
+
+// requestPathInfo classifies the incoming path once per request
+type requestPathInfo struct {
+	uiAsset bool
+	authUI  bool
+	api     bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -252,69 +327,6 @@ func uiAuthMiddleware(r *Router) fiber.Handler {
 		}
 
 		return c.Next()
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Route middleware
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// accessLevel is a bitmask of access checks; requireAccess passes when any set bit matches
-type accessLevel uint8
-
-const (
-	accessAuth accessLevel = 1 << iota
-	accessSiteAdmin
-	accessGroupMember
-	accessGroupAdmin
-)
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-const (
-	accessGroupMemberScope = accessSiteAdmin | accessGroupMember
-	accessGroupAdminScope  = accessSiteAdmin | accessGroupAdmin
-)
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// requireAccess returns per-route API authorization middleware. It assumes sessionMiddleware has
-// already attached a principal for logged-in callers; it does not perform UI redirects
-func (r *Router) requireAccess(level accessLevel) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		if level == 0 {
-			return errorResponse(c, fiber.StatusInternalServerError, "Unknown access level", nil)
-		}
-
-		p, ctx, err := principalCtx(c)
-		if err != nil {
-			return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
-		}
-
-		if level&accessAuth != 0 {
-			return c.Next()
-		}
-
-		if level&accessSiteAdmin != 0 && p.SiteRole == types.SiteRoleAdmin {
-			return c.Next()
-		}
-
-		groupID := c.Params("id")
-
-		if level&accessGroupMember != 0 {
-			if _, err := r.membership(ctx, groupID, p.UserID); err == nil {
-				return c.Next()
-			}
-		}
-
-		if level&accessGroupAdmin != 0 {
-			m, err := r.appDao.GetGroupMember(ctx, groupID, p.UserID)
-			if err == nil && m != nil && m.GroupRole == types.GroupRoleAdmin {
-				return c.Next()
-			}
-		}
-
-		return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
 	}
 }
 

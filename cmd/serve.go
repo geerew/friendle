@@ -59,7 +59,7 @@ var serveCmd = &cobra.Command{
 		application.Cron.Start()
 
 		// Router
-		router := api.NewRouter(application)
+		router := api.New(application, nil)
 
 		var wg sync.WaitGroup
 		wg.Add(1)

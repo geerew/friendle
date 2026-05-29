@@ -18,50 +18,30 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// setupAdmin creates a test router with an admin user
-func setupAdmin(t *testing.T) (*Router, context.Context) {
-	return setup(t, "admin", types.UserRoleAdmin)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// setupUser creates a test router with a regular user
-func setupUser(t *testing.T) (*Router, context.Context) {
-	return setup(t, "user", types.UserRoleUser)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// setupNoAuth creates a test router without authentication
-//
-// Note: role doesn't matter when the user is empty
-func setupNoAuth(t *testing.T) (*Router, context.Context) {
-	return setup(t, "", types.UserRoleUser)
+// testPrincipal holds mutable auth state for test middleware
+type testPrincipal struct {
+	userID string
+	role   types.UserRole
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // setup creates a test router
-func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Context) {
+func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Context, *testPrincipal) {
 	t.Helper()
 
-	// Create test app
 	application := app.NewTestApp(t)
+	principal := &testPrincipal{userID: id, role: role}
 
-	// Create router from app
-	router := NewRouter(application)
-
-	// Configure middleware based on whether we have auth
-	if id != "" {
-		setTestPrincipal(t, router, id, role)
-	} else {
-		// Use CORS-only (for recovery tests)
-		router.SetTestMiddleware(
-			func(r *Router) fiber.Handler { return corsMiddleWare() },
-		)
+	stack := testMiddleware(principal)
+	if id == "" {
+		stack = func(r *Router) []fiber.Handler {
+			return []fiber.Handler{corsMiddleWare()}
+		}
 	}
 
-	// Create user only if we have auth
+	router := New(application, stack)
+
 	if id != "" {
 		user := models.User{
 			Base: models.Base{
@@ -80,24 +60,42 @@ func setup(t *testing.T, id string, role types.UserRole) (*Router, context.Conte
 		}
 	}
 
-	// In tests, if we have a user, consider the app bootstrapped
-	// (even if the user is not an admin, so route access middleware can handle the check)
 	if id != "" {
 		router.app.SetBootstrapped()
 	}
 
 	ctx := context.Background()
-
-	// Add principal to context only if we have auth
 	if id != "" {
-		principal := types.Principal{
-			UserID: id,
+		ctx = context.WithValue(ctx, types.PrincipalContextKey, types.Principal{
+			UserID:   id,
 			SiteRole: role,
-		}
-		ctx = context.WithValue(ctx, types.PrincipalContextKey, principal)
+		})
 	}
 
-	return router, ctx
+	return router, ctx, principal
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// testMiddleware returns a minimal stack that injects the test principal
+func testMiddleware(principal *testPrincipal) MiddlewareStack {
+	return func(r *Router) []fiber.Handler {
+		return []fiber.Handler{
+			corsMiddleWare(),
+			requestPathMiddleware(r),
+			bootstrapMiddleware(r),
+			func(c *fiber.Ctx) error {
+				if principal.userID != "" {
+					c.Locals(types.PrincipalContextKey, types.Principal{
+						UserID:   principal.userID,
+						SiteRole: principal.role,
+					})
+				}
+
+				return c.Next()
+			},
+		}
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -137,30 +135,6 @@ func unmarshalHelper[T any](t *testing.T, body []byte) (pagination.PaginationRes
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// setTestPrincipal reconfigures test middleware for a different caller
-func setTestPrincipal(t *testing.T, router *Router, userID string, role types.UserRole) {
-	t.Helper()
-
-	router.SetTestMiddleware(
-		func(r *Router) fiber.Handler { return requestLoggingMiddleware(r.logger) },
-		func(r *Router) fiber.Handler { return corsMiddleWare() },
-		func(r *Router) fiber.Handler { return requestPathMiddleware(r) },
-		func(r *Router) fiber.Handler { return bootstrapMiddleware(r) },
-		func(r *Router) fiber.Handler {
-			return func(c *fiber.Ctx) error {
-				c.Locals(types.PrincipalContextKey, types.Principal{
-					UserID:   userID,
-					SiteRole: role,
-				})
-
-				return c.Next()
-			}
-		},
-	)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // createTestUser inserts a user, using a placeholder password hash when none is set
 func createTestUser(t *testing.T, router *Router, ctx context.Context, user *models.User) {
 	t.Helper()
@@ -168,6 +142,7 @@ func createTestUser(t *testing.T, router *Router, ctx context.Context, user *mod
 	if user.PasswordHash == "" {
 		user.PasswordHash = "test-password-hash"
 	}
+
 	require.NoError(t, router.appDao.CreateUser(ctx, user))
 }
 
@@ -179,6 +154,7 @@ func createTestUserWithPassword(t *testing.T, router *Router, ctx context.Contex
 
 	passwordHash, err := auth.GeneratePassword(password)
 	require.NoError(t, err)
+
 	user.PasswordHash = passwordHash
 	require.NoError(t, router.appDao.CreateUser(ctx, user))
 }
@@ -191,9 +167,13 @@ func createTestGroupWithMember(t *testing.T, router *Router, ctx context.Context
 
 	group := &models.Group{Name: name, CreatedBy: userID, IntervalHours: 24, Timezone: "UTC"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
-	require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
-		GroupID: group.ID, UserID: userID, GroupRole: groupRole,
-	}))
+
+	groupMember := &models.GroupMember{
+		GroupID:   group.ID,
+		UserID:    userID,
+		GroupRole: groupRole,
+	}
+	require.NoError(t, router.appDao.CreateGroupMember(ctx, groupMember))
 
 	return group
 }

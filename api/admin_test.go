@@ -21,7 +21,7 @@ import (
 func TestAdminListUsers(t *testing.T) {
 	// Test successfully listing users for a site admin
 	t.Run("success", func(t *testing.T) {
-		router, _ := setupAdmin(t)
+		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/admin/users", nil))
 		require.NoError(t, err)
@@ -35,7 +35,7 @@ func TestAdminListUsers(t *testing.T) {
 
 	// Test error due to a non-admin caller
 	t.Run("403", func(t *testing.T) {
-		router, _ := setupUser(t)
+		router, _, _ := setup(t, "user", types.UserRoleUser)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/admin/users", nil))
 		require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestAdminListUsers(t *testing.T) {
 func TestAdminCreateUser(t *testing.T) {
 	// Test successfully creating a user
 	t.Run("201", func(t *testing.T) {
-		router, _ := setupAdmin(t)
+		router, _, _ := setup(t, "admin", types.UserRoleAdmin)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/admin/users", strings.NewReader(`{"username": "testuser", "password": "password123"}`))
 		req.Header.Set("Content-Type", "application/json")
@@ -62,7 +62,7 @@ func TestAdminCreateUser(t *testing.T) {
 
 	// Test error due to a non-admin caller
 	t.Run("403", func(t *testing.T) {
-		router, _ := setupUser(t)
+		router, _, _ := setup(t, "user", types.UserRoleUser)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodPost, "/api/admin/users", nil))
 		require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestAdminCreateUser(t *testing.T) {
 
 // TestAdminUpdateUser exercises site admin user updates
 func TestAdminUpdateUser(t *testing.T) {
-	router, ctx := setupAdmin(t)
+	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
 
 	user := &models.User{
 		Username:     "test",
@@ -101,7 +101,7 @@ func TestAdminUpdateUser(t *testing.T) {
 
 // TestAdminListGroups exercises admin group listing and pagination
 func TestAdminListGroups(t *testing.T) {
-	router, ctx := setupAdmin(t)
+	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
 
 	group := &models.Group{Name: "Admin Test Group", CreatedBy: "admin"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))
@@ -142,7 +142,7 @@ func TestAdminListGroups(t *testing.T) {
 
 // TestDeleteAdminUser exercises site admin user deletion
 func TestDeleteAdminUser(t *testing.T) {
-	router, ctx := setupAdmin(t)
+	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
 
 	target := &models.User{Username: "delete-me", DisplayName: "Delete Me", SiteRole: types.UserRoleUser}
 	createTestUser(t, router, ctx, target)
@@ -160,7 +160,7 @@ func TestDeleteAdminUser(t *testing.T) {
 
 // TestDeleteAdminGroup exercises site admin group deletion
 func TestDeleteAdminGroup(t *testing.T) {
-	router, ctx := setupAdmin(t)
+	router, ctx, _ := setup(t, "admin", types.UserRoleAdmin)
 
 	group := &models.Group{Name: "Delete Group", CreatedBy: "admin"}
 	require.NoError(t, router.appDao.CreateGroup(ctx, group))

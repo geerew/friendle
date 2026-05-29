@@ -16,8 +16,8 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// MiddlewareFactory defines a function that creates middleware with access to the router
-type MiddlewareFactory func(r *Router) fiber.Handler
+// MiddlewareStack builds the global middleware chain for a router
+type MiddlewareStack func(r *Router) []fiber.Handler
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -32,8 +32,12 @@ type Router struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// NewRouter creates a new router from an App instance
-func NewRouter(application *app.App) *Router {
+// New creates a router, applies middleware, and registers routes
+func New(application *app.App, stack MiddlewareStack) *Router {
+	if stack == nil {
+		stack = DefaultMiddleware
+	}
+
 	r := &Router{
 		app:    application,
 		appDao: dao.New(application.DbManager.DataDb),
@@ -46,8 +50,16 @@ func NewRouter(application *app.App) *Router {
 		DisableStartupMessage: true,
 	})
 
-	r.initMiddleware()
-	r.initRoutes()
+	for _, handler := range stack(r) {
+		r.fiberApp.Use(handler)
+	}
+
+	r.bindUi()
+	r.initAuthRoutes()
+	r.initGroupRoutes()
+	r.initRoundRoutes()
+	r.initAdminRoutes()
+	r.initVersionRoutes()
 
 	return r
 }
@@ -70,68 +82,9 @@ func (r *Router) Serve() error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SetTestMiddleware replaces the middleware stack with test middleware
-//
-// FOR TESTING PURPOSES ONLY
-func (r *Router) SetTestMiddleware(factories ...MiddlewareFactory) {
-	// Clear existing middleware by creating a new Fiber app with same config
-	r.fiberApp = fiber.New(fiber.Config{
-		DisableStartupMessage: true,
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			// Default error handler that returns JSON
-			code := fiber.StatusInternalServerError
-			if e, ok := err.(*fiber.Error); ok {
-				code = e.Code
-			}
-			return c.Status(code).JSON(fiber.Map{
-				"message": err.Error(),
-			})
-		},
-	})
-
-	// Apply test middleware
-	for _, factory := range factories {
-		r.fiberApp.Use(factory(r))
-	}
-
-	// Re-initialize routes (they depend on the Fiber app)
-	r.initRoutes()
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// Test is a test helper that wraps FiberApp.Test() for testing purposes
+// Test sends a request through the router for use in tests
 func (r *Router) Test(req *http.Request, msTimeout ...int) (*http.Response, error) {
 	return r.fiberApp.Test(req, msTimeout...)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Private
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// initMiddleware initializes the middleware
-func (r *Router) initMiddleware() {
-	r.fiberApp.Use(requestLoggingMiddleware(r.logger))
-	r.fiberApp.Use(corsMiddleWare())
-	r.fiberApp.Use(requestPathMiddleware(r))
-	r.fiberApp.Use(bootstrapMiddleware(r))
-	r.fiberApp.Use(sessionMiddleware(r))
-	r.fiberApp.Use(uiAuthMiddleware(r))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// initRoutes initializes the routes
-func (r *Router) initRoutes() {
-	// UI
-	r.bindUi()
-
-	// API routes
-	r.initAuthRoutes()
-	r.initGroupRoutes()
-	r.initRoundRoutes()
-	r.initAdminRoutes()
-	r.initVersionRoutes()
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

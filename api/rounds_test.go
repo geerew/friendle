@@ -20,7 +20,7 @@ import (
 func TestGetGroupRound(t *testing.T) {
 	// Test successfully returning none when no round exists
 	t.Run("none", func(t *testing.T) {
-		router, ctx := setupUser(t)
+		router, ctx, _ := setup(t, "user", types.UserRoleUser)
 		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Round Group")
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/rounds/current", nil))
@@ -34,7 +34,7 @@ func TestGetGroupRound(t *testing.T) {
 
 	// Test successfully returning an awaiting-word round
 	t.Run("awaiting word", func(t *testing.T) {
-		router, ctx := setupUser(t)
+		router, ctx, _ := setup(t, "user", types.UserRoleUser)
 		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Active Round")
 
 		roundDate := time.Now().Format("2006-01-02")
@@ -59,7 +59,7 @@ func TestGetGroupRound(t *testing.T) {
 
 // TestCreateGroupRoundWord exercises submitting the picker's word
 func TestCreateGroupRoundWord(t *testing.T) {
-	router, ctx := setupUser(t)
+	router, ctx, _ := setup(t, "user", types.UserRoleUser)
 	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Word Group")
 
 	roundDate := time.Now().Format("2006-01-02")
@@ -88,7 +88,7 @@ func TestCreateGroupRoundWord(t *testing.T) {
 
 // TestCreateGroupRoundGuess exercises submitting a guess
 func TestCreateGroupRoundGuess(t *testing.T) {
-	router, ctx := setupUser(t)
+	router, ctx, principal := setup(t, "user", types.UserRoleUser)
 
 	picker := &models.User{Username: "picker", DisplayName: "Picker", SiteRole: types.UserRoleUser}
 	guesser := &models.User{Username: "guesser", DisplayName: "Guesser", SiteRole: types.UserRoleUser}
@@ -112,7 +112,8 @@ func TestCreateGroupRoundGuess(t *testing.T) {
 	}
 	require.NoError(t, router.appDao.CreateRound(ctx, round))
 
-	setTestPrincipal(t, router, guesser.ID, types.UserRoleUser)
+	principal.userID = guesser.ID
+	principal.role = types.UserRoleUser
 
 	body := bytes.NewBufferString(`{"word":"about"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/rounds/current/guesses", body)
@@ -132,7 +133,7 @@ func TestCreateGroupRoundGuess(t *testing.T) {
 
 // TestGetGroupRoundReveal exercises the round reveal endpoint
 func TestGetGroupRoundReveal(t *testing.T) {
-	router, ctx := setupUser(t)
+	router, ctx, _ := setup(t, "user", types.UserRoleUser)
 	group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Reveal Group")
 
 	word := "ABOUT"
