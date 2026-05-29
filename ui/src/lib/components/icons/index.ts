@@ -9,3 +9,4 @@ export { default as SortAscendingIcon } from './sort-ascending.svelte';
 export { default as SortDescendingIcon } from './sort-descending.svelte';
 export { default as TrashIcon } from './trash.svelte';
 export { default as TickIcon } from './tick.svelte';
+export { default as XIcon } from './x.svelte';

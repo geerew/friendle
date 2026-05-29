@@ -3,6 +3,7 @@ package api
 import (
 	"strings"
 
+	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
@@ -16,6 +17,7 @@ func (r *Router) initGroupRoutes() {
 	g.Get("/:id", r.requireAuth, r.getGroup)
 	g.Patch("/:id", r.requireAuth, r.requireGroupAdmin, r.updateGroup)
 	g.Post("/:id/join-requests", r.requireAuth, r.createJoinRequest)
+	g.Delete("/:id/join-requests/:userId", r.requireAuth, r.cancelJoinRequest)
 	g.Get("/:id/join-requests", r.requireAuth, r.requireGroupAdmin, r.listJoinRequests)
 	g.Post("/:id/join-requests/:rid/approve", r.requireAuth, r.requireGroupAdmin, r.approveJoinRequest)
 	g.Post("/:id/join-requests/:rid/reject", r.requireAuth, r.requireGroupAdmin, r.rejectJoinRequest)
@@ -63,23 +65,50 @@ func (r *Router) listMyGroups(c *fiber.Ctx) error {
 }
 
 func (r *Router) searchGroups(c *fiber.Ctx) error {
-	_, ctx, err := principalCtx(c)
+	principal, ctx, err := principalCtx(c)
 	if err != nil {
 		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 	}
+
 	q := strings.TrimSpace(c.Query("q"))
 	if q == "" {
-		return c.JSON([]fiber.Map{})
+		pResult, err := paginationFromCtx(c).BuildResult([]*groupSearchResponse{})
+		if err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+		}
+
+		return c.JSON(pResult)
 	}
-	groups, err := r.appDao.SearchGroups(ctx, strings.ToLower(q))
+
+	dbOpts := dao.NewOptions().WithPagination(paginationFromCtx(c))
+	rows, err := r.appDao.SearchGroupSummaries(ctx, strings.ToLower(q), dbOpts)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Search failed", err)
 	}
-	var out []fiber.Map
-	for _, g := range groups {
-		out = append(out, fiber.Map{"id": g.ID, "name": g.Name})
+
+	groupIDs := make([]string, len(rows))
+	for i, row := range rows {
+		groupIDs[i] = row.ID
 	}
-	return c.JSON(out)
+
+	memberGroupIDs, err := r.appDao.ListMemberGroupIDsForUser(ctx, principal.UserID, groupIDs)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Search failed", err)
+	}
+
+	pendingGroupIDs, err := r.appDao.ListPendingJoinGroupIDsForUser(ctx, principal.UserID, groupIDs)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Search failed", err)
+	}
+
+	pResult, err := dbOpts.Pagination.BuildResult(
+		groupSearchResponsesFromRows(rows, stringSet(memberGroupIDs), stringSet(pendingGroupIDs)),
+	)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
 }
 
 func (r *Router) getGroup(c *fiber.Ctx) error {
@@ -152,6 +181,39 @@ func (r *Router) createJoinRequest(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusInternalServerError, "Request failed", err)
 	}
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"id": jr.ID, "status": jr.Status})
+}
+
+func (r *Router) cancelJoinRequest(c *fiber.Ctx) error {
+	principal, ctx, err := principalCtx(c)
+	if err != nil {
+		return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
+	}
+
+	groupID := c.Params("id")
+	targetUserID := c.Params("userId")
+	if targetUserID == "me" {
+		targetUserID = principal.UserID
+	}
+
+	if targetUserID != principal.UserID {
+		if principal.SiteRole != types.SiteRoleAdmin {
+			m, err := r.appDao.GetGroupMember(ctx, groupID, principal.UserID)
+			if err != nil || m == nil || m.GroupRole != types.GroupRoleAdmin {
+				return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
+			}
+		}
+	}
+
+	jr, err := r.appDao.GetJoinRequestByUser(ctx, groupID, targetUserID)
+	if err != nil || jr == nil || jr.Status != models.JoinPending {
+		return errorResponse(c, fiber.StatusNotFound, "Pending request not found", nil)
+	}
+
+	if err := r.appDao.DeletePendingJoinRequest(ctx, groupID, targetUserID); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Cancel failed", err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (r *Router) listJoinRequests(c *fiber.Ctx) error {

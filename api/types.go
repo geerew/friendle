@@ -96,6 +96,48 @@ func userGroupSummariesByUserID(rows []*models.UserGroupSummaryRow) map[string][
 	return byUser
 }
 
+type groupSearchResponse struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	MemberCount int    `json:"memberCount"`
+	IsMember    bool   `json:"isMember"`
+	JoinPending bool   `json:"joinPending"`
+}
+
+func groupSearchResponsesFromRows(
+	rows []*models.GroupSearchRow,
+	memberGroupIDs map[string]struct{},
+	pendingGroupIDs map[string]struct{},
+) []*groupSearchResponse {
+	if len(rows) == 0 {
+		return []*groupSearchResponse{}
+	}
+
+	responses := make([]*groupSearchResponse, 0, len(rows))
+	for _, row := range rows {
+		_, isMember := memberGroupIDs[row.ID]
+		_, joinPending := pendingGroupIDs[row.ID]
+		responses = append(responses, &groupSearchResponse{
+			ID:          row.ID,
+			Name:        row.Name,
+			MemberCount: row.MemberCount,
+			IsMember:    isMember,
+			JoinPending: joinPending,
+		})
+	}
+
+	return responses
+}
+
+func stringSet(ids []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		set[id] = struct{}{}
+	}
+
+	return set
+}
+
 type signupStatusResponse struct {
 	Enabled bool `json:"enabled"`
 }

@@ -56,6 +56,13 @@ type UserGroupSummaryRow struct {
 	GroupRole   types.GroupRole `db:"group_role"`
 }
 
+// GroupSearchRow is a group row enriched for name search results
+type GroupSearchRow struct {
+	ID          string `db:"id"`
+	Name        string `db:"name"`
+	MemberCount int    `db:"member_count"`
+}
+
 const ROUND_TABLE = "rounds"
 
 type RoundStatus string

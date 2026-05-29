@@ -56,6 +56,41 @@ func (dao *DAO) ListAdminGroups(ctx context.Context, dbOpts *Options) ([]*models
 		SetDbOpts(dbOpts))
 }
 
+func (dao *DAO) SearchGroupSummaries(ctx context.Context, q string, dbOpts *Options) ([]*models.GroupSearchRow, error) {
+	g := models.GROUP_TABLE
+	gm := models.GROUP_MEMBER_TABLE
+	like := "%" + q + "%"
+
+	if dbOpts == nil {
+		dbOpts = NewOptions()
+	}
+
+	searchOpts := NewOptions().
+		WithWhere(squirrel.Like{"LOWER(" + g + ".name)": like}).
+		WithOrderByClause(searchGroupRelevanceOrder(g, q))
+
+	if dbOpts.Pagination != nil {
+		searchOpts = searchOpts.WithPagination(dbOpts.Pagination)
+	}
+
+	return listGeneric[models.GroupSearchRow](ctx, dao, *newBuilderOptions(g).
+		WithColumns(
+			g+"."+models.BASE_ID+" AS id",
+			g+".name AS name",
+			"(SELECT COUNT(*) FROM "+gm+" gm_count WHERE gm_count.group_id = "+g+"."+models.BASE_ID+") AS member_count",
+		).
+		SetDbOpts(searchOpts))
+}
+
+// searchGroupRelevanceOrder ranks exact name matches first, then prefix matches, then other
+// substring matches, then shorter names, then name ascending, then newest created
+func searchGroupRelevanceOrder(g, q string) squirrel.Sqlizer {
+	return squirrel.Expr(
+		`CASE WHEN LOWER(`+g+`.name) = ? THEN 0 WHEN LOWER(`+g+`.name) LIKE ? THEN 1 ELSE 2 END, LENGTH(`+g+`.name), LOWER(`+g+`.name), `+g+`.`+models.BASE_CREATED_AT+` DESC`,
+		q, q+"%",
+	)
+}
+
 func (dao *DAO) SearchGroups(ctx context.Context, q string) ([]*models.Group, error) {
 	like := "%" + q + "%"
 	return listGeneric[models.Group](ctx, dao, *newBuilderOptions(models.GROUP_TABLE).
@@ -134,7 +169,7 @@ func (dao *DAO) ListUserGroupSummariesForUserIDs(ctx context.Context, userIDs []
 		WithJoin(g, g+"."+models.BASE_ID+" = "+gm+".group_id").
 		SetDbOpts(NewOptions().
 			WithWhere(squirrel.Eq{gm + ".user_id": userIDs}).
-			WithOrderBy(gm+".user_id ASC", g+".name ASC")))
+			WithOrderBy(gm+".user_id ASC", g+"."+models.BASE_CREATED_AT+" desc")))
 }
 
 func (dao *DAO) DeleteGroupMember(ctx context.Context, groupID, userID string) error {
@@ -192,6 +227,63 @@ func (dao *DAO) GetJoinRequestByUser(ctx context.Context, groupID, userID string
 		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "user_id": userID})).WithLimit(1))
 }
 
+// ListMemberGroupIDsForUser returns group IDs the user belongs to from the given set
+func (dao *DAO) ListMemberGroupIDsForUser(ctx context.Context, userID string, groupIDs []string) ([]string, error) {
+	if len(groupIDs) == 0 {
+		return []string{}, nil
+	}
+
+	type groupIDRow struct {
+		GroupID string `db:"group_id"`
+	}
+
+	rows, err := listGeneric[groupIDRow](ctx, dao, *newBuilderOptions(models.GROUP_MEMBER_TABLE).
+		WithColumns("group_id").
+		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{
+			"user_id":  userID,
+			"group_id": groupIDs,
+		})))
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.GroupID)
+	}
+
+	return ids, nil
+}
+
+// ListPendingJoinGroupIDsForUser returns group IDs with a pending join request for the user
+func (dao *DAO) ListPendingJoinGroupIDsForUser(ctx context.Context, userID string, groupIDs []string) ([]string, error) {
+	if len(groupIDs) == 0 {
+		return []string{}, nil
+	}
+
+	type groupIDRow struct {
+		GroupID string `db:"group_id"`
+	}
+
+	rows, err := listGeneric[groupIDRow](ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).
+		WithColumns("group_id").
+		SetDbOpts(NewOptions().WithWhere(squirrel.Eq{
+			"user_id":  userID,
+			"group_id": groupIDs,
+			"status":   models.JoinPending,
+		})))
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.GroupID)
+	}
+
+	return ids, nil
+}
+
 func (dao *DAO) ListPendingJoinRequests(ctx context.Context, groupID string) ([]*models.GroupJoinRequest, error) {
 	return listGeneric[models.GroupJoinRequest](ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).
 		WithColumns(joinColumns()...).
@@ -203,6 +295,24 @@ func (dao *DAO) UpdateJoinRequestStatus(ctx context.Context, id string, status m
 	_, err := updateGeneric(ctx, dao, *newBuilderOptions(models.JOIN_REQUEST_TABLE).WithData(map[string]interface{}{
 		"status": status, models.BASE_UPDATED_AT: now,
 	}).SetDbOpts(NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})))
+	return err
+}
+
+// DeletePendingJoinRequest removes a pending join request for the given group and user
+func (dao *DAO) DeletePendingJoinRequest(ctx context.Context, groupID, userID string) error {
+	if groupID == "" || userID == "" {
+		return utils.ErrWhere
+	}
+
+	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).SetDbOpts(
+		NewOptions().WithWhere(squirrel.Eq{
+			"group_id": groupID,
+			"user_id":  userID,
+			"status":   models.JoinPending,
+		}))
+	sqlStr, args, _ := deleteBuilder(*builderOpts)
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
+
 	return err
 }
 
