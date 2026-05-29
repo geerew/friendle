@@ -175,6 +175,7 @@ type requestPathInfo struct {
 	uiAsset bool
 	authUI  bool
 	api     bool
+	adminUI bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -183,10 +184,12 @@ type requestPathInfo struct {
 func requestPathMiddleware(r *Router) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		path := c.Path()
+
 		c.Locals(requestPathLocalsKey, requestPathInfo{
 			uiAsset: r.isUIAsset(path),
 			authUI:  strings.HasPrefix(path, "/auth/"),
 			api:     strings.HasPrefix(path, "/api/"),
+			adminUI: strings.HasPrefix(path, "/admin"),
 		})
 
 		return c.Next()
@@ -321,7 +324,7 @@ func uiAuthMiddleware(r *Router) fiber.Handler {
 		}
 
 		if p, ok := c.Locals(types.PrincipalContextKey).(types.Principal); ok {
-			if p.SiteRole != types.SiteRoleAdmin && r.isProtectedUIPage(c.Path()) {
+			if p.SiteRole != types.SiteRoleAdmin && pathInfo.adminUI {
 				return c.Redirect("/")
 			}
 		}
@@ -363,11 +366,4 @@ func (r *Router) isUIAsset(path string) bool {
 	}
 
 	return false
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// isProtectedUIPage checks if the request is intended for a protected UI page
-func (r *Router) isProtectedUIPage(path string) bool {
-	return strings.HasPrefix(path, "/admin")
 }
