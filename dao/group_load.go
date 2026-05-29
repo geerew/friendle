@@ -37,7 +37,9 @@ func (dao *DAO) GetGroupLoaded(ctx context.Context, groupID string, load GroupLo
 // LoadGroup populates relation fields on an existing group row
 func (dao *DAO) LoadGroup(ctx context.Context, group *models.Group, load GroupLoad) error {
 	if load.Members {
-		members, err := dao.ListGroupMembers(ctx, NewOptions().WithWhere(squirrel.Eq{"group_id": group.ID}))
+		members, err := dao.ListGroupMembers(ctx, NewOptions().WithWhere(squirrel.Eq{
+			models.GROUP_MEMBER_GROUP_ID: group.ID,
+		}))
 		if err != nil {
 			return err
 		}
@@ -50,8 +52,8 @@ func (dao *DAO) LoadGroup(ctx context.Context, group *models.Group, load GroupLo
 
 	if load.JoinRequests {
 		requests, err := dao.ListJoinRequests(ctx, NewOptions().WithWhere(squirrel.Eq{
-			"group_id": group.ID,
-			"status":   types.JoinPending,
+			models.JOIN_REQUEST_GROUP_ID: group.ID,
+			models.JOIN_REQUEST_STATUS:   types.JoinPending,
 		}))
 		if err != nil {
 			return err

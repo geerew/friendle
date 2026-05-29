@@ -18,17 +18,17 @@ func (dao *DAO) CreateRound(ctx context.Context, r *models.Round) error {
 	r.RefreshUpdatedAt()
 
 	data := map[string]interface{}{
-		models.BASE_ID:         r.ID,
-		"group_id":             r.GroupID,
-		"round_date":           r.RoundDate,
-		"picker_user_id":       r.PickerUserID,
-		"status":               r.Status,
-		models.BASE_CREATED_AT: r.CreatedAt,
-		models.BASE_UPDATED_AT: r.UpdatedAt,
+		models.BASE_ID:              r.ID,
+		models.ROUND_GROUP_ID:       r.GroupID,
+		models.ROUND_ROUND_DATE:     r.RoundDate,
+		models.ROUND_PICKER_USER_ID: r.PickerUserID,
+		models.ROUND_STATUS:         r.Status,
+		models.BASE_CREATED_AT:      r.CreatedAt,
+		models.BASE_UPDATED_AT:      r.UpdatedAt,
 	}
 
 	if r.WordPlain != nil {
-		data["word_plain"] = *r.WordPlain
+		data[models.ROUND_WORD_PLAIN] = *r.WordPlain
 	}
 
 	builderOpts := newBuilderOptions(models.ROUND_TABLE).WithData(data)
@@ -66,11 +66,11 @@ func (dao *DAO) UpdateRound(ctx context.Context, r *models.Round) error {
 	r.RefreshUpdatedAt()
 
 	data := map[string]interface{}{
-		"status":               r.Status,
+		models.ROUND_STATUS:    r.Status,
 		models.BASE_UPDATED_AT: r.UpdatedAt,
 	}
 	if r.WordPlain != nil {
-		data["word_plain"] = *r.WordPlain
+		data[models.ROUND_WORD_PLAIN] = *r.WordPlain
 	}
 
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: r.ID})

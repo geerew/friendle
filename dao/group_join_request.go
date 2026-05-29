@@ -18,18 +18,19 @@ func (dao *DAO) CreateJoinRequest(ctx context.Context, r *models.GroupJoinReques
 	}
 	r.RefreshCreatedAt()
 	r.RefreshUpdatedAt()
+
 	if r.Status == "" {
 		r.Status = types.JoinPending
 	}
 
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
 		WithData(map[string]interface{}{
-			models.BASE_ID:         r.ID,
-			"group_id":             r.GroupID,
-			"user_id":              r.UserID,
-			"status":               r.Status,
-			models.BASE_CREATED_AT: r.CreatedAt,
-			models.BASE_UPDATED_AT: r.UpdatedAt,
+			models.BASE_ID:               r.ID,
+			models.JOIN_REQUEST_GROUP_ID: r.GroupID,
+			models.JOIN_REQUEST_USER_ID:  r.UserID,
+			models.JOIN_REQUEST_STATUS:   r.Status,
+			models.BASE_CREATED_AT:       r.CreatedAt,
+			models.BASE_UPDATED_AT:       r.UpdatedAt,
 		})
 
 	return createGeneric(ctx, dao, *builderOpts)
@@ -67,8 +68,8 @@ func (dao *DAO) UpdateJoinRequestStatus(ctx context.Context, id string, status t
 
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
 		WithData(map[string]interface{}{
-			"status":               status,
-			models.BASE_UPDATED_AT: now,
+			models.JOIN_REQUEST_STATUS: status,
+			models.BASE_UPDATED_AT:     now,
 		}).
 		SetDbOpts(dbOpts)
 
@@ -86,9 +87,9 @@ func (dao *DAO) DeletePendingJoinRequest(ctx context.Context, groupID, userID st
 	}
 
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{
-		"group_id": groupID,
-		"user_id":  userID,
-		"status":   types.JoinPending,
+		models.JOIN_REQUEST_GROUP_ID: groupID,
+		models.JOIN_REQUEST_USER_ID:  userID,
+		models.JOIN_REQUEST_STATUS:   types.JoinPending,
 	})
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).SetDbOpts(dbOpts)
 	sqlStr, args, _ := deleteBuilder(*builderOpts)
@@ -110,12 +111,12 @@ func (dao *DAO) ListPendingJoinGroupIDsForUser(ctx context.Context, userID strin
 	}
 
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{
-		"user_id":  userID,
-		"group_id": groupIDs,
-		"status":   types.JoinPending,
+		models.JOIN_REQUEST_USER_ID:  userID,
+		models.JOIN_REQUEST_GROUP_ID: groupIDs,
+		models.JOIN_REQUEST_STATUS:   types.JoinPending,
 	})
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
-		WithColumns("group_id").
+		WithColumns(models.JOIN_REQUEST_GROUP_ID).
 		SetDbOpts(dbOpts)
 
 	rows, err := listGeneric[groupIDRow](ctx, dao, *builderOpts)

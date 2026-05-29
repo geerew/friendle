@@ -50,7 +50,9 @@ func (dao *DAO) LoadRound(ctx context.Context, round *models.Round, load RoundLo
 		return nil
 	}
 
-	participations, err := dao.ListRoundParticipations(ctx, NewOptions().WithWhere(squirrel.Eq{"round_id": round.ID}))
+	participations, err := dao.ListRoundParticipations(ctx, NewOptions().WithWhere(squirrel.Eq{
+		models.ROUND_PARTICIPATION_ROUND_ID: round.ID,
+	}))
 	if err != nil {
 		return err
 	}
@@ -58,8 +60,8 @@ func (dao *DAO) LoadRound(ctx context.Context, round *models.Round, load RoundLo
 	for _, p := range participations {
 		if load.Guesses {
 			p.Guesses, err = dao.ListGuesses(ctx, NewOptions().WithWhere(squirrel.Eq{
-				"round_id": round.ID,
-				"user_id":  p.UserID,
+				models.GUESS_ROUND_ID: round.ID,
+				models.GUESS_USER_ID:  p.UserID,
 			}))
 			if err != nil {
 				return err

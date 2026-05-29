@@ -21,14 +21,14 @@ func (dao *DAO) CreateGroupMember(ctx context.Context, m *models.GroupMember) er
 
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithData(map[string]interface{}{
-			models.BASE_ID:         m.ID,
-			"group_id":             m.GroupID,
-			"user_id":              m.UserID,
-			"group_role":           m.GroupRole,
-			"times_picked":         m.TimesPicked,
-			"picker_skips":         m.PickerSkips,
-			models.BASE_CREATED_AT: m.CreatedAt,
-			models.BASE_UPDATED_AT: m.UpdatedAt,
+			models.BASE_ID:                   m.ID,
+			models.GROUP_MEMBER_GROUP_ID:     m.GroupID,
+			models.GROUP_MEMBER_USER_ID:      m.UserID,
+			models.GROUP_MEMBER_GROUP_ROLE:   m.GroupRole,
+			models.GROUP_MEMBER_TIMES_PICKED: m.TimesPicked,
+			models.GROUP_MEMBER_PICKER_SKIPS: m.PickerSkips,
+			models.BASE_CREATED_AT:           m.CreatedAt,
+			models.BASE_UPDATED_AT:           m.UpdatedAt,
 		})
 
 	return createGeneric(ctx, dao, *builderOpts)
@@ -65,7 +65,10 @@ func (dao *DAO) DeleteGroupMember(ctx context.Context, groupID, userID string) e
 		return utils.ErrWhere
 	}
 
-	dbOpts := NewOptions().WithWhere(squirrel.Eq{"group_id": groupID, "user_id": userID})
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{
+		models.GROUP_MEMBER_GROUP_ID: groupID,
+		models.GROUP_MEMBER_USER_ID:  userID,
+	})
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).SetDbOpts(dbOpts)
 	sqlStr, args, _ := deleteBuilder(*builderOpts)
 	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
@@ -131,11 +134,11 @@ func (dao *DAO) ListMemberGroupIDsForUser(ctx context.Context, userID string, gr
 	}
 
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{
-		"user_id":  userID,
-		"group_id": groupIDs,
+		models.GROUP_MEMBER_USER_ID:  userID,
+		models.GROUP_MEMBER_GROUP_ID: groupIDs,
 	})
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
-		WithColumns("group_id").
+		WithColumns(models.GROUP_MEMBER_GROUP_ID).
 		SetDbOpts(dbOpts)
 
 	rows, err := listGeneric[groupIDRow](ctx, dao, *builderOpts)

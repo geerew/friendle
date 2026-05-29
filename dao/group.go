@@ -39,10 +39,16 @@ func (dao *DAO) CreateGroup(ctx context.Context, g *models.Group) error {
 	}
 	g.RefreshCreatedAt()
 	g.RefreshUpdatedAt()
-	return createGeneric(ctx, dao, *newBuilderOptions(models.GROUP_TABLE).WithData(map[string]interface{}{
-		models.BASE_ID: g.ID, "name": g.Name, "created_by": g.CreatedBy,
-		models.BASE_CREATED_AT: g.CreatedAt, models.BASE_UPDATED_AT: g.UpdatedAt,
-	}))
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithData(map[string]interface{}{
+			models.BASE_ID:          g.ID,
+			models.GROUP_NAME:       g.Name,
+			models.GROUP_CREATED_BY: g.CreatedBy,
+			models.BASE_CREATED_AT:  g.CreatedAt,
+			models.BASE_UPDATED_AT:  g.UpdatedAt,
+		})
+
+	return createGeneric(ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -130,7 +136,7 @@ func (dao *DAO) UpdateGroup(ctx context.Context, g *models.Group) error {
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: g.ID})
 	builderOpts := newBuilderOptions(models.GROUP_TABLE).
 		WithData(map[string]interface{}{
-			"name":                 g.Name,
+			models.GROUP_NAME:      g.Name,
 			models.BASE_UPDATED_AT: g.UpdatedAt,
 		}).
 		SetDbOpts(dbOpts)

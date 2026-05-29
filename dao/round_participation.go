@@ -19,16 +19,16 @@ func (dao *DAO) CreateRoundParticipation(ctx context.Context, p *models.RoundPar
 
 	builderOpts := newBuilderOptions(models.ROUND_PARTICIPATION_TABLE).
 		WithData(map[string]interface{}{
-			models.BASE_ID:         p.ID,
-			"round_id":             p.RoundID,
-			"user_id":              p.UserID,
-			"solved":               p.Solved,
-			"finished":             p.Finished,
-			"score":                p.Score,
-			"first_guess_at":       p.FirstGuessAt,
-			"completed_at":         p.CompletedAt,
-			models.BASE_CREATED_AT: p.CreatedAt,
-			models.BASE_UPDATED_AT: p.UpdatedAt,
+			models.BASE_ID:                            p.ID,
+			models.ROUND_PARTICIPATION_ROUND_ID:       p.RoundID,
+			models.ROUND_PARTICIPATION_USER_ID:        p.UserID,
+			models.ROUND_PARTICIPATION_SOLVED:         p.Solved,
+			models.ROUND_PARTICIPATION_FINISHED:       p.Finished,
+			models.ROUND_PARTICIPATION_SCORE:          p.Score,
+			models.ROUND_PARTICIPATION_FIRST_GUESS_AT: p.FirstGuessAt,
+			models.ROUND_PARTICIPATION_COMPLETED_AT:   p.CompletedAt,
+			models.BASE_CREATED_AT:                    p.CreatedAt,
+			models.BASE_UPDATED_AT:                    p.UpdatedAt,
 		})
 
 	return createGeneric(ctx, dao, *builderOpts)
@@ -66,12 +66,12 @@ func (dao *DAO) UpdateRoundParticipation(ctx context.Context, p *models.RoundPar
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: p.ID})
 	builderOpts := newBuilderOptions(models.ROUND_PARTICIPATION_TABLE).
 		WithData(map[string]interface{}{
-			"solved":               p.Solved,
-			"finished":             p.Finished,
-			"score":                p.Score,
-			"first_guess_at":       p.FirstGuessAt,
-			"completed_at":         p.CompletedAt,
-			models.BASE_UPDATED_AT: p.UpdatedAt,
+			models.ROUND_PARTICIPATION_SOLVED:         p.Solved,
+			models.ROUND_PARTICIPATION_FINISHED:       p.Finished,
+			models.ROUND_PARTICIPATION_SCORE:          p.Score,
+			models.ROUND_PARTICIPATION_FIRST_GUESS_AT: p.FirstGuessAt,
+			models.ROUND_PARTICIPATION_COMPLETED_AT:   p.CompletedAt,
+			models.BASE_UPDATED_AT:                    p.UpdatedAt,
 		}).
 		SetDbOpts(dbOpts)
 

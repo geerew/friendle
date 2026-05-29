@@ -18,12 +18,12 @@ func (dao *DAO) CreateGuess(ctx context.Context, g *models.Guess) error {
 	builderOpts := newBuilderOptions(models.GUESS_TABLE).
 		WithData(map[string]interface{}{
 			models.BASE_ID:         g.ID,
-			"round_id":             g.RoundID,
-			"user_id":              g.UserID,
-			"attempt":              g.Attempt,
-			"word":                 g.Word,
-			"result":               g.Result,
-			"outcome":              g.Outcome,
+			models.GUESS_ROUND_ID:  g.RoundID,
+			models.GUESS_USER_ID:   g.UserID,
+			models.GUESS_ATTEMPT:   g.Attempt,
+			models.GUESS_WORD:      g.Word,
+			models.GUESS_RESULT:    g.Result,
+			models.GUESS_OUTCOME:   g.Outcome,
 			models.BASE_CREATED_AT: g.CreatedAt,
 		})
 
@@ -38,7 +38,7 @@ func (dao *DAO) ListGuesses(ctx context.Context, dbOpts *Options) ([]*models.Gue
 		dbOpts = NewOptions()
 	}
 
-	dbOpts = dbOpts.WithOrderBy("attempt ASC")
+	dbOpts = dbOpts.WithOrderBy(models.GUESS_ATTEMPT + " ASC")
 
 	builderOpts := newBuilderOptions(models.GUESS_TABLE).
 		WithColumns(models.GuessColumns()...).
