@@ -287,7 +287,11 @@ func (r *Router) createGroupMember(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Invalid group role", nil)
 	}
 
-	_ = r.appDao.DeletePendingJoinRequest(ctx, groupID, userID)
+	_ = r.appDao.DeleteJoinRequests(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		models.JOIN_REQUEST_GROUP_ID: groupID,
+		models.JOIN_REQUEST_USER_ID:  userID,
+		models.JOIN_REQUEST_STATUS:   types.JoinPending,
+	}))
 
 	member := &models.GroupMember{GroupID: groupID, UserID: userID, GroupRole: role}
 	if err := r.appDao.CreateGroupMember(ctx, member); err != nil {

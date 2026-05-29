@@ -261,7 +261,9 @@ func (r *Router) deleteGroupJoinRequest(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusNotFound, "Pending request not found", nil)
 	}
 
-	if err := r.appDao.DeletePendingJoinRequest(ctx, groupID, targetUserID); err != nil {
+	if err := r.appDao.DeleteJoinRequests(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		models.BASE_ID: jr.ID,
+	})); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Cancel failed", err)
 	}
 
@@ -305,7 +307,10 @@ func (r *Router) updateGroupJoinRequestReject(c *fiber.Ctx) error {
 func (r *Router) deleteGroupMember(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	if err := r.appDao.DeleteGroupMember(ctx, c.Params("id"), c.Params("userId")); err != nil {
+	if err := r.appDao.DeleteGroupMembers(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+		models.GROUP_MEMBER_GROUP_ID: c.Params("id"),
+		models.GROUP_MEMBER_USER_ID:  c.Params("userId"),
+	})); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Remove failed", err)
 	}
 
@@ -337,7 +342,7 @@ func (r *Router) resolveGroupJoinRequest(c *fiber.Ctx, status types.JoinRequestS
 		return errorResponse(c, fiber.StatusNotFound, "Request not found", nil)
 	}
 
-	if err := r.appDao.UpdateJoinRequestStatus(ctx, jr.ID, status); err != nil {
+	if err := r.appDao.UpdateJoinRequest(ctx, jr.ID, status); err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Update failed", err)
 	}
 

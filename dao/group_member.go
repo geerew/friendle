@@ -59,20 +59,18 @@ func (dao *DAO) ListGroupMembers(ctx context.Context, dbOpts *Options) ([]*model
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DeleteGroupMember removes a user from a group
-func (dao *DAO) DeleteGroupMember(ctx context.Context, groupID, userID string) error {
-	if groupID == "" || userID == "" {
+// DeleteGroupMembers deletes records from the group_members table
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteGroupMembers(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
 		return utils.ErrWhere
 	}
 
-	dbOpts := NewOptions().WithWhere(squirrel.Eq{
-		models.GROUP_MEMBER_GROUP_ID: groupID,
-		models.GROUP_MEMBER_USER_ID:  userID,
-	})
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).SetDbOpts(dbOpts)
 	sqlStr, args, _ := deleteBuilder(*builderOpts)
-	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
 
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
 	return err
 }
 

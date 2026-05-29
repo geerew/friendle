@@ -61,8 +61,8 @@ func (dao *DAO) ListJoinRequests(ctx context.Context, dbOpts *Options) ([]*model
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateJoinRequestStatus updates the status of a join request
-func (dao *DAO) UpdateJoinRequestStatus(ctx context.Context, id string, status types.JoinRequestStatus) error {
+// UpdateJoinRequest updates the status of a join request
+func (dao *DAO) UpdateJoinRequest(ctx context.Context, id string, status types.JoinRequestStatus) error {
 	now := types.NowDateTime().String()
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: id})
 
@@ -80,21 +80,18 @@ func (dao *DAO) UpdateJoinRequestStatus(ctx context.Context, id string, status t
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DeletePendingJoinRequest removes a pending join request for the given group and user
-func (dao *DAO) DeletePendingJoinRequest(ctx context.Context, groupID, userID string) error {
-	if groupID == "" || userID == "" {
+// DeleteJoinRequests deletes records from the group_join_requests table
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteJoinRequests(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
 		return utils.ErrWhere
 	}
 
-	dbOpts := NewOptions().WithWhere(squirrel.Eq{
-		models.JOIN_REQUEST_GROUP_ID: groupID,
-		models.JOIN_REQUEST_USER_ID:  userID,
-		models.JOIN_REQUEST_STATUS:   types.JoinPending,
-	})
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).SetDbOpts(dbOpts)
 	sqlStr, args, _ := deleteBuilder(*builderOpts)
-	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
 
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
 	return err
 }
 
