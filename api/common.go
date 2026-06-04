@@ -30,21 +30,6 @@ func errorResponse(c *fiber.Ctx, status int, message string, err error) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// validatePassword checks password length constraints
-func validatePassword(password string) error {
-	if len(password) < 8 {
-		return fmt.Errorf("password must be at least 8 characters")
-	}
-
-	if len(password) > 128 {
-		return fmt.Errorf("password must be no more than 128 characters")
-	}
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // principalCtx returns the authenticated principal and a context carrying it
 func principalCtx(c *fiber.Ctx) (types.Principal, context.Context, error) {
 	principal, ok := c.Locals(types.PrincipalContextKey).(types.Principal)
