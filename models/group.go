@@ -24,11 +24,6 @@ type Group struct {
 	Base
 	Name      string `db:"name"`       // Mutable
 	CreatedBy string `db:"created_by"` // Immutable
-
-	// Relations
-	Members      []*GroupMember      `db:"-"`
-	JoinRequests []*GroupJoinRequest `db:"-"`
-	MemberCount  int                 `db:"-"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

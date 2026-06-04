@@ -32,15 +32,11 @@ const (
 // GroupMember defines the model for a group membership row
 type GroupMember struct {
 	Base
-	GroupID     string          `db:"group_id"`     // Immutable
-	UserID      string          `db:"user_id"`      // Immutable
-	GroupRole   types.GroupRole `db:"group_role"`   // Mutable
-	TimesPicked int             `db:"times_picked"` // Mutable
-	PickerSkips int             `db:"picker_skips"` // Mutable
-
-	// Relations
-	User  *User  `db:"-"`
-	Group *Group `db:"-"`
+	GroupID     string          `json:"groupId" db:"group_id"`     // Immutable
+	UserID      string          `json:"userId" db:"user_id"`       // Immutable
+	GroupRole   types.GroupRole `json:"groupRole" db:"group_role"` // Mutable
+	TimesPicked int             `db:"times_picked"`                // Mutable
+	PickerSkips int             `db:"picker_skips"`                // Mutable
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

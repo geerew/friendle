@@ -37,10 +37,6 @@ type Round struct {
 	PickerUserID string            `db:"picker_user_id"` // Immutable
 	WordPlain    *string           `db:"word_plain"`     // Mutable
 	Status       types.RoundStatus `db:"status"`         // Mutable
-
-	// Relations
-	Picker         *User                 `db:"-"`
-	Participations []*RoundParticipation `db:"-"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
