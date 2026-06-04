@@ -3,44 +3,31 @@ package service
 import (
 	"context"
 
-	"github.com/Masterminds/squirrel"
-	"github.com/geerew/friendle/dao"
-	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// userContext holds the caller identity and group-scoped access for read paths
-type userContext struct {
-	UserID     string
-	SiteAdmin  bool
-	GroupAdmin bool
+// principalFromContext returns the authenticated principal from the context
+func principalFromContext(ctx context.Context) (types.Principal, error) {
+	principal, err := types.PrincipalFromContext(ctx)
+	if err != nil {
+		return types.Principal{}, err
+	}
+
+	return principal, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// userContext loads group-scoped access for the caller on ctx
-func (d deps) userContext(ctx context.Context, groupID string) (userContext, error) {
-	principal, err := types.PrincipalFromContext(ctx)
+// groupMembershipFromContext returns the group membership from the context
+func groupMembershipFromContext(ctx context.Context) (types.GroupMembership, error) {
+	groupMembership, err := types.GroupMembershipFromContext(ctx)
 	if err != nil {
-		return userContext{}, err
+		return types.GroupMembership{}, err
 	}
 
-	viewer := userContext{
-		UserID:    principal.UserID,
-		SiteAdmin: principal.SiteRole == types.SiteRoleAdmin,
-	}
-
-	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{
-		models.GROUP_MEMBER_GROUP_ID: groupID,
-		models.GROUP_MEMBER_USER_ID:  principal.UserID,
-	})
-	if m, _ := d.dao.GetGroupMember(ctx, dbOpts); m != nil {
-		viewer.GroupAdmin = m.GroupRole == types.GroupRoleAdmin
-	}
-
-	return viewer, nil
+	return groupMembership, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

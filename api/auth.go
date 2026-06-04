@@ -135,9 +135,9 @@ func (r *Router) logout(c *fiber.Ctx) error {
 
 // getMe returns the authenticated user's profile
 func (r *Router) getMe(c *fiber.Ctx) error {
-	principal, ctx := principalAndCtx(c)
+	_, ctx := principalAndCtx(c)
 
-	user, err := r.appSvc.Auth.GetMe(ctx, principal.UserID)
+	user, err := r.appSvc.Auth.GetMe(ctx)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -149,14 +149,14 @@ func (r *Router) getMe(c *fiber.Ctx) error {
 
 // updateMe updates the authenticated user's profile or password
 func (r *Router) updateMe(c *fiber.Ctx) error {
-	principal, ctx := principalAndCtx(c)
+	_, ctx := principalAndCtx(c)
 
 	req := &service.UpdateMeRequest{}
 	if err := c.BodyParser(req); err != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	user, err := r.appSvc.Auth.UpdateMe(ctx, principal.UserID, *req)
+	user, err := r.appSvc.Auth.UpdateMe(ctx, *req)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -175,7 +175,7 @@ func (r *Router) deleteMe(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	if err := r.appSvc.Auth.DeleteMe(ctx, principal.UserID, *req); err != nil {
+	if err := r.appSvc.Auth.DeleteMe(ctx, *req); err != nil {
 		return serviceError(c, err)
 	}
 
