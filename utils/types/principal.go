@@ -25,3 +25,17 @@ func PrincipalFromContext(ctx context.Context) (Principal, error) {
 
 	return principal, nil
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsAdmin returns whether the caller is a site admin
+func (p Principal) IsAdmin() bool {
+	return p.SiteRole == SiteRoleAdmin
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsMember returns whether the caller is a site member
+func (p Principal) IsMember() bool {
+	return p.SiteRole == SiteRoleUser
+}

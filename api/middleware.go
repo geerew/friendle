@@ -8,7 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/app"
+	"github.com/geerew/friendle/dao"
+	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/logger"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
@@ -43,15 +46,9 @@ const (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-const (
-	accessGroupMemberScope = accessSiteAdmin | accessGroupMember
-	accessGroupAdminScope  = accessSiteAdmin | accessGroupAdmin
-)
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// requireAccess returns per-route API authorization middleware. It assumes sessionMiddleware has
-// already attached a principal for logged-in callers; it does not perform UI redirects
+// requireAccess returns per-route API authorization middleware
+//
+// It assumes sessionMiddleware has already attached a principal for logged-in callers
 func (r *Router) requireAccess(level accessLevel) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if level == 0 {
@@ -63,25 +60,46 @@ func (r *Router) requireAccess(level accessLevel) fiber.Handler {
 			return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
 
+		// Basic site user access
 		if level&accessSiteUser != 0 {
 			return c.Next()
 		}
 
+		// Site admin access
 		if level&accessSiteAdmin != 0 && p.SiteRole == types.SiteRoleAdmin {
 			return c.Next()
 		}
 
+		// Group membership check
 		groupID := c.Params("id")
+		needsGroup := level&(accessGroupMember|accessGroupAdmin) != 0
 
+		var member *models.GroupMember
+		if needsGroup && groupID != "" {
+			member, err = r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
+				models.GROUP_MEMBER_GROUP_ID: groupID,
+				models.GROUP_MEMBER_USER_ID:  p.UserID,
+			}))
+
+			if err != nil || member == nil {
+				return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
+			}
+		}
+
+		// Group member access
 		if level&accessGroupMember != 0 {
-			if _, err := r.membership(ctx, groupID, p.UserID); err == nil {
+			if member != nil {
+				c.SetUserContext(types.WithGroupMembership(ctx, member.GroupRole))
+
 				return c.Next()
 			}
 		}
 
+		// Group admin access
 		if level&accessGroupAdmin != 0 {
-			m, err := r.membership(ctx, groupID, p.UserID)
-			if err == nil && m != nil && m.GroupRole == types.GroupRoleAdmin {
+			if member != nil && member.GroupRole == types.GroupRoleAdmin {
+				c.SetUserContext(types.WithGroupMembership(ctx, member.GroupRole))
+
 				return c.Next()
 			}
 		}

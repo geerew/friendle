@@ -10,8 +10,13 @@ import (
 	"github.com/geerew/friendle/database"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/logger"
+	"github.com/geerew/friendle/utils/pagination"
 	"github.com/geerew/friendle/utils/types"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const groupAdvanceBatchSize = 50
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -26,14 +31,25 @@ type RoundScheduler struct {
 // AdvanceAll creates today's round for each group that does not have one yet
 func (rs *RoundScheduler) AdvanceAll() {
 	ctx := context.Background()
-	groups, err := rs.dao.ListAllGroups(ctx)
-	if err != nil {
-		rs.logger.Error().Err(err).Msg("advance rounds: list groups")
-		return
-	}
+	pageNum := 1
 
-	for _, g := range groups {
-		rs.advanceGroup(ctx, g)
+	for {
+		page := pagination.New(pageNum, groupAdvanceBatchSize)
+		groups, err := rs.dao.ListGroups(ctx, dao.NewOptions().WithPagination(page))
+		if err != nil {
+			rs.logger.Error().Err(err).Int("page", pageNum).Msg("advance rounds: list groups")
+			return
+		}
+
+		for _, g := range groups {
+			rs.advanceGroup(ctx, g)
+		}
+
+		if len(groups) == 0 || pageNum >= page.TotalPages() {
+			break
+		}
+
+		pageNum++
 	}
 }
 

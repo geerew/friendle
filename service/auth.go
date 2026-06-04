@@ -128,24 +128,34 @@ func (a *Auth) Login(ctx context.Context, req LoginRequest) (*UserResponse, erro
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // GetMe returns the authenticated user's profile
-func (a *Auth) GetMe(ctx context.Context, userID string) (*UserResponse, error) {
-	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: userID})
-	user, err := a.dao.GetUser(ctx, dbOpts)
+func (a *Auth) GetMe(ctx context.Context) (*UserResponse, error) {
+	principal, err := principalFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if user == nil {
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: principal.UserID})
+	record, err := a.dao.GetUser(ctx, dbOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if record == nil {
 		return nil, ErrUserNotFound
 	}
 
-	return userResponseBuilder(user), nil
+	return userResponseBuilder(record), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // UpdateMe updates the authenticated user's profile or password
-func (a *Auth) UpdateMe(ctx context.Context, userID string, req UpdateMeRequest) (*UserResponse, error) {
+func (a *Auth) UpdateMe(ctx context.Context, req UpdateMeRequest) (*UserResponse, error) {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	displayName := strings.TrimSpace(req.DisplayName)
 	password := strings.TrimSpace(req.Password)
 	currentPassword := strings.TrimSpace(req.CurrentPassword)
@@ -154,7 +164,7 @@ func (a *Auth) UpdateMe(ctx context.Context, userID string, req UpdateMeRequest)
 		return nil, ErrNoUpdateData
 	}
 
-	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: userID})
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: principal.UserID})
 	user, err := a.dao.GetUser(ctx, dbOpts)
 	if err != nil {
 		return nil, err
@@ -195,8 +205,13 @@ func (a *Auth) UpdateMe(ctx context.Context, userID string, req UpdateMeRequest)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeleteMe deletes the authenticated user's account
-func (a *Auth) DeleteMe(ctx context.Context, userID string, req DeleteMeRequest) error {
-	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: userID})
+func (a *Auth) DeleteMe(ctx context.Context, req DeleteMeRequest) error {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: principal.UserID})
 	user, err := a.dao.GetUser(ctx, dbOpts)
 	if err != nil {
 		return err
@@ -223,6 +238,7 @@ func (a *Auth) DeleteMe(ctx context.Context, userID string, req DeleteMeRequest)
 		}
 	}
 
-	dbOpts = dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: userID})
+	dbOpts = dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: principal.UserID})
+
 	return a.dao.DeleteUsers(ctx, dbOpts)
 }

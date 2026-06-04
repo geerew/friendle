@@ -47,6 +47,16 @@ var serviceErrorMappings = []serviceErrorMapping{
 	{err: service.ErrLastAdmin, status: fiber.StatusBadRequest, message: "Unable to delete the last admin user"},
 	{err: service.ErrPasswordTooShort, status: fiber.StatusBadRequest, message: "password must be at least 8 characters"},
 	{err: service.ErrPasswordTooLong, status: fiber.StatusBadRequest, message: "password must be no more than 128 characters"},
+
+	{err: service.ErrGroupNotFound, status: fiber.StatusNotFound, message: "Group not found"},
+	{err: service.ErrGroupNameRequired, status: fiber.StatusBadRequest, message: "Name required"},
+	{err: service.ErrGroupNameTaken, status: fiber.StatusBadRequest, message: "Group name already exists"},
+	{err: service.ErrAlreadyGroupMember, status: fiber.StatusBadRequest, message: "Already a member"},
+	{err: service.ErrJoinRequestNotFound, status: fiber.StatusNotFound, message: "Pending request not found"},
+	{err: service.ErrCannotJoinGroup, status: fiber.StatusBadRequest, message: "Unable to join this group"},
+	{err: service.ErrForbidden, status: fiber.StatusForbidden, message: "Forbidden"},
+
+	{err: utils.ErrApiQueryParse, status: fiber.StatusBadRequest, message: "Invalid query"},
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
