@@ -14,7 +14,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UserResponse is a user row for the site admin user API
+// UserResponse represents a user response
 type UserResponse struct {
 	ID          string         `json:"id"`
 	Username    string         `json:"username"`
@@ -173,7 +173,7 @@ func (u *Users) UpdateUser(ctx context.Context, userID string, req UpdateUserReq
 		return nil, false, err
 	}
 
-	return usersResponseBuilder([]*models.User{user})[0], roleChanged, nil
+	return userResponseBuilder(user), roleChanged, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -190,13 +190,20 @@ func (u *Users) DeleteUser(ctx context.Context, userID string) error {
 func usersResponseBuilder(users []*models.User) []*UserResponse {
 	responses := make([]*UserResponse, 0, len(users))
 	for _, user := range users {
-		responses = append(responses, &UserResponse{
-			ID:          user.ID,
-			Username:    user.Username,
-			DisplayName: user.DisplayName,
-			SiteRole:    user.SiteRole,
-		})
+		responses = append(responses, userResponseBuilder(user))
 	}
 
 	return responses
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// userResponseBuilder maps a user model to an API response
+func userResponseBuilder(user *models.User) *UserResponse {
+	return &UserResponse{
+		ID:          user.ID,
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		SiteRole:    user.SiteRole,
+	}
 }
