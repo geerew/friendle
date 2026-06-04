@@ -11,6 +11,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/service"
 	"github.com/geerew/friendle/utils/auth"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
@@ -343,7 +344,7 @@ func TestAuth_GetMe(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
 
-	var resp userResponse
+	var resp service.UserResponse
 	require.NoError(t, json.Unmarshal(body, &resp))
 	require.Equal(t, "user", resp.Username)
 }
@@ -363,7 +364,7 @@ func TestAuth_UpdateMe(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
 
-		var resp userResponse
+		var resp service.UserResponse
 		require.NoError(t, json.Unmarshal(body, &resp))
 		require.Equal(t, "Updated Name", resp.DisplayName)
 

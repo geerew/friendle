@@ -35,7 +35,7 @@ func DefaultMiddleware(r *Router) []fiber.Handler {
 type accessLevel uint8
 
 const (
-	accessAuth accessLevel = 1 << iota
+	accessSiteUser accessLevel = 1 << iota
 	accessSiteAdmin
 	accessGroupMember
 	accessGroupAdmin
@@ -63,7 +63,7 @@ func (r *Router) requireAccess(level accessLevel) fiber.Handler {
 			return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
 
-		if level&accessAuth != 0 {
+		if level&accessSiteUser != 0 {
 			return c.Next()
 		}
 

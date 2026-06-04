@@ -8,6 +8,7 @@ import (
 
 	"github.com/geerew/friendle/app"
 	"github.com/geerew/friendle/dao"
+	"github.com/geerew/friendle/service"
 	"github.com/geerew/friendle/utils/logger"
 	"github.com/geerew/friendle/utils/session"
 	"github.com/gofiber/fiber/v2"
@@ -26,6 +27,7 @@ type Router struct {
 	fiberApp       *fiber.App
 	app            *app.App
 	appDao         *dao.DAO
+	appSvc         *service.Service
 	sessionManager *session.SessionManager
 	logger         *logger.Logger
 }
@@ -38,10 +40,12 @@ func New(application *app.App, stack MiddlewareStack) *Router {
 		stack = DefaultMiddleware
 	}
 
+	log := application.Logger.WithComponent(string(app.ComponentAPI))
 	r := &Router{
 		app:    application,
 		appDao: dao.New(application.DbManager.DataDb),
-		logger: application.Logger.WithComponent(string(app.ComponentAPI)),
+		appSvc: service.New(application.DbManager.DataDb, application.Dictionary),
+		logger: log,
 	}
 
 	r.createSessionStore()
