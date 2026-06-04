@@ -40,8 +40,7 @@ func (dao *DAO) CreateOrReplaceSession(ctx context.Context, session *models.Sess
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetSession gets a record from the sessions table based upon the where clause in the options. If
-// there is no where clause, it will return the first record in the table
+// GetSession returns a session record
 func (dao *DAO) GetSession(ctx context.Context, dbOpts *Options) (*models.Session, error) {
 	builderOpts := newBuilderOptions(models.SESSION_TABLE).
 		WithColumns(models.SessionColumns()...).
@@ -53,8 +52,7 @@ func (dao *DAO) GetSession(ctx context.Context, dbOpts *Options) (*models.Sessio
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListSessions gets all records from the sessions table based upon the where clause and pagination
-// in the options
+// ListSessions returns session records
 func (dao *DAO) ListSessions(ctx context.Context, dbOpts *Options) ([]*models.Session, error) {
 	builderOpts := newBuilderOptions(models.SESSION_TABLE).
 		WithColumns(models.SessionColumns()...).
@@ -92,7 +90,7 @@ func (dao *DAO) UpdateSession(ctx context.Context, session *models.Session) erro
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// BulkUpdateSessions bulk updates session records
+// BulkUpdateSessions updates multiple session records
 func (dao *DAO) BulkUpdateSessions(ctx context.Context, sessions []*models.Session) error {
 	if sessions == nil {
 		return utils.ErrNilPtr
@@ -119,7 +117,7 @@ func (dao *DAO) BulkUpdateSessions(ctx context.Context, sessions []*models.Sessi
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DeleteSessions deletes records from the sessions table
+// DeleteSessions deletes session records
 //
 // Errors when a where clause is not provided
 func (dao *DAO) DeleteSessions(ctx context.Context, dbOpts *Options) error {

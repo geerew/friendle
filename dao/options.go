@@ -40,42 +40,6 @@ type Options struct {
 
 	// ApiQuery is the list `q` query string from an HTTP request
 	ApiQuery string
-
-	// IncludeMembers includes group members when querying groups
-	//
-	// Valid when querying groups
-	IncludeMembers bool
-
-	// IncludeJoinRequests includes pending join requests when querying groups
-	//
-	// Valid when querying groups
-	IncludeJoinRequests bool
-
-	// IncludeParticipations includes round participations when querying rounds
-	//
-	// Valid when querying rounds
-	IncludeParticipations bool
-
-	// IncludeGuesses includes guess rows on round participations
-	//
-	// Valid when querying rounds
-	IncludeGuesses bool
-
-	// IncludeUsers includes related user rows on group members, round pickers, and
-	// round participations
-	//
-	// Valid when querying groups or rounds
-	IncludeUsers bool
-
-	// IncludeMemberCount sets MemberCount on groups loaded via groups or group member queries
-	//
-	// Valid when querying groups or group members with WithGroup()
-	IncludeMemberCount bool
-
-	// IncludeGroup includes the parent group when querying group members
-	//
-	// Valid when querying group members
-	IncludeGroup bool
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,75 +97,6 @@ func (o *Options) WithPagination(p *pagination.Pagination) *Options {
 // Calling multiple times will override the previous WithApiQuery call
 func (o *Options) WithApiQuery(q string) *Options {
 	o.ApiQuery = q
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithMembers enables group member inclusion in queries
-//
-// Can be used when querying groups
-func (o *Options) WithMembers() *Options {
-	o.IncludeMembers = true
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithJoinRequests enables pending join request inclusion in queries
-//
-// Can be used when querying groups
-func (o *Options) WithJoinRequests() *Options {
-	o.IncludeJoinRequests = true
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithParticipations enables round participation inclusion in queries
-//
-// Can be used when querying rounds
-func (o *Options) WithParticipations() *Options {
-	o.IncludeParticipations = true
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithGuesses enables guess rows on round participations
-//
-// Can be used when querying rounds
-func (o *Options) WithGuesses() *Options {
-	o.IncludeGuesses = true
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithUsers enables related user rows on loaded group members, round pickers, and
-// round participations
-//
-// Can be used when querying groups or rounds
-func (o *Options) WithUsers() *Options {
-	o.IncludeUsers = true
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithMemberCount enables member count inclusion on loaded groups
-//
-// Can be used when querying groups or group members with WithGroup()
-func (o *Options) WithMemberCount() *Options {
-	o.IncludeMemberCount = true
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithGroup enables parent group inclusion when querying group members
-func (o *Options) WithGroup() *Options {
-	o.IncludeGroup = true
 	return o
 }
 

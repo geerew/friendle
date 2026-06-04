@@ -159,8 +159,8 @@ func pluck[T any](ctx context.Context, dao *DAO, builderOpts builderOptions) ([]
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// usersByIDs returns users keyed by ID for the given user IDs
-func usersByIDs(ctx context.Context, dao *DAO, userIDs []string) (map[string]*models.User, error) {
+// UsersByIDs returns users keyed by ID for the given user IDs
+func (dao *DAO) UsersByIDs(ctx context.Context, userIDs []string) (map[string]*models.User, error) {
 	if len(userIDs) == 0 {
 		return map[string]*models.User{}, nil
 	}

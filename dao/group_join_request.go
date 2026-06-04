@@ -11,7 +11,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CreateJoinRequest inserts a group join request
+// CreateJoinRequest inserts a group join record
 func (dao *DAO) CreateJoinRequest(ctx context.Context, r *models.GroupJoinRequest) error {
 	if r.ID == "" {
 		r.RefreshId()
@@ -38,7 +38,7 @@ func (dao *DAO) CreateJoinRequest(ctx context.Context, r *models.GroupJoinReques
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetJoinRequest returns a join request matching dbOpts
+// GetJoinRequest returns a group join record
 func (dao *DAO) GetJoinRequest(ctx context.Context, dbOpts *Options) (*models.GroupJoinRequest, error) {
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
 		WithColumns(models.GroupJoinRequestColumns()...).
@@ -50,7 +50,7 @@ func (dao *DAO) GetJoinRequest(ctx context.Context, dbOpts *Options) (*models.Gr
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListJoinRequests returns join requests matching dbOpts
+// ListJoinRequests returns group join records
 func (dao *DAO) ListJoinRequests(ctx context.Context, dbOpts *Options) ([]*models.GroupJoinRequest, error) {
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
 		WithColumns(models.GroupJoinRequestColumns()...).
@@ -61,7 +61,7 @@ func (dao *DAO) ListJoinRequests(ctx context.Context, dbOpts *Options) ([]*model
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateJoinRequest updates mutable join request fields
+// UpdateJoinRequest updates a group join record
 func (dao *DAO) UpdateJoinRequest(ctx context.Context, r *models.GroupJoinRequest) error {
 	if r.ID == "" {
 		return utils.ErrId
@@ -84,7 +84,7 @@ func (dao *DAO) UpdateJoinRequest(ctx context.Context, r *models.GroupJoinReques
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DeleteJoinRequests deletes records from the group_join_requests table
+// DeleteJoinRequests deletes group join records
 //
 // Errors when a where clause is not provided
 func (dao *DAO) DeleteJoinRequests(ctx context.Context, dbOpts *Options) error {
@@ -107,28 +107,15 @@ func (dao *DAO) ListPendingJoinGroupIDsForUser(ctx context.Context, userID strin
 		return []string{}, nil
 	}
 
-	type groupIDRow struct {
-		GroupID string `db:"group_id"`
-	}
-
 	dbOpts := NewOptions().WithWhere(squirrel.Eq{
 		models.JOIN_REQUEST_USER_ID:  userID,
 		models.JOIN_REQUEST_GROUP_ID: groupIDs,
 		models.JOIN_REQUEST_STATUS:   types.JoinPending,
 	})
+
 	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
-		WithColumns(models.JOIN_REQUEST_GROUP_ID).
+		WithColumns(models.JOIN_REQUEST_TABLE_GROUP_ID).
 		SetDbOpts(dbOpts)
 
-	rows, err := listGeneric[groupIDRow](ctx, dao, *builderOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	ids := make([]string, 0, len(rows))
-	for _, row := range rows {
-		ids = append(ids, row.GroupID)
-	}
-
-	return ids, nil
+	return pluck[string](ctx, dao, *builderOpts)
 }
