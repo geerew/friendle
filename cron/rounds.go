@@ -108,16 +108,16 @@ func (rs *RoundScheduler) closeRound(ctx context.Context, r *models.Round) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// completeRound marks unfinished participations done and sets the round to completed
+// completeRound marks unfinished round entries done and sets the round to completed
 func (rs *RoundScheduler) completeRound(ctx context.Context, r *models.Round) {
-	participations, _ := rs.dao.ListRoundParticipations(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"round_id": r.ID}))
-	for _, p := range participations {
-		if p.Finished {
+	entries, _ := rs.dao.ListRoundEntries(ctx, dao.NewOptions().WithWhere(squirrel.Eq{"round_id": r.ID}))
+	for _, entry := range entries {
+		if entry.Finished {
 			continue
 		}
 
-		p.Finished = true
-		_ = rs.dao.UpdateRoundParticipation(ctx, p)
+		entry.Finished = true
+		_ = rs.dao.UpdateRoundEntry(ctx, entry)
 	}
 
 	r.Status = types.RoundCompleted
