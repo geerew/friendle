@@ -152,11 +152,11 @@ type submitRoundGuessRequest struct {
 
 // groupResponse is a group returned by the API
 type groupResponse struct {
-	ID        string                 `json:"id"`
-	Name      string                 `json:"name"`
-	GroupRole types.GroupRole        `json:"groupRole"`
-	Members       []*groupMemberResponse `json:"members,omitempty"`
-	JoinRequests  []*joinRequestResponse `json:"joinRequests,omitempty"`
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	GroupRole    types.GroupRole        `json:"groupRole"`
+	Members      []*groupMemberResponse `json:"members,omitempty"`
+	JoinRequests []*joinRequestResponse `json:"joinRequests,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -168,9 +168,11 @@ func groupResponseHelper(g *models.Group, role types.GroupRole) *groupResponse {
 		Name:      g.Name,
 		GroupRole: role,
 	}
+
 	if len(g.Members) > 0 {
 		resp.Members = groupMemberResponsesFromModels(g.Members)
 	}
+
 	if len(g.JoinRequests) > 0 {
 		resp.JoinRequests = joinRequestResponsesFromModels(g.JoinRequests)
 	}
@@ -262,7 +264,7 @@ type groupRoundSummaryResponse struct {
 
 // joinRequestResponse is a join request returned by the API
 type joinRequestResponse struct {
-	ID     string                   `json:"id,omitempty"`
+	ID     string                  `json:"id,omitempty"`
 	Status types.JoinRequestStatus `json:"status"`
 }
 
@@ -280,24 +282,24 @@ type adminGroupMemberResponse struct {
 
 // guessRowResponse is one submitted guess row for the current round
 type guessRowResponse struct {
-	Word    string               `json:"word"`
-	Result  []types.TileState    `json:"result"`
-	Outcome types.GuessOutcome   `json:"outcome"`
+	Word    string             `json:"word"`
+	Result  []types.TileState  `json:"result"`
+	Outcome types.GuessOutcome `json:"outcome"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // roundResponse is a round with optional participations for the API
 type roundResponse struct {
-	ID             string                      `json:"id,omitempty"`
-	GroupID        string                      `json:"groupId,omitempty"`
-	RoundDate      string                      `json:"roundDate,omitempty"`
-	Status         string                      `json:"status"`
-	PickerUserID      string                      `json:"pickerUserId,omitempty"`
-	PickerDisplayName string                      `json:"pickerDisplayName,omitempty"`
-	Word              string                      `json:"word,omitempty"`
-	YourRole       string                      `json:"yourRole,omitempty"`
-	Participations []*participationResponse    `json:"participations,omitempty"`
+	ID                string                   `json:"id,omitempty"`
+	GroupID           string                   `json:"groupId,omitempty"`
+	RoundDate         string                   `json:"roundDate,omitempty"`
+	Status            string                   `json:"status"`
+	PickerUserID      string                   `json:"pickerUserId,omitempty"`
+	PickerDisplayName string                   `json:"pickerDisplayName,omitempty"`
+	Word              string                   `json:"word,omitempty"`
+	YourRole          string                   `json:"yourRole,omitempty"`
+	Participations    []*participationResponse `json:"participations,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -363,7 +365,7 @@ func participationResponsesFromModels(participations []*models.RoundParticipatio
 			ID: p.ID, UserID: p.UserID, DisplayName: name,
 			Solved: p.Solved, Finished: p.Finished, Score: p.Score,
 			FirstGuessAt: p.FirstGuessAt, CompletedAt: p.CompletedAt,
-			Guesses:      guessRowResponsesFromModels(p.Guesses),
+			Guesses: guessRowResponsesFromModels(p.Guesses),
 		})
 	}
 
@@ -389,9 +391,9 @@ func guessRowResponsesFromModels(guesses []*models.Guess) []guessRowResponse {
 // groupRoundGuessResponse is returned after submitting a guess
 type groupRoundGuessResponse struct {
 	Result   []types.TileState `json:"result"`
-	Attempt  int                  `json:"attempt"`
-	Won      bool                 `json:"won"`
-	Finished bool                 `json:"finished"`
+	Attempt  int               `json:"attempt"`
+	Won      bool              `json:"won"`
+	Finished bool              `json:"finished"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -553,9 +555,11 @@ type adminRecoveryRequest struct {
 
 // adminGroupResponse is a group row enriched for the site admin list
 type adminGroupResponse struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	MemberCount int    `json:"memberCount"`
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	MemberCount  int                    `json:"memberCount"`
+	Members      []*groupMemberResponse `json:"members,omitempty"`
+	JoinRequests []*joinRequestResponse `json:"joinRequests,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -564,9 +568,19 @@ type adminGroupResponse struct {
 func adminGroupResponseHelper(groups []*models.Group) []*adminGroupResponse {
 	responses := make([]*adminGroupResponse, 0, len(groups))
 	for _, g := range groups {
-		responses = append(responses, &adminGroupResponse{
+		resp := &adminGroupResponse{
 			ID: g.ID, Name: g.Name, MemberCount: g.MemberCount,
-		})
+		}
+
+		if len(g.Members) > 0 {
+			resp.Members = groupMemberResponsesFromModels(g.Members)
+		}
+
+		if len(g.JoinRequests) > 0 {
+			resp.JoinRequests = joinRequestResponsesFromModels(g.JoinRequests)
+		}
+
+		responses = append(responses, resp)
 	}
 
 	return responses

@@ -19,7 +19,7 @@ import type {
 } from '$lib/types/group';
 
 export async function listMyGroups(): Promise<UserGroupSummaryModel[]> {
-	const response = await apiFetch('/api/groups/');
+	const response = await apiFetch('/api/groups/mine');
 	const data = await parseJson<unknown>(response);
 	const result = safeParse(array(UserGroupSummarySchema), data);
 

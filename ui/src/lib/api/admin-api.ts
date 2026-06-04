@@ -15,7 +15,7 @@ import {
 
 export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
-	const response = await apiFetch('/api/admin/users' + (qs ? `?${qs}` : ''));
+	const response = await apiFetch('/api/users' + (qs ? `?${qs}` : ''));
 
 	if (response.ok) {
 		const data = await response.json();
@@ -33,7 +33,7 @@ export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserP
 }
 
 export async function createUser(data: AdminUserCreateModel): Promise<void> {
-	const response = await apiFetch('/api/admin/users', {
+	const response = await apiFetch('/api/users', {
 		method: 'POST',
 		body: JSON.stringify(data)
 	});
@@ -48,7 +48,7 @@ export async function createUser(data: AdminUserCreateModel): Promise<void> {
 
 export async function listGroups(params?: AdminGroupReqParams): Promise<AdminGroupPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
-	const response = await apiFetch('/api/admin/groups' + (qs ? `?${qs}` : ''));
+	const response = await apiFetch('/api/groups' + (qs ? `?${qs}` : ''));
 
 	if (response.ok) {
 		const data = await response.json();
@@ -66,7 +66,7 @@ export async function listGroups(params?: AdminGroupReqParams): Promise<AdminGro
 }
 
 export async function deleteUser(userId: string): Promise<void> {
-	const response = await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+	const response = await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
 
 	if (response.ok || response.status === 204) {
 		return;
@@ -77,7 +77,7 @@ export async function deleteUser(userId: string): Promise<void> {
 }
 
 export async function deleteAdminGroup(groupId: string): Promise<void> {
-	const response = await apiFetch(`/api/admin/groups/${groupId}`, { method: 'DELETE' });
+	const response = await apiFetch(`/api/groups/${groupId}`, { method: 'DELETE' });
 
 	if (response.ok || response.status === 204) {
 		return;

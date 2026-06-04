@@ -19,7 +19,7 @@ CREATE TABLE sessions (
 
 CREATE TABLE groups (
     id              TEXT PRIMARY KEY NOT NULL,
-    name            TEXT NOT NULL,
+    name            TEXT UNIQUE NOT NULL COLLATE NOCASE,
     created_by      TEXT NOT NULL,
     created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     updated_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),

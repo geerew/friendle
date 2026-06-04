@@ -7,6 +7,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,15 +19,17 @@ func (r *Router) initGroupRoutes() {
 	g := r.apiGroup("groups")
 
 	// Groups
-	g.Post("/", r.requireAccess(accessAuth), r.createGroup)
-	g.Get("/", r.requireAccess(accessAuth), r.getMyGroups)
-	g.Get("/search", r.requireAccess(accessAuth), r.searchGroups)
+	g.Post("/", r.requireAccess(accessSiteUser), r.createGroup)
+	g.Get("/", r.requireAccess(accessSiteUser), r.getGroups)
+	g.Get("/mine", r.requireAccess(accessSiteUser), r.getMyGroups)
+	g.Get("/search", r.requireAccess(accessSiteUser), r.searchGroups)
 	g.Get("/:id", r.requireAccess(accessGroupMemberScope), r.getGroup)
 	g.Patch("/:id", r.requireAccess(accessGroupAdminScope), r.updateGroup)
+	g.Delete("/:id", r.requireAccess(accessGroupAdminScope), r.deleteGroup)
 
 	// Join requests
-	g.Post("/:id/join-requests", r.requireAccess(accessAuth), r.createGroupJoinRequest)
-	g.Delete("/:id/join-requests/:userId", r.requireAccess(accessAuth), r.deleteGroupJoinRequest)
+	g.Post("/:id/join-requests", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
+	g.Delete("/:id/join-requests/:userId", r.requireAccess(accessSiteUser), r.deleteGroupJoinRequest)
 	g.Get("/:id/join-requests", r.requireAccess(accessGroupAdminScope), r.getGroupJoinRequests)
 	g.Post("/:id/join-requests/:rid/approve", r.requireAccess(accessGroupAdminScope), r.updateGroupJoinRequestApprove)
 	g.Post("/:id/join-requests/:rid/reject", r.requireAccess(accessGroupAdminScope), r.updateGroupJoinRequestReject)
@@ -42,18 +45,37 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 	principal, ctx := principalAndCtx(c)
 
 	req := &createGroupRequest{}
-	if err := c.BodyParser(req); err != nil || strings.TrimSpace(req.Name) == "" {
+	if err := c.BodyParser(req); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
 		return errorResponse(c, fiber.StatusBadRequest, "Name required", nil)
 	}
 
+	// Check if the name is already taken
+	if taken, err := r.groupNameTaken(ctx, name, ""); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Failed to create group", err)
+	} else if taken {
+		return errorResponse(c, fiber.StatusBadRequest, "Group name already exists", nil)
+	}
+
 	group := &models.Group{
-		Name:      strings.TrimSpace(req.Name),
+		Name:      name,
 		CreatedBy: principal.UserID,
 	}
+
+	// Create the group
 	if err := r.appDao.CreateGroup(ctx, group); err != nil {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
+			return errorResponse(c, fiber.StatusBadRequest, "Group name already exists", nil)
+		}
+
 		return errorResponse(c, fiber.StatusInternalServerError, "Failed to create group", err)
 	}
 
+	// Add the user as group admin
 	member := &models.GroupMember{
 		GroupID:   group.ID,
 		UserID:    principal.UserID,
@@ -64,6 +86,32 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(groupResponseHelper(group, types.GroupRoleAdmin))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getGroups returns a paginated site-wide group list
+func (r *Router) getGroups(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	dbOpts := dao.NewOptions().
+		WithOrderBy(utils.StringSplit(c.Query("orderBy", ""), ",")...).
+		WithPagination(paginationFromCtx(c)).
+		WithMembers().
+		WithJoinRequests().
+		WithMemberCount()
+
+	groups, err := r.appDao.ListGroups(ctx, dbOpts)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "List failed", err)
+	}
+
+	pResult, err := dbOpts.Pagination.BuildResult(adminGroupResponseHelper(groups))
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -154,8 +202,7 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 
 	groupOpts := dao.NewOptions().
 		WithWhere(squirrel.Eq{models.BASE_ID: groupID}).
-		WithMembers().
-		WithUsers()
+		WithMembers()
 	if loadJoinRequests {
 		groupOpts = groupOpts.WithJoinRequests()
 	}
@@ -186,10 +233,28 @@ func (r *Router) updateGroup(c *fiber.Ctx) error {
 	}
 
 	if req.Name != nil {
-		g.Name = strings.TrimSpace(*req.Name)
+		name := strings.TrimSpace(*req.Name)
+		if name == "" {
+			return errorResponse(c, fiber.StatusBadRequest, "Name required", nil)
+		}
+
+		taken, err := r.groupNameTaken(ctx, name, groupID)
+		if err != nil {
+			return errorResponse(c, fiber.StatusInternalServerError, "Update failed", err)
+		}
+
+		if taken {
+			return errorResponse(c, fiber.StatusBadRequest, "Group name already exists", nil)
+		}
+
+		g.Name = name
 	}
 
 	if err := r.appDao.UpdateGroup(ctx, g); err != nil {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
+			return errorResponse(c, fiber.StatusBadRequest, "Group name already exists", nil)
+		}
+
 		return errorResponse(c, fiber.StatusInternalServerError, "Update failed", err)
 	}
 
@@ -323,6 +388,33 @@ func (r *Router) deleteGroupMember(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// deleteGroup deletes a group
+func (r *Router) deleteGroup(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: c.Params("id")})
+	if err := r.appDao.DeleteGroups(ctx, dbOpts); err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error deleting group", err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupNameTaken reports whether another group already uses the given name
+func (r *Router) groupNameTaken(ctx context.Context, name, excludeGroupID string) (bool, error) {
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_NAME: name})
+	existing, err := r.appDao.GetGroup(ctx, dbOpts)
+	if err != nil || existing == nil {
+		return false, err
+	}
+
+	return existing.ID != excludeGroupID, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

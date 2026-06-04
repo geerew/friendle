@@ -12,6 +12,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils/pagination"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +23,7 @@ import (
 func TestListMyGroups(t *testing.T) {
 	router, _, _ := setup(t, "user", types.SiteRoleUser)
 
-	for _, path := range []string{"/api/groups", "/api/groups/"} {
+	for _, path := range []string{"/api/groups/mine", "/api/groups/mine/"} {
 		req, err := http.NewRequest(http.MethodGet, path, nil)
 		require.NoError(t, err)
 		status, body, err := requestHelper(t, router, req)
@@ -31,6 +32,110 @@ func TestListMyGroups(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 		require.Equal(t, "[]", string(body))
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestListGroups exercises the site-wide group list
+func TestListGroups(t *testing.T) {
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
+
+	group := &models.Group{Name: "List Test Group", CreatedBy: "user"}
+	require.NoError(t, router.appDao.CreateGroup(ctx, group))
+
+	// Test successfully listing groups without site admin access
+	t.Run("success", func(t *testing.T) {
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		result, groups := unmarshalHelper[map[string]any](t, body)
+		require.Equal(t, 1, result.TotalItems)
+		require.Len(t, groups, 1)
+	})
+
+	// Test successfully paginating groups
+	t.Run("pagination", func(t *testing.T) {
+		for i := range 4 {
+			group := &models.Group{Name: "Paginated Group " + string(rune('A'+i)), CreatedBy: "user"}
+			require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		}
+
+		params := url.Values{
+			pagination.PageQueryParam:    {"1"},
+			pagination.PerPageQueryParam: {"2"},
+		}
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups?"+params.Encode(), nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		result, groups := unmarshalHelper[map[string]any](t, body)
+		require.Equal(t, 5, result.TotalItems)
+		require.Len(t, groups, 2)
+	})
+
+	// Test error due to an unauthenticated caller
+	t.Run("401", func(t *testing.T) {
+		router, _, _ := setup(t, "", types.SiteRoleUser)
+		router.app.SetBootstrapped()
+
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusUnauthorized, status)
+		require.Contains(t, string(body), "Unauthorized")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestDeleteGroup exercises group deletion authorization
+func TestDeleteGroup(t *testing.T) {
+	// Test successfully deleting a group as a site admin
+	t.Run("site admin", func(t *testing.T) {
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
+
+		group := &models.Group{Name: "Delete Group", CreatedBy: "admin"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+
+		deleted, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: group.ID}))
+		require.NoError(t, err)
+		require.Nil(t, deleted)
+	})
+
+	// Test successfully deleting a group as a group admin
+	t.Run("group admin", func(t *testing.T) {
+		router, ctx, _ := setup(t, "user", types.SiteRoleUser)
+
+		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleAdmin, "Group Admin Delete")
+
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+
+		deleted, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: group.ID}))
+		require.NoError(t, err)
+		require.Nil(t, deleted)
+	})
+
+	// Test error due to a non-admin group member
+	t.Run("403 member", func(t *testing.T) {
+		router, ctx, _ := setup(t, "user", types.SiteRoleUser)
+
+		group := createTestGroupWithMember(t, router, ctx, "user", types.GroupRoleUser, "Member Delete")
+
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, status)
+		require.Contains(t, string(body), "Forbidden")
+
+		existing, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: group.ID}))
+		require.NoError(t, err)
+		require.NotNil(t, existing)
+	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -220,6 +325,26 @@ func TestCreateGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, m)
 	require.Equal(t, types.GroupRoleAdmin, m.GroupRole)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestCreateGroupDuplicateName exercises case-insensitive group name uniqueness
+func TestCreateGroupDuplicateName(t *testing.T) {
+	router, ctx, _ := setup(t, "user", types.SiteRoleUser)
+
+	group := &models.Group{Name: "Unique Group", CreatedBy: "user"}
+	require.NoError(t, router.appDao.CreateGroup(ctx, group))
+
+	body := bytes.NewBufferString(`{"name":"unique group"}`)
+	req, err := http.NewRequest(http.MethodPost, "/api/groups/", body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	status, respBody, err := requestHelper(t, router, req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, status)
+	require.Contains(t, string(respBody), "Group name already exists")
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
