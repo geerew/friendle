@@ -3,9 +3,17 @@
 
 	type Props = {
 		class?: string;
+		dashed?: boolean;
 	};
 
-	let { class: className = '' }: Props = $props();
+	let { class: className = '', dashed = false }: Props = $props();
 </script>
 
-<div role="separator" class={cn('h-px shrink-0 bg-border', className)}></div>
+<div
+	role="separator"
+	class={cn(
+		'shrink-0',
+		dashed ? 'border-t border-dashed border-border' : 'h-px bg-border',
+		className
+	)}
+></div>

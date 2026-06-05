@@ -5,7 +5,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils/pagination"
 	"github.com/geerew/friendle/utils/types"
 )
 
@@ -26,7 +28,7 @@ type CreateGroupRequest struct {
 type GroupResponse struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	CreatedBy string `json:"createdBy"`
+	CreatedBy string `json:"createdBy,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,8 +47,8 @@ func newGroups(d deps) *Groups {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create creates a group and adds the caller as group admin
-func (g *Groups) Create(ctx context.Context, req CreateGroupRequest) (*GroupResponse, error) {
+// CreateGroup creates a group and adds the caller as group admin
+func (g *Groups) CreateGroup(ctx context.Context, req CreateGroupRequest) (*GroupResponse, error) {
 	principal, err := principalFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -87,16 +89,59 @@ func (g *Groups) Create(ctx context.Context, req CreateGroupRequest) (*GroupResp
 		return nil, err
 	}
 
-	return groupResponseBuilder(group), nil
+	return groupResponseBuilder(group, true), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// groupResponseBuilder maps a group model to a response
-func groupResponseBuilder(group *models.Group) *GroupResponse {
-	return &GroupResponse{
-		ID:        group.ID,
-		Name:      group.Name,
-		CreatedBy: group.CreatedBy,
+// ListSelfGroups returns paginated groups the authenticated user belongs to
+func (g *Groups) ListSelfGroups(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return nil, err
 	}
+
+	where, err := dao.MemberGroupsWhere(principal.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	groups, err := g.dao.ListGroups(ctx, dao.NewOptions().WithPagination(page).WithWhere(where))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(groups) == 0 {
+		return []*GroupResponse{}, nil
+	}
+
+	return groupsResponseBuilder(groups, false), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupsResponseBuilder maps group models to API response slices
+func groupsResponseBuilder(groups []*models.Group, includeCreatedBy bool) []*GroupResponse {
+	out := make([]*GroupResponse, len(groups))
+	for i, group := range groups {
+		out[i] = groupResponseBuilder(group, includeCreatedBy)
+	}
+
+	return out
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupResponseBuilder maps a group model to a single API response
+func groupResponseBuilder(group *models.Group, includeCreatedBy bool) *GroupResponse {
+	resp := &GroupResponse{
+		ID:   group.ID,
+		Name: group.Name,
+	}
+
+	if includeCreatedBy && group.CreatedBy != "" {
+		resp.CreatedBy = group.CreatedBy
+	}
+
+	return resp
 }

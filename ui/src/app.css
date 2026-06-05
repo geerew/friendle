@@ -6,6 +6,7 @@
 	--bg: #121213;
 	--bg-secondary: #1a1a1b;
 	--text: #ffffff;
+	--text-secondary: #d1d2d3;
 	--text-muted: #818384;
 	--tile-empty: #3a3a3c;
 	--tile-correct: #538d4e;
@@ -28,6 +29,7 @@
 	--color-bg: var(--bg);
 	--color-bg-secondary: var(--bg-secondary);
 	--color-text: var(--text);
+	--color-text-secondary: var(--text-secondary);
 	--color-text-muted: var(--text-muted);
 	--color-tile-empty: var(--tile-empty);
 	--color-tile-correct: var(--tile-correct);

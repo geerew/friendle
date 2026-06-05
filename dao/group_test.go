@@ -118,6 +118,54 @@ func Test_CreateGroupMember(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_ListGroups(t *testing.T) {
+	// Test successfully listing groups for a member
+	t.Run("member groups", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		group := &models.Group{Name: "Friends", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+		require.NoError(t, dao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		other := &models.Group{Name: "Work", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, other))
+		require.NoError(t, dao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   other.ID,
+			UserID:    userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		where, err := MemberGroupsWhere(userID)
+		require.NoError(t, err)
+
+		groups, err := dao.ListGroups(ctx, NewOptions().WithWhere(where))
+		require.NoError(t, err)
+		require.Len(t, groups, 2)
+		require.Equal(t, "Friends", groups[0].Name)
+		require.Equal(t, "Work", groups[1].Name)
+	})
+
+	// Test empty list when the user has no memberships
+	t.Run("no memberships", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		where, err := MemberGroupsWhere(userID)
+		require.NoError(t, err)
+
+		groups, err := dao.ListGroups(ctx, NewOptions().WithWhere(where))
+		require.NoError(t, err)
+		require.Empty(t, groups)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // testUserID returns the seeded test user's id
 func testUserID(t *testing.T, dao *DAO, ctx context.Context) string {
 	t.Helper()

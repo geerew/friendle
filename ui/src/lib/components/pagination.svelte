@@ -12,6 +12,7 @@
 		perPage: number;
 		onPerPageChange: () => void;
 		selectTriggerClass?: string;
+		showPerPageSelect?: boolean;
 	};
 
 	let {
@@ -20,7 +21,8 @@
 		onPageChange,
 		perPage = $bindable(),
 		onPerPageChange,
-		selectTriggerClass
+		selectTriggerClass,
+		showPerPageSelect = true
 	}: Props = $props();
 
 	let perPageValue = $state(`${perPage}`);
@@ -65,27 +67,39 @@
 				</div>
 			{/if}
 
-			<div class="grid w-full grid-cols-2 gap-3">
-				<div class="flex items-center">
-					<Select
-						type="single"
-						items={SelectPaginationPerPage}
-						bind:value={perPageValue}
-						contentProps={{ sideOffset: 8, loop: true }}
-						triggerClass={cn('w-24', selectTriggerClass)}
-						onValueChange={(v) => {
-							perPage = +v;
+			<div
+				class={cn(
+					'grid w-full gap-3',
+					showPerPageSelect ? 'grid-cols-2' : 'grid-cols-1'
+				)}
+			>
+				{#if showPerPageSelect}
+					<div class="flex items-center">
+						<Select
+							type="single"
+							items={SelectPaginationPerPage}
+							bind:value={perPageValue}
+							contentProps={{ sideOffset: 8, loop: true }}
+							triggerClass={cn('w-24', selectTriggerClass)}
+							onValueChange={(v) => {
+								perPage = +v;
 
-							if (page > Math.ceil(count / perPage)) {
-								page = Math.max(1, Math.ceil(count / perPage));
-							}
+								if (page > Math.ceil(count / perPage)) {
+									page = Math.max(1, Math.ceil(count / perPage));
+								}
 
-							onPerPageChange();
-						}}
-					/>
-				</div>
+								onPerPageChange();
+							}}
+						/>
+					</div>
+				{/if}
 
-				<p class="flex min-w-0 items-center justify-end text-end text-sm whitespace-nowrap text-text-muted">
+				<p
+					class={cn(
+						'flex min-w-0 items-center text-sm whitespace-nowrap text-text-muted',
+						showPerPageSelect ? 'justify-end text-end' : 'justify-center text-center'
+					)}
+				>
 					{range.start} - {range.end} / {count}
 				</p>
 			</div>

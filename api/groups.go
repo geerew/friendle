@@ -11,7 +11,28 @@ import (
 func (r *Router) initGroupRoutes() {
 	groupRoutes := r.apiGroup("groups")
 
+	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Post("/", r.requireAccess(accessSiteUser), r.createGroup)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// listSelfGroups returns paginated groups the authenticated user belongs to
+func (r *Router) listSelfGroups(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	page := paginationFromCtx(c)
+	groups, err := r.appSvc.Groups.ListSelfGroups(ctx, page)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	pResult, err := page.BuildResult(groups)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,7 +46,7 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	group, err := r.appSvc.Groups.Create(ctx, *req)
+	group, err := r.appSvc.Groups.CreateGroup(ctx, *req)
 	if err != nil {
 		return serviceError(c, err)
 	}
