@@ -27,15 +27,15 @@
 </script>
 
 <div class="app-shell">
-	<header class="sticky top-0 z-10 border-b border-border bg-bg">
-		<div class="flex items-center justify-between px-3 py-3">
-			<div class="w-10 shrink-0"></div>
+	<header class="app-header">
+		<div class="flex h-full items-center justify-between px-3">
+			<div class="h-10 w-10 shrink-0" aria-hidden="true"></div>
 
 			<div class="flex min-w-0 flex-1 justify-center px-2">
 				<Logo href="/" variant="header" />
 			</div>
 
-			<div class="flex w-10 shrink-0 justify-end">
+			<div class="flex h-10 w-10 shrink-0 items-center justify-end">
 				{#if showMenu}
 					<Dropdown.Root>
 						<Dropdown.Trigger aria-label="Menu">

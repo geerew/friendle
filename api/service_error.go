@@ -35,6 +35,10 @@ var serviceErrorMappings = []serviceErrorMapping{
 	{err: service.ErrPasswordTooShort, status: fiber.StatusBadRequest, message: "password must be at least 8 characters"},
 	{err: service.ErrPasswordTooLong, status: fiber.StatusBadRequest, message: "password must be no more than 128 characters"},
 
+	{err: service.ErrGroupNameRequired, status: fiber.StatusBadRequest, message: "Group name is required"},
+	{err: service.ErrGroupNameTaken, status: fiber.StatusBadRequest, message: "Group name already exists"},
+	{err: service.ErrGroupNameTooLong, status: fiber.StatusBadRequest, message: "Group name is too long"},
+
 	{err: utils.ErrApiQueryParse, status: fiber.StatusBadRequest, message: "Invalid query"},
 }
 

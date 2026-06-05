@@ -20,4 +20,6 @@ var (
 	ErrUsername     = errors.New("username cannot be empty")
 	ErrUserPassword = errors.New("user password cannot be empty")
 	ErrUserId       = errors.New("user id cannot be empty")
+	ErrGroupName    = errors.New("group name cannot be empty")
+	ErrGroupId      = errors.New("group id cannot be empty")
 )

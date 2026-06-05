@@ -62,7 +62,7 @@
 				onclick={handleConfirm}
 			>
 				{#if loading}
-					<Spinner class="bg-text size-2" />
+					<Spinner class="size-2 bg-white/70" />
 				{:else}
 					<span class="text-xs">{confirmLabel}</span>
 				{/if}

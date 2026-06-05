@@ -9,8 +9,9 @@ import (
 
 // Service is the application service root. Each field covers one domain area
 type Service struct {
-	Auth  *Auth
-	Users *Users
+	Auth   *Auth
+	Groups *Groups
+	Users  *Users
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -29,7 +30,8 @@ func New(db database.Database) *Service {
 	}
 
 	return &Service{
-		Auth:  newAuth(d),
-		Users: newUsers(d),
+		Auth:   newAuth(d),
+		Groups: newGroups(d),
+		Users:  newUsers(d),
 	}
 }

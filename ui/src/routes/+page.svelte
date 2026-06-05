@@ -4,17 +4,18 @@
 </script>
 
 <AppShell>
-	<div class="flex flex-col gap-5 pt-4">
-		<section class="flex flex-col gap-3">
-			<h2 class="section-title">My Groups</h2>
-			<div class="text-text-muted flex min-h-30 items-center justify-center text-sm">No groups</div>
-		</section>
+	<h2 class="section-title">My Groups</h2>
+
+	<div class="flex flex-col gap-7">
+		<div class="text-text-muted flex min-h-24 items-center justify-center text-sm italic">
+			No groups
+		</div>
 
 		<Separator />
 
 		<div class="flex flex-col gap-3">
 			<Button type="button" variant="secondary">Search groups</Button>
-			<Button type="button" variant="primary">Create Group</Button>
+			<Button type="button" variant="primary" href="/groups/create/">Create Group</Button>
 		</div>
 	</div>
 </AppShell>

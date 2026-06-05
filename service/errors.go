@@ -16,4 +16,7 @@ var (
 	ErrInvalidCurrentPassword = errors.New("invalid current password")
 	ErrInvalidPassword        = errors.New("invalid password")
 	ErrLastAdmin              = errors.New("unable to delete the last admin user")
+	ErrGroupNameRequired      = errors.New("group name is required")
+	ErrGroupNameTaken         = errors.New("group name already exists")
+	ErrGroupNameTooLong       = errors.New("group name is too long")
 )

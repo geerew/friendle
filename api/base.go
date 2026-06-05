@@ -60,6 +60,7 @@ func New(application *app.App, stack MiddlewareStack) *Router {
 
 	r.bindUi()
 	r.initAuthRoutes()
+	r.initGroupRoutes()
 	r.initAdminRoutes()
 	r.initVersionRoutes()
 

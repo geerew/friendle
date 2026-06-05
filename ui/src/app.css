@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 
 :root {
+	--header-height: 4rem;
+	
 	--bg: #121213;
 	--bg-secondary: #1a1a1b;
 	--text: #ffffff;
@@ -121,6 +123,11 @@
 @layer components {
 	.app-shell {
 		@apply mx-auto flex min-h-dvh w-full max-w-md flex-col;
+	}
+
+	.app-header {
+		@apply sticky top-0 z-10 shrink-0 border-b border-border bg-bg;
+		height: var(--header-height);
 	}
 
 	.page-content {

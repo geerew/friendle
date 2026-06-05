@@ -1,5 +1,15 @@
 import { auth } from '$lib/auth.svelte';
 
+/** Minimum time mutation requests take so button loaders do not flicker */
+export const MIN_LOADING_MS = 500;
+
+const mutationMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+export type ApiFetchOptions = {
+	/** Override the default minimum duration for this request; pass false to disable */
+	minDurationMs?: number | false;
+};
+
 export class ApiError extends Error {
 	status: number;
 
@@ -10,7 +20,31 @@ export class ApiError extends Error {
 	}
 }
 
-export async function apiFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
+// delay resolves after at least ms milliseconds
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// minDurationMs returns the minimum wait for this request, if any
+function minDurationMs(init: RequestInit | undefined, options?: ApiFetchOptions): number | undefined {
+	if (options?.minDurationMs === false) {
+		return undefined;
+	}
+
+	if (options?.minDurationMs !== undefined) {
+		return options.minDurationMs;
+	}
+
+	const method = (init?.method ?? 'GET').toUpperCase();
+	if (!mutationMethods.has(method)) {
+		return undefined;
+	}
+
+	return MIN_LOADING_MS;
+}
+
+// runFetch performs the HTTP request and applies session handling
+async function runFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
 	const response = await fetch(input, {
 		credentials: 'include',
 		...init,
@@ -35,6 +69,22 @@ export async function apiFetch(input: RequestInfo, init?: RequestInit): Promise<
 			}
 		}
 	}
+
+	return response;
+}
+
+export async function apiFetch(
+	input: RequestInfo,
+	init?: RequestInit,
+	options?: ApiFetchOptions
+): Promise<Response> {
+	const minMs = minDurationMs(init, options);
+
+	if (!minMs) {
+		return runFetch(input, init);
+	}
+
+	const [response] = await Promise.all([runFetch(input, init), delay(minMs)]);
 
 	return response;
 }

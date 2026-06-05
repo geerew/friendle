@@ -3,7 +3,7 @@
 	import '../app.css';
 
 	import { page } from '$app/state';
-	import { Spinner } from '$lib/components';
+	import { AppShell, Spinner } from '$lib/components';
 	import { auth } from '$lib/auth.svelte';
 	import { Toaster } from 'svelte-sonner';
 
@@ -12,19 +12,20 @@
 	const isAuthPath = $derived(page.url.pathname.startsWith('/auth'));
 
 	$effect(() => {
-		page.url.pathname;
 		if (isAuthPath) return;
-		auth.load();
+		void auth.load();
 	});
 </script>
 
 <Toaster theme="dark" richColors />
 
 {#if !isAuthPath}
-	{#if auth.loading}
-		<div class="app-shell items-center justify-center py-20">
-			<Spinner class="size-6 bg-text-muted" />
-		</div>
+	{#if !auth.initialized}
+		<AppShell showMenu={false}>
+			<div class="flex justify-center pt-8">
+				<Spinner class="bg-text-muted size-3" />
+			</div>
+		</AppShell>
 	{:else if auth.error && !auth.user}
 		<div class="app-shell page-content">
 			<p class="text-error">{auth.error}</p>

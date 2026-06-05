@@ -8,7 +8,8 @@ function siteRole(user: AuthUser | null): SiteRole | undefined {
 
 class Auth {
 	#user = $state<AuthUser | null>(null);
-	#loading = $state(true);
+	#loading = $state(false);
+	#initialized = $state(false);
 	#error = $state<string | null>(null);
 
 	get user() {
@@ -17,6 +18,10 @@ class Auth {
 
 	get loading() {
 		return this.#loading;
+	}
+
+	get initialized() {
+		return this.#initialized;
 	}
 
 	get error() {
@@ -28,17 +33,24 @@ class Auth {
 		return r === 'site_admin';
 	}
 
+	// load fetches the current user once on cold start; later updates come from setUser/clear
 	async load(): Promise<void> {
+		if (this.#initialized) {
+			return;
+		}
+
 		this.#loading = true;
 		this.#error = null;
 
 		try {
+			await new Promise((resolve) => setTimeout(resolve, 500));
 			this.#user = await fetchMe();
 		} catch (err) {
 			this.#user = null;
 			this.#error = err instanceof Error ? err.message : 'Failed to load user';
 		} finally {
 			this.#loading = false;
+			this.#initialized = true;
 		}
 	}
 
@@ -46,12 +58,14 @@ class Auth {
 		this.#user = user;
 		this.#error = null;
 		this.#loading = false;
+		this.#initialized = true;
 	}
 
 	clear(): void {
 		this.#user = null;
 		this.#error = null;
 		this.#loading = false;
+		this.#initialized = true;
 	}
 }
 

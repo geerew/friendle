@@ -10,7 +10,7 @@
 	let { children }: Props = $props();
 
 	$effect(() => {
-		if (auth.loading) return;
+		if (!auth.initialized) return;
 
 		if (!auth.isAdmin) {
 			void goto('/');

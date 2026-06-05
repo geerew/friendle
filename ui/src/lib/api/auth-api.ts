@@ -59,6 +59,6 @@ export async function deleteMe(data: SelfDeleteRequest): Promise<void> {
 }
 
 export async function logout(): Promise<void> {
-	const response = await apiFetch('/api/auth/logout', { method: 'POST' });
+	const response = await apiFetch('/api/auth/logout', { method: 'POST' }, { minDurationMs: false });
 	await parseJson(response);
 }
