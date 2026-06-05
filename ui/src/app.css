@@ -43,8 +43,19 @@
 	--color-error-bg: var(--error-bg);
 	--color-error-bg-hover: var(--error-bg-hover);
 
+	--animate-bounce-dot: bounce-dot 0.55s ease-in-out infinite;
 	--animate-shake: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 	--animate-pop: pop 0.1s ease-in-out;
+
+	@keyframes bounce-dot {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-75%);
+		}
+	}
 
 	@keyframes shake {
 		10%,

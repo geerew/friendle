@@ -9,6 +9,7 @@
 		ref?: HTMLInputElement;
 		class?: string;
 		password?: boolean;
+		selectOnMount?: boolean;
 	};
 
 	let {
@@ -17,12 +18,27 @@
 		class: className = '',
 		password = false,
 		type = 'text',
+		autofocus = false,
+		selectOnMount = false,
 		...restProps
 	}: Props = $props();
 
 	let visible = $state(false);
 
 	const inputType = $derived(password ? (visible ? 'text' : 'password') : type);
+
+	// Focus when mounted with autofocus (deferred so it wins over the triggering button)
+	$effect(() => {
+		if (!autofocus || !ref) return;
+
+		const input = ref;
+		requestAnimationFrame(() => {
+			input.focus();
+			if (selectOnMount) {
+				input.select();
+			}
+		});
+	});
 
 	function toggleVisibility(): void {
 		visible = !visible;

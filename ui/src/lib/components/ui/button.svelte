@@ -41,17 +41,17 @@
 	const variantClasses = $derived.by(() => {
 		switch (variant) {
 			case 'primary':
-				return 'bg-button-primary text-white hover:brightness-110';
+				return 'bg-button-primary text-white enabled:hover:brightness-110';
 			case 'secondary':
-				return 'bg-button-secondary text-white hover:brightness-110';
+				return 'bg-button-secondary text-white enabled:hover:brightness-110';
 			case 'ghost':
-				return 'bg-transparent text-text-muted hover:text-text';
+				return 'bg-transparent text-text-muted enabled:hover:text-text';
 			case 'destructive':
 				if (size === 'inline') {
-					return 'bg-transparent text-error-fg hover:bg-error-bg hover:text-text';
+					return 'bg-transparent text-error-fg enabled:hover:bg-error-bg enabled:hover:text-text';
 				}
 
-				return 'bg-error-bg text-text hover:bg-error-bg-hover';
+				return 'bg-error-bg text-text enabled:hover:bg-error-bg-hover';
 		}
 	});
 

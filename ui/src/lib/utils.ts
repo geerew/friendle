@@ -1,3 +1,4 @@
+import { ApiError } from '$lib/api/fetch';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -15,6 +16,10 @@ export function buildQueryString(params: Record<string, string | number | undefi
 	}
 
 	return searchParams.toString();
+}
+
+export function apiErrorMessage(err: unknown, fallback: string): string {
+	return err instanceof ApiError ? err.message : fallback;
 }
 
 export function isPasswordFieldError(error: string | null): boolean {

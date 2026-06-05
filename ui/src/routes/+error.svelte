@@ -5,5 +5,5 @@
 <div class="app-shell page-content items-center justify-center text-center">
 	<h1 class="text-2xl font-bold">{page.status}</h1>
 	<p class="text-text-muted">{page.error?.message ?? 'Something went wrong.'}</p>
-	<a href="/" class="mt-4 text-tile-correct">Go home</a>
+	<a href="/" class="text-tile-correct mt-4">Go home</a>
 </div>
