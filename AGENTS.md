@@ -40,23 +40,25 @@ Packages under `utils/` (and similar modules) should use **`base.go`** as the mo
 - **FFmpeg / FFprobe** — video HLS only (not required for card-only work)
 - Native libs: SQLite dev headers, libwebp dev headers (see README Prerequisites)
 
-## Development (two terminals)
+## Development
 
-Run backend and frontend separately; both reload on change. Traffic goes through the Go app—ignore the Vite URL for browsing.
-
-**Terminal 1 — frontend**
-
-```bash
-cd ui
-pnpm install   # first time
-pnpm run dev
-```
-
-**Terminal 2 — backend**
+**One terminal (recommended):**
 
 ```bash
 go mod download   # first time
-air               # optional: air -- --http 0.0.0.0:8080
+make dev
+```
+
+`scripts/dev.sh` starts Vite in the background and `air` in the foreground. Browse **http://0.0.0.0:9081** — the Go app handles `/api` and proxies all other routes to Vite (`--dev` mode). Do not use the Vite URL for browsing.
+
+**Two terminals** (optional):
+
+```bash
+# Terminal 1
+cd ui && pnpm install && pnpm run dev
+
+# Terminal 2
+air
 ```
 
 Open the URL from `Bootstrap required: ...` (first run) or `Server started at ...` (already bootstrapped).

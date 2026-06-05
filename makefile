@@ -11,6 +11,11 @@ tidy:
 	go fmt ./...
 	go mod tidy -v
 
+## dev: run API and UI dev servers together (single terminal)
+.PHONY: dev
+dev:
+	@sh scripts/dev.sh
+
 ## test: run all tests
 .PHONY: test
 test:

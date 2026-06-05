@@ -43,17 +43,23 @@ docker run -p 8080:80 -v friendle_data:/friendle_data friendle
 
 ## Development
 
-Terminal 1 (UI):
-
-```bash
-cd ui && pnpm install && pnpm run dev
-```
-
-Terminal 2 (API):
+One terminal (recommended):
 
 ```bash
 go mod download
-air   # or: go run . serve --dev --enable-signup
+make dev
+```
+
+Browse **http://0.0.0.0:9081** — the API serves requests and proxies everything else to the Vite dev server.
+
+Or run the servers separately:
+
+```bash
+# Terminal 1
+cd ui && pnpm install && pnpm run dev
+
+# Terminal 2
+air
 ```
 
 Tests (no UI build required):
