@@ -4,7 +4,7 @@
 	import { auth } from '$lib/auth.svelte';
 	import { AppShell, Spinner } from '$lib/components';
 	import EditableSection from '$lib/components/pages/settings/editable-section.svelte';
-	import { Button, DestroyDialog, Input } from '$lib/components/ui';
+	import { Button, DestroyDialog, Input, Separator } from '$lib/components/ui';
 	import { apiErrorMessage } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
@@ -196,7 +196,7 @@
 				<p class="text-button-primary text-2xl">{auth.user.username}</p>
 			</section>
 
-			<div class="bg-border h-px shrink-0"></div>
+			<Separator />
 
 			<EditableSection
 				title="Display name"
@@ -221,7 +221,7 @@
 				{/if}
 			</EditableSection>
 
-			<div class="bg-border h-px shrink-0"></div>
+			<Separator />
 
 			<EditableSection
 				title="Password"
@@ -271,7 +271,7 @@
 				{/if}
 			</EditableSection>
 
-			<div class="bg-border h-px shrink-0"></div>
+			<Separator />
 
 			<EditableSection
 				title="Delete account"
