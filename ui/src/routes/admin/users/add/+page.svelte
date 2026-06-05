@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ApiError, createUser } from '$lib/api/admin-api';
+	import { ApiError } from '$lib/api';
+	import { createUser } from '$lib/api/admin-api';
 	import { AppShell } from '$lib/components';
 	import { Button, Field, Input, RadioGroup } from '$lib/components/ui';
 	import { SelectSiteRoles, type SiteRole } from '$lib/models/admin-user-model';

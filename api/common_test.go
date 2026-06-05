@@ -162,22 +162,3 @@ func createTestUserWithPassword(t *testing.T, router *Router, ctx context.Contex
 	user.PasswordHash = passwordHash
 	require.NoError(t, router.appDao.CreateUser(ctx, user))
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// createTestGroupWithMember creates a group and adds the user as a member
-func createTestGroupWithMember(t *testing.T, router *Router, ctx context.Context, userID string, groupRole types.GroupRole, name string) *models.Group {
-	t.Helper()
-
-	group := &models.Group{Name: name, CreatedBy: userID}
-	require.NoError(t, router.appDao.CreateGroup(ctx, group))
-
-	groupMember := &models.GroupMember{
-		GroupID:   group.ID,
-		UserID:    userID,
-		GroupRole: groupRole,
-	}
-	require.NoError(t, router.appDao.CreateGroupMember(ctx, groupMember))
-
-	return group
-}

@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/geerew/friendle/cron"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/database"
 	"github.com/geerew/friendle/models"
@@ -14,7 +13,6 @@ import (
 	"github.com/geerew/friendle/utils/filesystem"
 	"github.com/geerew/friendle/utils/logger"
 	"github.com/geerew/friendle/utils/types"
-	"github.com/geerew/friendle/utils/words"
 	"github.com/spf13/afero"
 )
 
@@ -42,13 +40,11 @@ type Config struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// App wires shared runtime dependencies for the API, cron jobs, and CLI
+// App wires shared runtime dependencies for the API and CLI
 type App struct {
 	Logger       *logger.Logger
 	FS           *filesystem.FS
 	DbManager    *database.DatabaseManager
-	Dictionary   *words.Dictionary
-	Cron         *cron.Cron
 	Config       *Config
 	bootstrapped atomic.Int32
 }
@@ -91,23 +87,11 @@ func New(ctx context.Context, config *Config) (*App, error) {
 		return nil, fmt.Errorf("failed to create database manager: %w", err)
 	}
 
-	dict, err := words.New()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load dictionary: %w", err)
-	}
-
-	cronScheduler := cron.New(&cron.Config{
-		DataDb: dbManager.DataDb,
-		Logger: appLogger.WithComponent(string(ComponentCron)),
-	})
-
 	application := &App{
-		Logger:     appLogger,
-		FS:         fs,
-		DbManager:  dbManager,
-		Dictionary: dict,
-		Config:     config,
-		Cron:       cronScheduler,
+		Logger:    appLogger,
+		FS:        fs,
+		DbManager: dbManager,
+		Config:    config,
 	}
 
 	if err := application.bootstrap(); err != nil {

@@ -13,8 +13,7 @@ var (
 
 	// DB
 	ErrWhere           = errors.New("where clause cannot be empty")
-	ErrPrincipal       = errors.New("principal not found in context")
-	ErrGroupMembership = errors.New("group membership not found in context")
+	ErrPrincipal = errors.New("principal not found in context")
 
 	// Model
 	ErrId           = errors.New("id cannot be empty")

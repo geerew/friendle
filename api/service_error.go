@@ -23,19 +23,6 @@ type serviceErrorMapping struct {
 var serviceErrorMappings = []serviceErrorMapping{
 	{err: utils.ErrPrincipal, status: fiber.StatusUnauthorized, message: "Unauthorized"},
 
-	{err: service.ErrRoundNotFound, status: fiber.StatusNotFound, message: "No round"},
-	{err: service.ErrRoundNotAwaitingWord, status: fiber.StatusBadRequest, message: "No round awaiting word"},
-	{err: service.ErrRoundNotActive, status: fiber.StatusBadRequest, message: "Round not active"},
-	{err: service.ErrRoundNotFinished, status: fiber.StatusBadRequest, message: "Round not finished"},
-	{err: service.ErrNotPicker, status: fiber.StatusForbidden, message: "Not the picker"},
-	{err: service.ErrPickerCannotGuess, status: fiber.StatusForbidden, message: "Picker cannot guess"},
-	{err: service.ErrWordNotSet, status: fiber.StatusInternalServerError, message: "Word not set"},
-	{err: service.ErrAlreadyFinished, status: fiber.StatusBadRequest, message: "Already finished"},
-	{err: service.ErrNoAttemptsLeft, status: fiber.StatusBadRequest, message: "No attempts left"},
-	{err: service.ErrInvalidWordLength, status: fiber.StatusBadRequest, message: "Word must be 5 letters"},
-	{err: service.ErrInvalidAnswerWord, status: fiber.StatusBadRequest, message: "Not a valid answer word"},
-	{err: service.ErrInvalidGuessWord, status: fiber.StatusBadRequest, message: "Not in word list"},
-
 	{err: service.ErrNotSiteAdmin, status: fiber.StatusForbidden, message: "Forbidden"},
 	{err: service.ErrUserNotFound, status: fiber.StatusNotFound, message: "User not found"},
 	{err: service.ErrUsernameTaken, status: fiber.StatusBadRequest, message: "Username already exists"},
@@ -47,14 +34,6 @@ var serviceErrorMappings = []serviceErrorMapping{
 	{err: service.ErrLastAdmin, status: fiber.StatusBadRequest, message: "Unable to delete the last admin user"},
 	{err: service.ErrPasswordTooShort, status: fiber.StatusBadRequest, message: "password must be at least 8 characters"},
 	{err: service.ErrPasswordTooLong, status: fiber.StatusBadRequest, message: "password must be no more than 128 characters"},
-
-	{err: service.ErrGroupNotFound, status: fiber.StatusNotFound, message: "Group not found"},
-	{err: service.ErrGroupNameRequired, status: fiber.StatusBadRequest, message: "Name required"},
-	{err: service.ErrGroupNameTaken, status: fiber.StatusBadRequest, message: "Group name already exists"},
-	{err: service.ErrAlreadyGroupMember, status: fiber.StatusBadRequest, message: "Already a member"},
-	{err: service.ErrJoinRequestNotFound, status: fiber.StatusNotFound, message: "Pending request not found"},
-	{err: service.ErrCannotJoinGroup, status: fiber.StatusBadRequest, message: "Unable to join this group"},
-	{err: service.ErrForbidden, status: fiber.StatusForbidden, message: "Forbidden"},
 
 	{err: utils.ErrApiQueryParse, status: fiber.StatusBadRequest, message: "Invalid query"},
 }

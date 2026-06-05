@@ -76,31 +76,3 @@ func createTestUser(tb testing.TB, dao *DAO, ctx context.Context, username strin
 
 	return user
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// createTestGroup inserts a group owned by createdBy
-func createTestGroup(tb testing.TB, dao *DAO, ctx context.Context, name, createdBy string) *models.Group {
-	tb.Helper()
-
-	group := &models.Group{Name: name, CreatedBy: createdBy}
-	require.NoError(tb, dao.CreateGroup(ctx, group))
-
-	return group
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// createTestGroupMember inserts a group membership row
-func createTestGroupMember(tb testing.TB, dao *DAO, ctx context.Context, groupID, userID string, role types.GroupRole) *models.GroupMember {
-	tb.Helper()
-
-	member := &models.GroupMember{
-		GroupID:   groupID,
-		UserID:    userID,
-		GroupRole: role,
-	}
-	require.NoError(tb, dao.CreateGroupMember(ctx, member))
-
-	return member
-}

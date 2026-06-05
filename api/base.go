@@ -44,7 +44,7 @@ func New(application *app.App, stack MiddlewareStack) *Router {
 	r := &Router{
 		app:    application,
 		appDao: dao.New(application.DbManager.DataDb),
-		appSvc: service.New(application.DbManager.DataDb, application.Dictionary),
+		appSvc: service.New(application.DbManager.DataDb),
 		logger: log,
 	}
 
@@ -60,8 +60,6 @@ func New(application *app.App, stack MiddlewareStack) *Router {
 
 	r.bindUi()
 	r.initAuthRoutes()
-	r.initGroupRoutes()
-	r.initRoundRoutes()
 	r.initAdminRoutes()
 	r.initVersionRoutes()
 

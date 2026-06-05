@@ -55,8 +55,6 @@ var serveCmd = &cobra.Command{
 			Str("commit", version.GetCommit()).
 			Msg("Starting Friendle")
 
-		application.Cron.Start()
-
 		// Router
 		router := api.New(application, nil)
 

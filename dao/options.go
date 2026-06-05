@@ -2,7 +2,6 @@ package dao
 
 import (
 	"github.com/Masterminds/squirrel"
-	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/pagination"
 )
 
@@ -97,20 +96,5 @@ func (o *Options) WithPagination(p *pagination.Pagination) *Options {
 // Calling multiple times will override the previous WithApiQuery call
 func (o *Options) WithApiQuery(q string) *Options {
 	o.ApiQuery = q
-	return o
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithGroupNameSearch applies a case-insensitive name search with relevance ordering
-//
-// Can be used when querying groups
-func (o *Options) WithGroupNameSearch(q string) *Options {
-	g := models.GROUP_TABLE
-	like := "%" + q + "%"
-
-	o.WithWhere(squirrel.Like{"LOWER(" + g + ".name)": like})
-	o.WithOrderByClause(groupNameSearchOrder(g, q))
-
 	return o
 }

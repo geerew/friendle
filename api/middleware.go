@@ -8,10 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/app"
-	"github.com/geerew/friendle/dao"
-	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/logger"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
@@ -40,8 +37,6 @@ type accessLevel uint8
 const (
 	accessSiteUser accessLevel = 1 << iota
 	accessSiteAdmin
-	accessGroupMember
-	accessGroupAdmin
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -55,7 +50,7 @@ func (r *Router) requireAccess(level accessLevel) fiber.Handler {
 			return errorResponse(c, fiber.StatusInternalServerError, "Unknown access level", nil)
 		}
 
-		p, ctx, err := principalCtx(c)
+		p, _, err := principalCtx(c)
 		if err != nil {
 			return errorResponse(c, fiber.StatusUnauthorized, "Unauthorized", nil)
 		}
@@ -68,40 +63,6 @@ func (r *Router) requireAccess(level accessLevel) fiber.Handler {
 		// Site admin access
 		if level&accessSiteAdmin != 0 && p.SiteRole == types.SiteRoleAdmin {
 			return c.Next()
-		}
-
-		// Group membership check
-		groupID := c.Params("id")
-		needsGroup := level&(accessGroupMember|accessGroupAdmin) != 0
-
-		var member *models.GroupMember
-		if needsGroup && groupID != "" {
-			member, err = r.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.Eq{
-				models.GROUP_MEMBER_GROUP_ID: groupID,
-				models.GROUP_MEMBER_USER_ID:  p.UserID,
-			}))
-
-			if err != nil || member == nil {
-				return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
-			}
-		}
-
-		// Group member access
-		if level&accessGroupMember != 0 {
-			if member != nil {
-				c.SetUserContext(types.WithGroupMembership(ctx, member.GroupRole))
-
-				return c.Next()
-			}
-		}
-
-		// Group admin access
-		if level&accessGroupAdmin != 0 {
-			if member != nil && member.GroupRole == types.GroupRoleAdmin {
-				c.SetUserContext(types.WithGroupMembership(ctx, member.GroupRole))
-
-				return c.Next()
-			}
 		}
 
 		return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)

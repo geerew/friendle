@@ -7,7 +7,6 @@ package app
 type Component string
 
 const (
-	ComponentApp  Component = "app"
-	ComponentAPI  Component = "api"
-	ComponentCron Component = "cron"
+	ComponentApp Component = "app"
+	ComponentAPI Component = "api"
 )

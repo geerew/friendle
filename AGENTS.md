@@ -19,11 +19,11 @@ See [README.md](README.md) for architecture, CLI commands, bootstrapping, and Do
 | `main.go` | Binary entry; delegates to `cmd` |
 | `cmd/` | CLI (Cobra): `serve`, `admin`, etc. |
 | `api/` | HTTP handlers (Fiber), route wiring per resource |
+| `service/` | Domain logic between API and DAO (views, orchestration) |
 | `dao/` | Database access |
 | `models/` | Domain types |
 | `database/` | DB setup and migrations wiring |
 | `migrations/` | SQL migrations |
-| `cron/` | Scheduled jobs (e.g. card cache warm) |
 | `utils/` | Shared packages (`cardcache`, `media`, `logger`, …) |
 | `ui/` | SvelteKit frontend |
 | `app/` | App-level wiring (`Config`, bootstrap state, log components) |
@@ -268,7 +268,61 @@ func (a *App) IsBootstrapped() bool {
 
 - Avoid package-level app singletons and mutable globals when dependency injection or passing values through `New` / constructors is reasonable
 
-### 6. Module entrypoints
+### 6. API and service layers
+
+**Requests — models vs service request types**
+
+- **`models.*`** — persisted domain rows (what the DAO reads and writes). Do not add request-only
+  fields (plaintext passwords, partial patches) to models to avoid leaking writable surface area
+- **`service` request structs** — use when an operation must accept only a **subset** of fields
+  (e.g. `CreateUserRequest` with username, display name, password, site role; the service hashes
+  the password and builds `models.User`). Add `json` tags so handlers can `BodyParser` directly
+  into them; do not duplicate the same shape in `api/types.go`
+
+**Responses — service types when the shape differs**
+
+Return **`service` response types** (e.g. `UserResponse`, `RoundResponse`) in the same file as
+the service (e.g. `users.go`, `round_responses.go`). Use `*ResponseBuilder` helpers to map
+`models.*` rows (e.g. `usersResponseBuilder`, `authUserResponseBuilder`).
+
+**Readable call sites**
+
+Parse the body into the **service request** in a named variable, then call the service.
+
+**Prefer:**
+
+```go
+create := &service.CreateUserRequest{}
+if err := c.BodyParser(create); err != nil {
+	return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+}
+
+err := r.appSvc.Users.CreateUser(ctx, *create)
+```
+
+**Authorization**
+
+Gate site-admin operations with `requireAccess(accessSiteAdmin)` on the route. Do not re-check
+site admin role inside `service.Users` methods.
+
+**DAO and models**
+
+`models.*` and `dao.*` return table rows only—no nested `User`/`Group` pointers or `With*` relation
+loads on `dao.Options`. When an API response needs related data, fetch it with separate DAO calls
+in `api/` or compose it in `service/` (see `service/groups.go`).
+
+**Service errors in handlers**
+
+Return `serviceError(c, err)` for errors from `service.*` methods. Add a row to
+`serviceErrorMappings` in `api/service_error.go` when introducing a new `service.Err*` sentinel.
+
+**Site-admin API layout**
+
+- `api/users.go` — handlers for `/api/admin/users` (registered from `initAdminUserRoutes`)
+- `api/admin.go` — recovery and other non-user admin routes
+- `api/auth.go` — session/bootstrap wiring; business logic in `service.Auth`
+
+### 7. Module entrypoints
 
 For a cohesive package (especially under `utils/`):
 
@@ -276,7 +330,7 @@ For a cohesive package (especially under `utils/`):
 - Constructor name: **`New`**, not `NewCardCache`, `NewFooService`, etc.
 - Split other concerns into additional files in the same package (`serve.go`, `http.go`, …)
 
-### 7. Comments
+### 8. Comments
 
 Every function and method needs a comment, including unexported ones. Keep comments **short and concise**. Start with the function name (Go doc convention). Wrap comment lines around **85–90** columns—do not let comments run too long on one line.
 
@@ -327,11 +381,11 @@ func xxx(xxx) {
 func xxx(xxx) {
 ```
 
-### 8. Review before commit
+### 9. Review before commit
 
 AI may implement or edit Go code in this repo. The author who commits is responsible for **reading and understanding** those changes first—not shipping blind copy-paste. See [AI-generated code policy](#ai-generated-code-policy) above.
 
-### 9. Tests
+### 10. Tests
 
 Add tests when they add real value—behaviour worth guarding, non-trivial branches, regressions. Skip trivial or redundant tests. Do not target 100% coverage unless it falls out naturally.
 

@@ -1,14 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { ApiError } from '$lib/api';
 	import { deleteMe, updateMe } from '$lib/api/auth-api';
-	import { listMyGroups } from '$lib/api/groups-api';
 	import { auth } from '$lib/auth.svelte';
-	import { AppShell, ListRow } from '$lib/components';
+	import { AppShell } from '$lib/components';
 	import { Button, Input } from '$lib/components/ui';
-	import type { UserGroupSummaryModel } from '$lib/models/user-group-summary-model';
-	import { isPasswordFieldError, formatMemberCount } from '$lib/utils';
+	import { isPasswordFieldError } from '$lib/utils';
 
 	const minPasswordLength = 8;
 
@@ -32,27 +29,6 @@
 
 	let error = $state<string | null>(null);
 	let message = $state<string | null>(null);
-
-	let groups = $state<UserGroupSummaryModel[]>([]);
-	let loadingGroups = $state(true);
-	let groupsError = $state<string | null>(null);
-
-	onMount(() => {
-		void loadGroups();
-	});
-
-	async function loadGroups(): Promise<void> {
-		loadingGroups = true;
-		groupsError = null;
-
-		try {
-			groups = await listMyGroups();
-		} catch (err) {
-			groupsError = err instanceof ApiError ? err.message : 'Failed to load groups';
-		} finally {
-			loadingGroups = false;
-		}
-	}
 
 	$effect(() => {
 		if (!isEditingDisplayName && auth.user?.displayName) {
@@ -301,30 +277,6 @@
 						>
 							{savingPassword ? 'Saving…' : 'Save'}
 						</Button>
-					</div>
-				{/if}
-			</section>
-
-			<div class="h-px shrink-0 bg-border"></div>
-
-			<section class="flex flex-col gap-3">
-				<h2 class="section-title">Groups</h2>
-
-				{#if loadingGroups}
-					<p class="text-sm text-text-muted">Loading…</p>
-				{:else if groupsError}
-					<p class="text-sm text-error">{groupsError}</p>
-				{:else if groups.length === 0}
-					<p class="text-sm text-text-muted">No groups</p>
-				{:else}
-					<div class="flex flex-col gap-3">
-						{#each groups as group (group.id)}
-							<ListRow
-								href="/groups/{group.id}/"
-								title={group.name}
-								subtitle={formatMemberCount(group.memberCount)}
-							/>
-						{/each}
 					</div>
 				{/if}
 			</section>

@@ -6,6 +6,5 @@
 <AppShell title="Admin">
 	<div class="flex flex-col gap-2">
 		<Button href="/admin/users/">Users</Button>
-		<Button href="/admin/groups/">Groups</Button>
 	</div>
 </AppShell>

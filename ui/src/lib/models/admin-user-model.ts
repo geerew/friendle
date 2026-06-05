@@ -1,6 +1,5 @@
-import { array, number, object, picklist, string, type InferOutput } from 'valibot';
+import { array, object, picklist, string, type InferOutput } from 'valibot';
 import { BasePaginationSchema, type PaginationReqParams } from './pagination-model';
-import { UserGroupSummarySchema } from './user-group-summary-model';
 
 const SiteRoleSchema = picklist(['site_admin', 'site_user']);
 
@@ -19,9 +18,7 @@ export const AdminUserSchema = object({
 	id: string(),
 	username: string(),
 	displayName: string(),
-	siteRole: SiteRoleSchema,
-	groupCount: number(),
-	groups: array(UserGroupSummarySchema)
+	siteRole: SiteRoleSchema
 });
 
 export type AdminUserModel = InferOutput<typeof AdminUserSchema>;
