@@ -177,6 +177,31 @@ func (g *Groups) GetGroup(ctx context.Context, groupID string) (*GroupResponse, 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// DeleteGroup deletes a group and its associated data
+func (g *Groups) DeleteGroup(ctx context.Context, groupID string) error {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	if principal.SiteRole != types.SiteRoleAdmin {
+		return ErrNotSiteAdmin
+	}
+
+	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
+	if err != nil {
+		return err
+	}
+
+	if group == nil {
+		return ErrGroupNotFound
+	}
+
+	return g.dao.DeleteGroups(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // groupsResponseBuilder maps group models to API response slices
 func groupsResponseBuilder(groups []*models.Group) []*GroupResponse {
 	out := make([]*GroupResponse, len(groups))

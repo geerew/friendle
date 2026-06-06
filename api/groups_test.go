@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Masterminds/squirrel"
+	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/service"
 	"github.com/geerew/friendle/utils/types"
@@ -244,5 +246,60 @@ func TestGroups_Get(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusUnauthorized, status)
 		require.Contains(t, string(body), "Unauthorized")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestGroups_Delete exercises site-admin group deletion
+func TestGroups_Delete(t *testing.T) {
+	// Test successfully deleting a group
+	t.Run("204 (deleted)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "admin", types.SiteRoleAdmin)
+
+		group := &models.Group{Name: "Delete Me", CreatedBy: "admin"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+
+		status, _, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+
+		deleted, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID}))
+		require.NoError(t, err)
+		require.Nil(t, deleted)
+	})
+
+	// Test error due to a non-existent group
+	t.Run("404 (not found)", func(t *testing.T) {
+		router, _, _ := setup(t, "admin", types.SiteRoleAdmin)
+
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/missing-group-id", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(body), "Group not found")
+	})
+
+	// Test error due to non-admin caller
+	t.Run("403 (forbidden)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "alice", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var created service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &created))
+
+		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/"+created.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, status)
+		require.Contains(t, string(body), "Forbidden")
+
+		stillThere, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: created.ID}))
+		require.NoError(t, err)
+		require.NotNil(t, stillThere)
 	})
 }

@@ -27,7 +27,7 @@
 		error = null;
 
 		try {
-			const data = await withMinLoadingDelay(listUsers({ page, perPage }), 2000);
+			const data = await withMinLoadingDelay(listUsers({ page, perPage }));
 			users = data.items;
 			totalItems = data.totalItems;
 		} catch (err) {
@@ -79,9 +79,7 @@
 			{#if users.length === 0}
 				<p class="text-foreground-alt-2 text-sm italic">No users</p>
 			{:else}
-				<div class="px-2">
-					<AdminUserList {users} onDelete={openDeleteUser} />
-				</div>
+				<AdminUserList {users} onDelete={openDeleteUser} />
 			{/if}
 
 			<Pagination

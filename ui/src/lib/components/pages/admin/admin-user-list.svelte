@@ -10,12 +10,12 @@
 
 	let { users, onDelete }: Props = $props();
 
-	const rowClass = 'flex w-full items-center gap-3 px-2 py-3';
+	const rowClass = '';
 </script>
 
 <div class="flex flex-col gap-2">
 	{#each users as user, index (user.id)}
-		<div class={rowClass}>
+		<div class="flex w-full items-center gap-3 py-3">
 			<span class="text-foreground-alt-1 min-w-0 flex-1 truncate px-1 text-base font-medium">
 				{user.username}
 			</span>
@@ -30,7 +30,7 @@
 
 		{#if index < users.length - 1}
 			<div class="flex w-full items-center justify-center">
-				<Separator class="bg-foreground-alt-5 w-[95%]" />
+				<Separator class="bg-foreground-alt-5 w-full" />
 			</div>
 		{/if}
 	{/each}

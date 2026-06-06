@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { listGroups } from '$lib/api/groups-api';
-	import { AppShell, ListRow, Pagination, Spinner } from '$lib/components';
+	import { AppShell, DeleteGroup, Pagination, Spinner } from '$lib/components';
+	import { AdminGroupList } from '$lib/components/pages';
+	import { Separator } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { withMinLoadingDelay } from '$lib/utils';
 
@@ -11,6 +13,8 @@
 	let totalItems = $state(0);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let deleteOpen = $state(false);
+	let groupToDelete = $state<GroupModel | null>(null);
 
 	$effect(() => {
 		page;
@@ -32,17 +36,33 @@
 			loading = false;
 		}
 	}
+
+	function openDeleteGroup(group: GroupModel): void {
+		error = null;
+		groupToDelete = group;
+		deleteOpen = true;
+	}
+
+	async function handleDeleteSuccess(): Promise<void> {
+		const remainingTotal = totalItems - 1;
+		const totalPages = Math.max(1, Math.ceil(remainingTotal / perPage));
+
+		if (page > totalPages) {
+			page = totalPages;
+		} else {
+			await loadGroups();
+		}
+	}
+
+	function handleDeleteError(message: string): void {
+		error = message;
+	}
 </script>
 
-<AppShell
-	breadcrumb={[
-		{ label: 'Admin', href: '/admin/' },
-		{ label: 'Groups' }
-	]}
->
-	<h2 class="section-title">Groups</h2>
-
+<AppShell breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Groups' }]}>
 	<div class="flex flex-col gap-6">
+		<Separator />
+
 		{#if loading}
 			<div class="flex min-h-24 items-center justify-center">
 				<Spinner class="bg-foreground-alt-2 size-3" />
@@ -52,18 +72,11 @@
 				<p class="text-foreground-error text-sm">{error}</p>
 			{/if}
 
-			<div class="flex flex-col gap-3">
-				{#if groups.length === 0}
-					<p class="text-foreground-alt-2 text-sm italic">No groups</p>
-				{:else}
-					{#each groups as group (group.id)}
-						<ListRow
-							title={group.name}
-							subtitle="{group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}"
-						/>
-					{/each}
-				{/if}
-			</div>
+			{#if groups.length === 0}
+				<p class="text-foreground-alt-2 text-sm italic">No groups</p>
+			{:else}
+				<AdminGroupList {groups} onDelete={openDeleteGroup} />
+			{/if}
 
 			<Pagination
 				count={totalItems}
@@ -75,4 +88,11 @@
 			/>
 		{/if}
 	</div>
+
+	<DeleteGroup
+		bind:open={deleteOpen}
+		group={groupToDelete}
+		onSuccess={handleDeleteSuccess}
+		onError={handleDeleteError}
+	/>
 </AppShell>

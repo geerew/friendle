@@ -161,6 +161,59 @@ func Test_ListGroups(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_DeleteGroups(t *testing.T) {
+	// Test successfully deleting a group record
+	t.Run("success", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		group := &models.Group{Name: "Friends", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		opts := NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID})
+		require.NoError(t, dao.DeleteGroups(ctx, opts))
+
+		records, err := dao.ListGroups(ctx, opts)
+		require.NoError(t, err)
+		require.Empty(t, records)
+	})
+
+	// Test no error when deleting a non-existent group record
+	t.Run("not found", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		group := &models.Group{Name: "Friends", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		opts := NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: "non-existent"})
+		require.NoError(t, dao.DeleteGroups(ctx, opts))
+
+		records, err := dao.ListGroups(ctx, nil)
+		require.NoError(t, err)
+		require.Len(t, records, 1)
+		require.Equal(t, group.ID, records[0].ID)
+	})
+
+	// Test error due to missing where clause
+	t.Run("missing where", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		group := &models.Group{Name: "Friends", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		require.ErrorIs(t, dao.DeleteGroups(ctx, nil), utils.ErrWhere)
+
+		records, err := dao.ListGroups(ctx, nil)
+		require.NoError(t, err)
+		require.Len(t, records, 1)
+		require.Equal(t, group.ID, records[0].ID)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // testUserID returns the seeded test user's id
 func testUserID(t *testing.T, dao *DAO, ctx context.Context) string {
 	t.Helper()

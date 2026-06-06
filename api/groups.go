@@ -15,6 +15,7 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Get("/", r.requireAccess(accessSiteUser), r.listGroups)
 	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
+	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,6 +75,19 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(group)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// deleteGroup deletes a group
+func (r *Router) deleteGroup(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	if err := r.appSvc.Groups.DeleteGroup(ctx, c.Params("id")); err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
