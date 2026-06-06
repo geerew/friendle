@@ -30,49 +30,49 @@
 	$effect(() => {
 		perPageValue = `${perPage}`;
 	});
-
-	const pageButtonClass =
-		'inline-flex size-10 items-center justify-center rounded-lg text-sm font-medium text-foreground-alt-2 transition-colors select-none hover:cursor-pointer hover:bg-background-primary/25 hover:text-foreground data-selected:bg-background-primary data-selected:text-white';
-
-	const navButtonClass =
-		'inline-flex h-10 flex-row items-center justify-center gap-1 rounded-lg px-2 text-sm font-medium text-foreground-alt-2 transition-colors select-none hover:cursor-pointer hover:bg-background-primary/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent';
 </script>
 
 <Pagination.Root {count} {perPage} bind:page class="flex w-full justify-center" {onPageChange}>
 	{#snippet children({ pages, range })}
 		<div class="flex w-full flex-col gap-4">
 			{#if count > perPage}
-				<div class="flex items-center justify-center gap-3">
-					<Pagination.PrevButton class={navButtonClass}>
-						<LeftChevronIcon class="size-5 stroke-2" />
-						<span class="text-xs tracking-wide uppercase">Previous</span>
-					</Pagination.PrevButton>
+				<div class="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-3">
+					<div class="flex justify-end">
+						<Pagination.PrevButton
+							class="text-foreground-alt-2 hover:bg-background-primary/25 hover:text-foreground inline-flex h-10 flex-row items-center justify-center gap-1 rounded-lg px-2 text-sm font-medium transition-colors select-none hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent"
+						>
+							<LeftChevronIcon class="size-5 stroke-2" />
+							<span class="text-xs tracking-wide uppercase">Prev</span>
+						</Pagination.PrevButton>
+					</div>
 
-					<div class="flex items-center gap-2">
+					<div class="flex items-center justify-center gap-2">
 						{#each pages as pageItem (pageItem.key)}
 							{#if pageItem.type === 'ellipsis'}
-								<div class="px-1 text-sm font-medium text-foreground-alt-2 select-none">…</div>
+								<div class="text-foreground-alt-2 px-1 text-sm font-medium select-none">…</div>
 							{:else}
-								<Pagination.Page page={pageItem} class={pageButtonClass}>
+								<Pagination.Page
+									page={pageItem}
+									class="text-foreground-alt-2 hover:bg-background-primary/25 hover:text-foreground data-selected:bg-background-primary inline-flex size-10 items-center justify-center rounded-lg text-sm font-medium transition-colors select-none hover:cursor-pointer data-selected:text-white"
+								>
 									{pageItem.value}
 								</Pagination.Page>
 							{/if}
 						{/each}
 					</div>
 
-					<Pagination.NextButton class={navButtonClass}>
-						<span class="text-xs tracking-wide uppercase">Next</span>
-						<RightChevronIcon class="size-5 stroke-2" />
-					</Pagination.NextButton>
+					<div class="flex justify-start">
+						<Pagination.NextButton
+							class="text-foreground-alt-2 hover:bg-background-primary/25 hover:text-foreground inline-flex h-10 flex-row items-center justify-center gap-1 rounded-lg px-2 text-sm font-medium transition-colors select-none hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent"
+						>
+							<span class="text-xs tracking-wide uppercase">Next</span>
+							<RightChevronIcon class="size-5 stroke-2" />
+						</Pagination.NextButton>
+					</div>
 				</div>
 			{/if}
 
-			<div
-				class={cn(
-					'grid w-full gap-3',
-					showPerPageSelect ? 'grid-cols-2' : 'grid-cols-1'
-				)}
-			>
+			<div class={cn('grid w-full gap-3', showPerPageSelect ? 'grid-cols-2' : 'grid-cols-1')}>
 				{#if showPerPageSelect}
 					<div class="flex items-center">
 						<Select
@@ -96,7 +96,7 @@
 
 				<p
 					class={cn(
-						'flex min-w-0 items-center text-sm whitespace-nowrap text-foreground-alt-2',
+						'text-foreground-alt-2 flex min-w-0 items-center text-sm whitespace-nowrap',
 						showPerPageSelect ? 'justify-end text-end' : 'justify-center text-center'
 					)}
 				>
