@@ -1,7 +1,5 @@
 package models
 
-import "fmt"
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const (
@@ -26,18 +24,6 @@ type Session struct {
 	UserId  string `db:"user_id"` // Immutable
 	Data    []byte `db:"data"`    // Mutable
 	Expires int64  `db:"expires"` // Mutable
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// SessionColumns returns the columns for use in a SELECT query
-func SessionColumns() []string {
-	return []string{
-		fmt.Sprintf("%s AS %s", SESSION_TABLE_ID, SESSION_ID),
-		fmt.Sprintf("%s AS %s", SESSION_TABLE_USER_ID, SESSION_USER_ID),
-		fmt.Sprintf("%s AS %s", SESSION_TABLE_DATA, SESSION_DATA),
-		fmt.Sprintf("%s AS %s", SESSION_TABLE_EXPIRES, SESSION_EXPIRES),
-	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

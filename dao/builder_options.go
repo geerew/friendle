@@ -156,6 +156,16 @@ func (o *builderOptions) WithHaving(pred squirrel.Sqlizer) *builderOptions {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// WithJoins appends joins to the query
+//
+// Can be called multiple times to add multiple joins
+func (o *builderOptions) WithJoins(joins ...join) *builderOptions {
+	o.Joins = append(o.Joins, joins...)
+	return o
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // WithJoin appends an INNER JOIN clause
 //
 // Can be called multiple times to add multiple joins

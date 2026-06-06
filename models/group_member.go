@@ -1,10 +1,6 @@
 package models
 
-import (
-	"fmt"
-
-	"github.com/geerew/friendle/utils/types"
-)
+import "github.com/geerew/friendle/utils/types"
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -37,20 +33,4 @@ type GroupMember struct {
 	GroupRole   types.GroupRole `json:"groupRole" db:"group_role"` // Mutable
 	TimesPicked int             `db:"times_picked"`                // Mutable
 	PickerSkips int             `db:"picker_skips"`                // Mutable
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GroupMemberColumns returns the columns for use in a SELECT query
-func GroupMemberColumns() []string {
-	return []string{
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_ID, BASE_ID),
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_CREATED_AT, BASE_CREATED_AT),
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_UPDATED_AT, BASE_UPDATED_AT),
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_GROUP_ID, GROUP_MEMBER_GROUP_ID),
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_USER_ID, GROUP_MEMBER_USER_ID),
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_GROUP_ROLE, GROUP_MEMBER_GROUP_ROLE),
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_TIMES_PICKED, GROUP_MEMBER_TIMES_PICKED),
-		fmt.Sprintf("%s AS %s", GROUP_MEMBER_TABLE_PICKER_SKIPS, GROUP_MEMBER_PICKER_SKIPS),
-	}
 }

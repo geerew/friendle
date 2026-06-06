@@ -2,11 +2,22 @@ package dao
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// sessionColumns defines the columns to select
+var sessionColumns = []string{
+	fmt.Sprintf("%s AS %s", models.SESSION_TABLE_ID, models.SESSION_ID),
+	fmt.Sprintf("%s AS %s", models.SESSION_TABLE_USER_ID, models.SESSION_USER_ID),
+	fmt.Sprintf("%s AS %s", models.SESSION_TABLE_DATA, models.SESSION_DATA),
+	fmt.Sprintf("%s AS %s", models.SESSION_TABLE_EXPIRES, models.SESSION_EXPIRES),
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -43,7 +54,7 @@ func (dao *DAO) CreateOrReplaceSession(ctx context.Context, session *models.Sess
 // GetSession returns a session record
 func (dao *DAO) GetSession(ctx context.Context, dbOpts *Options) (*models.Session, error) {
 	builderOpts := newBuilderOptions(models.SESSION_TABLE).
-		WithColumns(models.SessionColumns()...).
+		WithColumns(sessionColumns...).
 		SetDbOpts(dbOpts).
 		WithLimit(1)
 
@@ -55,7 +66,7 @@ func (dao *DAO) GetSession(ctx context.Context, dbOpts *Options) (*models.Sessio
 // ListSessions returns session records
 func (dao *DAO) ListSessions(ctx context.Context, dbOpts *Options) ([]*models.Session, error) {
 	builderOpts := newBuilderOptions(models.SESSION_TABLE).
-		WithColumns(models.SessionColumns()...).
+		WithColumns(sessionColumns...).
 		SetDbOpts(dbOpts)
 
 	return listGeneric[models.Session](ctx, dao, *builderOpts)

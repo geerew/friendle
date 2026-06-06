@@ -1,7 +1,5 @@
 package models
 
-import "fmt"
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const (
@@ -15,6 +13,8 @@ const (
 	GROUP_TABLE_UPDATED_AT = GROUP_TABLE + "." + BASE_UPDATED_AT
 	GROUP_TABLE_NAME       = GROUP_TABLE + "." + GROUP_NAME
 	GROUP_TABLE_CREATED_BY = GROUP_TABLE + "." + GROUP_CREATED_BY
+
+	GROUP_MEMBER_COUNT = "member_count"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,17 +24,7 @@ type Group struct {
 	Base
 	Name      string `db:"name"`       // Mutable
 	CreatedBy string `db:"created_by"` // Immutable
-}
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GroupColumns returns the columns for use in a SELECT query
-func GroupColumns() []string {
-	return []string{
-		fmt.Sprintf("%s AS %s", GROUP_TABLE_ID, BASE_ID),
-		fmt.Sprintf("%s AS %s", GROUP_TABLE_CREATED_AT, BASE_CREATED_AT),
-		fmt.Sprintf("%s AS %s", GROUP_TABLE_UPDATED_AT, BASE_UPDATED_AT),
-		fmt.Sprintf("%s AS %s", GROUP_TABLE_NAME, GROUP_NAME),
-		fmt.Sprintf("%s AS %s", GROUP_TABLE_CREATED_BY, GROUP_CREATED_BY),
-	}
+	// Added via JOIN
+	MemberCount int `db:"member_count"`
 }

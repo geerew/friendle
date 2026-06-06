@@ -2,11 +2,26 @@ package dao
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/types"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupMemberColumns defines the columns to select
+var groupMemberColumns = []string{
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_ID, models.BASE_ID),
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_CREATED_AT, models.BASE_CREATED_AT),
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_UPDATED_AT, models.BASE_UPDATED_AT),
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_GROUP_ID, models.GROUP_MEMBER_GROUP_ID),
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_USER_ID, models.GROUP_MEMBER_USER_ID),
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_GROUP_ROLE, models.GROUP_MEMBER_GROUP_ROLE),
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_TIMES_PICKED, models.GROUP_MEMBER_TIMES_PICKED),
+	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_PICKER_SKIPS, models.GROUP_MEMBER_PICKER_SKIPS),
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

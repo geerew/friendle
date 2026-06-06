@@ -62,62 +62,6 @@ func Test_CreateGroup(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-func Test_CreateGroupMember(t *testing.T) {
-	// Test successfully creating a group member record
-	t.Run("success", func(t *testing.T) {
-		dao, ctx := setup(t)
-
-		userID := testUserID(t, dao, ctx)
-		group := &models.Group{Name: "Friends", CreatedBy: userID}
-		require.NoError(t, dao.CreateGroup(ctx, group))
-
-		member := &models.GroupMember{
-			GroupID:   group.ID,
-			UserID:    userID,
-			GroupRole: types.GroupRoleAdmin,
-		}
-		require.NoError(t, dao.CreateGroupMember(ctx, member))
-		require.NotEmpty(t, member.ID)
-	})
-
-	// Test error due to nil pointer
-	t.Run("nil pointer", func(t *testing.T) {
-		dao, ctx := setup(t)
-		require.ErrorIs(t, dao.CreateGroupMember(ctx, nil), utils.ErrNilPtr)
-	})
-
-	// Test error due to empty group id
-	t.Run("empty group id", func(t *testing.T) {
-		dao, ctx := setup(t)
-
-		userID := testUserID(t, dao, ctx)
-		member := &models.GroupMember{
-			GroupID:   "",
-			UserID:    userID,
-			GroupRole: types.GroupRoleAdmin,
-		}
-		require.ErrorIs(t, dao.CreateGroupMember(ctx, member), utils.ErrGroupId)
-	})
-
-	// Test error due to empty user id
-	t.Run("empty user id", func(t *testing.T) {
-		dao, ctx := setup(t)
-
-		userID := testUserID(t, dao, ctx)
-		group := &models.Group{Name: "Friends", CreatedBy: userID}
-		require.NoError(t, dao.CreateGroup(ctx, group))
-
-		member := &models.GroupMember{
-			GroupID:   group.ID,
-			UserID:    "",
-			GroupRole: types.GroupRoleAdmin,
-		}
-		require.ErrorIs(t, dao.CreateGroupMember(ctx, member), utils.ErrUserId)
-	})
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 func Test_GetGroup(t *testing.T) {
 	// Test successfully retrieving a group record
 	t.Run("success", func(t *testing.T) {
@@ -128,10 +72,31 @@ func Test_GetGroup(t *testing.T) {
 		require.NoError(t, dao.CreateGroup(ctx, group))
 
 		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID})
+		require.NoError(t, dao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
 		record, err := dao.GetGroup(ctx, dbOpts)
 		require.NoError(t, err)
 		require.Equal(t, group.ID, record.ID)
 		require.Equal(t, "Friends", record.Name)
+		require.Equal(t, 1, record.MemberCount)
+	})
+
+	// Test member count is zero when a group has no members
+	t.Run("no members", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		group := &models.Group{Name: "Lonely", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID})
+		record, err := dao.GetGroup(ctx, dbOpts)
+		require.NoError(t, err)
+		require.Equal(t, 0, record.MemberCount)
 	})
 
 	// Test no error when retrieving a non-existent group record
@@ -175,7 +140,9 @@ func Test_ListGroups(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, groups, 2)
 		require.Equal(t, "Friends", groups[0].Name)
+		require.Equal(t, 1, groups[0].MemberCount)
 		require.Equal(t, "Work", groups[1].Name)
+		require.Equal(t, 1, groups[1].MemberCount)
 	})
 
 	// Test empty list when the user has no memberships

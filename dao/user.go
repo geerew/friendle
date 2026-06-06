@@ -21,6 +21,19 @@ var (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// userColumns defines the columns to select
+var userColumns = []string{
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_ID, models.BASE_ID),
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_CREATED_AT, models.BASE_CREATED_AT),
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_UPDATED_AT, models.BASE_UPDATED_AT),
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_USERNAME, models.USER_USERNAME),
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_DISPLAY_NAME, models.USER_DISPLAY_NAME),
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_PASSWORD_HASH, models.USER_PASSWORD_HASH),
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_SITE_ROLE, models.USER_SITE_ROLE),
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // CreateUser inserts a user record
 func (dao *DAO) CreateUser(ctx context.Context, user *models.User) error {
 	if user == nil {
@@ -71,7 +84,7 @@ func (dao *DAO) CountUsers(ctx context.Context, dbOpts *Options) (int, error) {
 // GetUser returns a user record
 func (dao *DAO) GetUser(ctx context.Context, dbOpts *Options) (*models.User, error) {
 	builderOpts := newBuilderOptions(models.USER_TABLE).
-		WithColumns(models.UserColumns()...).
+		WithColumns(userColumns...).
 		SetDbOpts(dbOpts).
 		WithLimit(1)
 
@@ -89,7 +102,7 @@ func (dao *DAO) ListUsers(ctx context.Context, dbOpts *Options) ([]*models.User,
 	applyDefaultOrderBy(dbOpts, defaultUsersListOrderBy)
 
 	builderOpts := newBuilderOptions(models.USER_TABLE).
-		WithColumns(models.UserColumns()...).
+		WithColumns(userColumns...).
 		SetDbOpts(dbOpts)
 
 	return listGeneric[models.User](ctx, dao, *builderOpts)
