@@ -8,6 +8,8 @@
 
 	type Props = {
 		href?: string;
+		target?: string;
+		rel?: string;
 		variant?: Variant;
 		size?: Size;
 		class?: string;
@@ -21,6 +23,8 @@
 
 	let {
 		href,
+		target,
+		rel,
 		variant = 'secondary',
 		size = 'default',
 		class: className = '',
@@ -50,7 +54,7 @@
 			case 'secondary':
 				return 'bg-background-alt-3 text-foreground enabled:hover:brightness-110';
 			case 'ghost':
-				return 'bg-transparent text-foreground-alt-2 enabled:hover:text-foreground';
+				return 'bg-transparent text-foreground-alt-2 hover:text-foreground disabled:hover:text-foreground-alt-2';
 			case 'destructive':
 				if (size === 'inline') {
 					return 'bg-transparent text-foreground-error-alt-1 enabled:hover:bg-background-error enabled:hover:text-foreground';
@@ -80,7 +84,7 @@
 {/snippet}
 
 {#if href}
-	<a {href} class={classes} aria-label={ariaLabel}>
+	<a {href} {target} {rel} class={classes} aria-label={ariaLabel} {onclick}>
 		{@render buttonContents()}
 	</a>
 {:else}

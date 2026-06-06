@@ -16,7 +16,7 @@
 <div class="flex flex-col gap-2">
 	{#each groups as group, index (group.id)}
 		<a href="/groups/{group.id}/" class={rowClass}>
-			<div class="flex w-full px-1">
+			<div class="flex w-full items-center px-1">
 				<span class="text-foreground-alt-1 min-w-0 flex-1 truncate text-base font-medium">
 					{group.name}
 				</span>

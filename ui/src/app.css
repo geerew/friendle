@@ -68,6 +68,8 @@
 	--header-height: 4rem;
 
 	--animate-bounce-dot: bounce-dot 0.55s ease-in-out infinite;
+	--animate-collapsible-down: collapsible-down 0.2s ease-out;
+	--animate-collapsible-up: collapsible-up 0.2s ease-out;
 
 	@keyframes bounce-dot {
 		0%,
@@ -100,13 +102,32 @@
 	}
 }
 
+@keyframes collapsible-down {
+	from {
+		height: 0;
+	}
+
+	to {
+		height: var(--bits-collapsible-content-height);
+	}
+}
+
+@keyframes collapsible-up {
+	from {
+		height: var(--bits-collapsible-content-height);
+	}
+
+	to {
+		height: 0;
+	}
+}
+
 @layer components {
 	.app-shell {
 		@apply mx-auto flex min-h-dvh w-full max-w-md flex-col;
 	}
 
 	.app-header {
-		@apply sticky top-0 z-10 shrink-0 border-b border-foreground-alt-4 bg-background;
 		height: var(--header-height);
 	}
 
