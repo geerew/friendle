@@ -1,73 +1,42 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { ApiError } from '$lib/api';
 	import { listSelfGroups } from '$lib/api/groups-api';
-	import { AppShell, Pagination, Spinner } from '$lib/components';
-	import { RightChevronIcon } from '$lib/components/icons';
+	import { AppShell, Spinner } from '$lib/components';
+	import { GroupList } from '$lib/components/pages';
 	import { Button, Separator } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { withMinLoadingDelay } from '$lib/utils';
 
-	const groupsPerPage = 5;
+	const homeGroupLimit = 4;
 
 	let groups = $state<GroupModel[]>([]);
-	let page = $state(1);
-	let perPage = $state(groupsPerPage);
 	let totalItems = $state(0);
 	let loading = $state(true);
-	let hasLoaded = $state(false);
 	let error = $state<string | null>(null);
-	let listMinHeight = $state<number | undefined>(undefined);
 
-	let listEl = $state<HTMLDivElement | undefined>(undefined);
-	let requestId = 0;
+	const showMoreRow = $derived(totalItems > homeGroupLimit);
 
 	$effect(() => {
-		page;
-		untrack(() => {
-			void loadGroups();
-		});
+		void loadGroups();
 	});
 
 	async function loadGroups(): Promise<void> {
-		const id = ++requestId;
-
-		if (hasLoaded && listEl) {
-			listMinHeight = listEl.offsetHeight;
-		} else {
-			listMinHeight = undefined;
-		}
-
 		loading = true;
 		error = null;
 
 		try {
 			const data = await withMinLoadingDelay(
-				listSelfGroups({ page, perPage: groupsPerPage })
+				listSelfGroups({ page: 1, perPage: homeGroupLimit }),
+				200
 			);
-
-			if (id !== requestId) {
-				return;
-			}
-
 			groups = data.items;
 			totalItems = data.totalItems;
-			hasLoaded = true;
 		} catch (err) {
-			if (id !== requestId) {
-				return;
-			}
-
 			error = err instanceof ApiError ? err.message : 'Failed to load groups';
-
-			if (!hasLoaded) {
-				groups = [];
-				totalItems = 0;
-			}
+			groups = [];
+			totalItems = 0;
 		} finally {
-			if (id === requestId) {
-				loading = false;
-			}
+			loading = false;
 		}
 	}
 </script>
@@ -76,62 +45,33 @@
 	<h2 class="section-title">My Groups</h2>
 
 	<div class="flex flex-col gap-7">
-		{#if loading && !hasLoaded}
+		{#if loading}
 			<div class="flex min-h-24 items-center justify-center">
 				<Spinner class="bg-foreground-alt-2 size-3" />
 			</div>
-		{:else if error && !hasLoaded}
+		{:else if error}
 			<p class="text-foreground-error text-sm">{error}</p>
-		{:else if groups.length === 0 && !loading}
+		{:else if groups.length === 0}
 			<div class="text-foreground-alt-2 flex min-h-24 items-center justify-center text-sm italic">
 				No groups
 			</div>
 		{:else}
-			<div class="flex flex-col gap-4 px-2">
-				{#if error}
-					<p class="text-foreground-error text-sm">{error}</p>
-				{/if}
+			<div class="flex flex-col gap-2 px-2">
+				<GroupList {groups} />
 
-				{#if loading}
-					<div
-						class="flex items-center justify-center"
-						class:min-h-24={listMinHeight === undefined}
-						style:min-height={listMinHeight === undefined ? undefined : `${listMinHeight}px`}
-					>
-						<Spinner class="bg-foreground-alt-2 size-3" />
+				{#if showMoreRow}
+					<div class="flex w-full items-center justify-center">
+						<Separator class="bg-foreground-alt-5 w-[95%]" />
 					</div>
-				{:else}
-					<div bind:this={listEl} class="flex flex-col gap-2">
-						{#each groups as group, index (group.id)}
-							<a
-								href="/groups/{group.id}/"
-								class="hover:bg-background-alt-1 flex w-full items-center gap-3 rounded-md px-2 py-3 text-left transition-all"
-							>
-								<div class="flex w-full px-1">
-									<span class="text-foreground-alt-1 min-w-0 flex-1 truncate text-base font-medium">
-										{group.name}
-									</span>
-									<RightChevronIcon class="text-foreground-alt-2 size-5 shrink-0 stroke-2" />
-								</div>
-							</a>
-							{#if index < groups.length - 1}
-								<div class="flex w-full items-center justify-center">
-									<Separator dashed class="w-[95%]" />
-								</div>
-							{/if}
-						{/each}
+					<div class="flex w-full items-center justify-center px-8">
+						<Button
+							href="/groups/"
+							variant="ghost"
+							class="bg-background-primary/15 text-foreground-alt-1 hover:bg-background-primary/35 enabled:hover:text-foreground-alt-1"
+						>
+							More
+						</Button>
 					</div>
-				{/if}
-
-				{#if totalItems > groupsPerPage}
-					<Pagination
-						count={totalItems}
-						bind:page
-						bind:perPage
-						showPerPageSelect={false}
-						onPageChange={() => {}}
-						onPerPageChange={() => {}}
-					/>
 				{/if}
 			</div>
 		{/if}

@@ -43,7 +43,6 @@ class Auth {
 		this.#error = null;
 
 		try {
-			await new Promise((resolve) => setTimeout(resolve, 500));
 			this.#user = await fetchMe();
 		} catch (err) {
 			this.#user = null;

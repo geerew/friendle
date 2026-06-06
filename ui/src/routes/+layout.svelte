@@ -2,7 +2,6 @@
 	import '../app.css';
 
 	import { page } from '$app/state';
-	import { AppShell, Spinner } from '$lib/components';
 	import { auth } from '$lib/auth.svelte';
 	import { Toaster } from 'svelte-sonner';
 
@@ -19,17 +18,13 @@
 <Toaster theme="dark" richColors />
 
 {#if !isAuthPath}
-	{#if !auth.initialized}
-		<AppShell showMenu={false}>
-			<div class="flex justify-center pt-8">
-				<Spinner class="bg-foreground-alt-2 size-3" />
-			</div>
-		</AppShell>
-	{:else if auth.error && !auth.user}
+	{#if auth.initialized && auth.error && !auth.user}
 		<div class="app-shell page-content">
 			<p class="text-foreground-error">{auth.error}</p>
 		</div>
-	{:else if auth.user}
+	{:else if auth.initialized && !auth.user}
+		<!-- session expired; redirect to login is in flight -->
+	{:else}
 		{@render children()}
 	{/if}
 {:else}
