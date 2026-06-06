@@ -1,10 +1,13 @@
-import { array, object, optional, string, type InferOutput } from 'valibot';
+import { array, number, object, string, type InferOutput } from 'valibot';
 import { BasePaginationSchema, type PaginationReqParams } from './pagination-model';
 
 export const GroupSchema = object({
 	id: string(),
+	createdAt: string(),
+	updatedAt: string(),
 	name: string(),
-	createdBy: optional(string())
+	createdBy: string(),
+	memberCount: number()
 });
 
 export type GroupModel = InferOutput<typeof GroupSchema>;
@@ -19,5 +22,7 @@ export type GroupPaginationModel = InferOutput<typeof GroupPaginationSchema>;
 export type CreateGroupRequest = {
 	name: string;
 };
+
+export type ListGroupsParams = PaginationReqParams;
 
 export type ListSelfGroupsParams = PaginationReqParams;

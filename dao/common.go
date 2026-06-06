@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/database"
@@ -75,8 +74,6 @@ func getGeneric[T any](ctx context.Context, dao *DAO, builderOpts builderOptions
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(sqlStr, args)
 
 	record := new(T)
 	err = dao.db.GetContext(ctx, record, sqlStr, args...)

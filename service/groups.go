@@ -27,9 +27,12 @@ type CreateGroupRequest struct {
 
 // GroupResponse represents a group response
 type GroupResponse struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	CreatedBy string `json:"createdBy,omitempty"`
+	ID          string         `json:"id"`
+	CreatedAt   types.DateTime `json:"createdAt"`
+	UpdatedAt   types.DateTime `json:"updatedAt"`
+	Name        string         `json:"name"`
+	CreatedBy   string         `json:"createdBy,omitempty"`
+	MemberCount int            `json:"memberCount"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,7 +93,29 @@ func (g *Groups) CreateGroup(ctx context.Context, req CreateGroupRequest) (*Grou
 		return nil, err
 	}
 
-	return groupResponseBuilder(group, true), nil
+	group.MemberCount = 1
+
+	return groupResponseBuilder(group), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ListGroups returns paginated groups
+func (g *Groups) ListGroups(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
+	if _, err := principalFromContext(ctx); err != nil {
+		return nil, err
+	}
+
+	groups, err := g.dao.ListGroups(ctx, dao.NewOptions().WithPagination(page))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(groups) == 0 {
+		return []*GroupResponse{}, nil
+	}
+
+	return groupsResponseBuilder(groups), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,7 +141,7 @@ func (g *Groups) ListSelfGroups(ctx context.Context, page *pagination.Pagination
 		return []*GroupResponse{}, nil
 	}
 
-	return groupsResponseBuilder(groups, false), nil
+	return groupsResponseBuilder(groups), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -147,16 +172,16 @@ func (g *Groups) GetGroup(ctx context.Context, groupID string) (*GroupResponse, 
 		return nil, ErrGroupNotFound
 	}
 
-	return groupResponseBuilder(group, false), nil
+	return groupResponseBuilder(group), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // groupsResponseBuilder maps group models to API response slices
-func groupsResponseBuilder(groups []*models.Group, includeCreatedBy bool) []*GroupResponse {
+func groupsResponseBuilder(groups []*models.Group) []*GroupResponse {
 	out := make([]*GroupResponse, len(groups))
 	for i, group := range groups {
-		out[i] = groupResponseBuilder(group, includeCreatedBy)
+		out[i] = groupResponseBuilder(group)
 	}
 
 	return out
@@ -165,15 +190,13 @@ func groupsResponseBuilder(groups []*models.Group, includeCreatedBy bool) []*Gro
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // groupResponseBuilder maps a group model to a single API response
-func groupResponseBuilder(group *models.Group, includeCreatedBy bool) *GroupResponse {
-	resp := &GroupResponse{
-		ID:   group.ID,
-		Name: group.Name,
+func groupResponseBuilder(group *models.Group) *GroupResponse {
+	return &GroupResponse{
+		ID:          group.ID,
+		CreatedAt:   group.CreatedAt,
+		UpdatedAt:   group.UpdatedAt,
+		Name:        group.Name,
+		CreatedBy:   group.CreatedBy,
+		MemberCount: group.MemberCount,
 	}
-
-	if includeCreatedBy && group.CreatedBy != "" {
-		resp.CreatedBy = group.CreatedBy
-	}
-
-	return resp
 }

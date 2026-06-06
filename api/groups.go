@@ -11,9 +11,30 @@ import (
 func (r *Router) initGroupRoutes() {
 	groupRoutes := r.apiGroup("groups")
 
-	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Post("/", r.requireAccess(accessSiteUser), r.createGroup)
+	groupRoutes.Get("/", r.requireAccess(accessSiteUser), r.listGroups)
+	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// listGroups returns paginated groups
+func (r *Router) listGroups(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	page := paginationFromCtx(c)
+	groups, err := r.appSvc.Groups.ListGroups(ctx, page)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	pResult, err := page.BuildResult(groups)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
