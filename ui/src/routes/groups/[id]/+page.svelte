@@ -2,7 +2,9 @@
 	import { page } from '$app/state';
 	import { ApiError } from '$lib/api';
 	import { getGroup } from '$lib/api/groups-api';
+	import { auth } from '$lib/auth.svelte';
 	import { AppShell, Spinner } from '$lib/components';
+	import { Separator } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 
 	const groupId = $derived(page.params.id ?? '');
@@ -44,11 +46,21 @@
 			<Spinner class="bg-foreground-alt-2 size-3" />
 		</div>
 	{:else if error}
-		<p class="text-foreground-error text-sm">{error}</p>
+		<p class="text-foreground-error-alt-1 text-sm">{error}</p>
 	{:else if group}
-		<section class="flex flex-col gap-3">
-			<h2 class="section-title">Group name</h2>
-			<p class="text-background-primary text-2xl">{group.name}</p>
-		</section>
+		<div class="flex flex-col gap-5">
+			<section class="flex flex-col gap-3">
+				<h2 class="section-title">Group name</h2>
+				<p class="text-background-primary text-2xl">{group.name}</p>
+			</section>
+
+			<Separator />
+
+			<section class="flex flex-col gap-3">
+				<h2 class="section-title">
+					Members ({group.memberCount})
+				</h2>
+			</section>
+		</div>
 	{/if}
 </AppShell>

@@ -51,21 +51,25 @@
 			{/if}
 
 			{#if groups.length === 0}
-				<p class="text-foreground-alt-2 text-sm italic">No groups</p>
+				<div class="flex min-h-16 items-center justify-center">
+					<p class="text-foreground-alt-2 text-sm italic">No groups</p>
+				</div>
 			{:else}
 				<div class="px-2">
 					<GroupList {groups} />
 				</div>
-			{/if}
 
-			<Pagination
-				count={totalItems}
-				bind:page
-				bind:perPage
-				showPerPageSelect={false}
-				onPageChange={() => {}}
-				onPerPageChange={() => {}}
-			/>
+				{#if totalItems > perPage}
+					<Pagination
+						count={totalItems}
+						bind:page
+						bind:perPage
+						showPerPageSelect={false}
+						onPageChange={() => {}}
+						onPerPageChange={() => {}}
+					/>
+				{/if}
+			{/if}
 		{/if}
 	</div>
 </AppShell>
