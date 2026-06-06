@@ -121,21 +121,21 @@
 		</Field>
 
 		{#if passwordTooShortError}
-			<p class="text-sm text-error">Password must be at least 8 characters</p>
+			<p class="text-sm text-foreground-error">Password must be at least 8 characters</p>
 		{/if}
 
 		{#if passwordMismatchError}
-			<p class="text-sm text-error">Passwords do not match</p>
+			<p class="text-sm text-foreground-error">Passwords do not match</p>
 		{/if}
 
 		{#if error}
-			<p class="text-sm text-error">{error}</p>
+			<p class="text-sm text-foreground-error">{error}</p>
 		{/if}
 
 		<div class="grid grid-cols-2 gap-2">
 			<Button href="/admin/users/" variant="secondary">Cancel</Button>
-			<Button type="submit" variant="primary" disabled={submitDisabled || submitting}>
-				{submitting ? 'Adding…' : 'Add'}
+			<Button type="submit" variant="primary" disabled={submitDisabled} loading={submitting}>
+				Add
 			</Button>
 		</div>
 	</form>

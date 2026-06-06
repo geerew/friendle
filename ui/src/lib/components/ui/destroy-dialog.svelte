@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Spinner } from '$lib/components';
 	import Button from './button.svelte';
 	import * as Dialog from './dialog';
 	import type { Snippet } from 'svelte';
@@ -38,13 +37,13 @@
 <Dialog.Root bind:open>
 	<Dialog.Content>
 		<Dialog.Alert>
-			<div class="text-text flex flex-col gap-2 text-center">
+			<div class="text-foreground flex flex-col gap-2 text-center">
 				<span class="text-lg">{title}</span>
 				{#if detail}
-					<span class="text-button-primary font-semibold">{detail}</span>
+					<span class="text-background-primary font-semibold">{detail}</span>
 				{/if}
 				{#if description}
-					<span class="text-text-muted text-sm">{description}</span>
+					<span class="text-foreground-alt-2 text-sm">{description}</span>
 				{/if}
 			</div>
 		</Dialog.Alert>
@@ -57,15 +56,12 @@
 			<Dialog.CloseButton class="text-xs" disabled={loading}>{cancelLabel}</Dialog.CloseButton>
 			<Button
 				variant="destructive"
-				class="h-10 w-36 gap-2 px-0 py-0 text-xs"
-				disabled={disabled || loading}
+				class="w-36 text-xs"
+				{disabled}
+				{loading}
 				onclick={handleConfirm}
 			>
-				{#if loading}
-					<Spinner class="size-2 bg-white/70" />
-				{:else}
-					<span class="text-xs">{confirmLabel}</span>
-				{/if}
+				{confirmLabel}
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

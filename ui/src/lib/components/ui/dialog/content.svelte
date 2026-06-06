@@ -13,7 +13,7 @@
 
 <Dialog.Content
 	class={cn(
-		'fixed top-20 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-lg border border-border bg-bg-secondary',
+		'fixed top-20 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 overflow-hidden rounded-lg border border-foreground-alt-4 bg-background-alt-1',
 		className
 	)}
 	{...restProps}

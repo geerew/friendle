@@ -1,5 +1,4 @@
 <script lang="ts">
-	import '@fontsource/anton';
 	import '../app.css';
 
 	import { page } from '$app/state';
@@ -23,12 +22,12 @@
 	{#if !auth.initialized}
 		<AppShell showMenu={false}>
 			<div class="flex justify-center pt-8">
-				<Spinner class="bg-text-muted size-3" />
+				<Spinner class="bg-foreground-alt-2 size-3" />
 			</div>
 		</AppShell>
 	{:else if auth.error && !auth.user}
 		<div class="app-shell page-content">
-			<p class="text-error">{auth.error}</p>
+			<p class="text-foreground-error">{auth.error}</p>
 		</div>
 	{:else if auth.user}
 		{@render children()}

@@ -40,24 +40,24 @@
 
 {#snippet alertContents()}
 	<Drawer.Alert>
-		<div class="flex flex-col gap-2 text-center text-text">
+		<div class="flex flex-col gap-2 text-center text-foreground">
 			<span class="text-lg">Are you sure you want to delete this user?</span>
 			{#if user}
-				<span class="font-semibold text-button-primary">{user.displayName}</span>
+				<span class="font-semibold text-background-primary">{user.displayName}</span>
 			{/if}
-			<span class="text-sm text-text-muted">All associated data will be deleted</span>
+			<span class="text-sm text-foreground-alt-2">All associated data will be deleted</span>
 		</div>
 	</Drawer.Alert>
 {/snippet}
 
 {#snippet deleteButton()}
-	<Button variant="destructive" class="w-full" disabled={isPosting} onclick={doDelete}>
-		{isPosting ? 'Deleting…' : 'Delete'}
+	<Button variant="destructive" class="w-full" loading={isPosting} onclick={doDelete}>
+		Delete
 	</Button>
 {/snippet}
 
 <Drawer.Root bind:open>
-	<Drawer.Content handleClass="bg-text-muted">
+	<Drawer.Content handleClass="bg-foreground-alt-2">
 		<div class="overflow-hidden rounded-lg">
 			{@render alertContents()}
 

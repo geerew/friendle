@@ -66,18 +66,18 @@
 	<div class="flex flex-col gap-6">
 		<Button href="/admin/users/add/" variant="primary" class="w-1/2">+ Add User</Button>
 
-		<hr class="border-0 border-t border-border" />
+		<hr class="border-0 border-t border-foreground-alt-4" />
 
 		{#if loading}
-			<p class="text-text-muted">Loading…</p>
+			<p class="text-foreground-alt-2">Loading…</p>
 		{:else}
 			{#if error}
-				<p class="text-sm text-error">{error}</p>
+				<p class="text-sm text-foreground-error">{error}</p>
 			{/if}
 
 			<div class="flex flex-col gap-3">
 				{#if users.length === 0}
-					<p class="text-sm text-text-muted">No users.</p>
+					<p class="text-sm text-foreground-alt-2">No users.</p>
 				{:else}
 					{#each users as user (user.id)}
 						<ListRow

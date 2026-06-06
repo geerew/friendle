@@ -22,9 +22,9 @@
 
 	const variantClasses: Record<Variant, string> = {
 		default:
-			'text-text-muted hover:bg-button-primary/25 hover:text-text data-disabled:hover:bg-transparent',
+			'text-foreground-alt-2 hover:bg-background-primary/25 hover:text-foreground data-disabled:hover:bg-transparent',
 		destructive:
-			'text-error-fg hover:bg-error-bg hover:text-text data-disabled:hover:bg-transparent'
+			'text-foreground-error hover:bg-background-error hover:text-foreground data-disabled:hover:bg-transparent'
 	};
 </script>
 

@@ -16,7 +16,7 @@
 			viewBox="0 0 24 24"
 			stroke-width="1.5"
 			stroke="currentColor"
-			class="size-14 text-error-fg"
+			class="size-14 text-foreground-error"
 			aria-hidden="true"
 		>
 			<path

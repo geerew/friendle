@@ -13,6 +13,7 @@ func (r *Router) initGroupRoutes() {
 
 	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Post("/", r.requireAccess(accessSiteUser), r.createGroup)
+	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -52,4 +53,18 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(group)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getGroup returns a group the authenticated user belongs to
+func (r *Router) getGroup(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	group, err := r.appSvc.Groups.GetGroup(ctx, c.Params("id"))
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.JSON(group)
 }

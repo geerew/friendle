@@ -79,18 +79,18 @@
 	<div class="flex flex-col gap-7">
 		{#if loading && !hasLoaded}
 			<div class="flex min-h-24 items-center justify-center">
-				<Spinner class="bg-text-muted size-3" />
+				<Spinner class="bg-foreground-alt-2 size-3" />
 			</div>
 		{:else if error && !hasLoaded}
-			<p class="text-error text-sm">{error}</p>
+			<p class="text-foreground-error text-sm">{error}</p>
 		{:else if groups.length === 0 && !loading}
-			<div class="text-text-muted flex min-h-24 items-center justify-center text-sm italic">
+			<div class="text-foreground-alt-2 flex min-h-24 items-center justify-center text-sm italic">
 				No groups
 			</div>
 		{:else}
 			<div class="flex flex-col gap-4 px-2">
 				{#if error}
-					<p class="text-error text-sm">{error}</p>
+					<p class="text-foreground-error text-sm">{error}</p>
 				{/if}
 
 				{#if loading}
@@ -99,19 +99,26 @@
 						class:min-h-24={listMinHeight === undefined}
 						style:min-height={listMinHeight === undefined ? undefined : `${listMinHeight}px`}
 					>
-						<Spinner class="bg-text-muted size-3" />
+						<Spinner class="bg-foreground-alt-2 size-3" />
 					</div>
 				{:else}
-					<div bind:this={listEl}>
+					<div bind:this={listEl} class="flex flex-col gap-2">
 						{#each groups as group, index (group.id)}
-							<div class="flex w-full items-center gap-3 py-5 text-left">
-								<span class="text-text-secondary min-w-0 flex-1 truncate text-base font-medium">
-									{group.name}
-								</span>
-								<RightChevronIcon class="text-text-muted size-5 shrink-0 stroke-2" />
-							</div>
+							<a
+								href="/groups/{group.id}/"
+								class="hover:bg-background-alt-1 flex w-full items-center gap-3 rounded-md px-2 py-3 text-left transition-all"
+							>
+								<div class="flex w-full px-1">
+									<span class="text-foreground-alt-1 min-w-0 flex-1 truncate text-base font-medium">
+										{group.name}
+									</span>
+									<RightChevronIcon class="text-foreground-alt-2 size-5 shrink-0 stroke-2" />
+								</div>
+							</a>
 							{#if index < groups.length - 1}
-								<Separator dashed />
+								<div class="flex w-full items-center justify-center">
+									<Separator dashed class="w-[95%]" />
+								</div>
 							{/if}
 						{/each}
 					</div>

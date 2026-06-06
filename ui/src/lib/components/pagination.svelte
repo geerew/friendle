@@ -32,10 +32,10 @@
 	});
 
 	const pageButtonClass =
-		'inline-flex size-10 items-center justify-center rounded-lg text-sm font-medium text-text-muted transition-colors select-none hover:cursor-pointer hover:bg-button-primary/25 hover:text-text data-selected:bg-button-primary data-selected:text-white';
+		'inline-flex size-10 items-center justify-center rounded-lg text-sm font-medium text-foreground-alt-2 transition-colors select-none hover:cursor-pointer hover:bg-background-primary/25 hover:text-foreground data-selected:bg-background-primary data-selected:text-white';
 
 	const navButtonClass =
-		'inline-flex h-10 flex-row items-center justify-center gap-1 rounded-lg px-2 text-sm font-medium text-text-muted transition-colors select-none hover:cursor-pointer hover:bg-button-primary/25 hover:text-text disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent';
+		'inline-flex h-10 flex-row items-center justify-center gap-1 rounded-lg px-2 text-sm font-medium text-foreground-alt-2 transition-colors select-none hover:cursor-pointer hover:bg-background-primary/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 hover:disabled:bg-transparent';
 </script>
 
 <Pagination.Root {count} {perPage} bind:page class="flex w-full justify-center" {onPageChange}>
@@ -51,7 +51,7 @@
 					<div class="flex items-center gap-2">
 						{#each pages as pageItem (pageItem.key)}
 							{#if pageItem.type === 'ellipsis'}
-								<div class="px-1 text-sm font-medium text-text-muted select-none">…</div>
+								<div class="px-1 text-sm font-medium text-foreground-alt-2 select-none">…</div>
 							{:else}
 								<Pagination.Page page={pageItem} class={pageButtonClass}>
 									{pageItem.value}
@@ -96,7 +96,7 @@
 
 				<p
 					class={cn(
-						'flex min-w-0 items-center text-sm whitespace-nowrap text-text-muted',
+						'flex min-w-0 items-center text-sm whitespace-nowrap text-foreground-alt-2',
 						showPerPageSelect ? 'justify-end text-end' : 'justify-center text-center'
 					)}
 				>

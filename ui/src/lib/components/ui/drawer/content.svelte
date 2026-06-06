@@ -29,7 +29,7 @@
 		bind:ref
 		data-slot="drawer-content"
 		class={cn(
-			'group/drawer-content fixed z-50 flex w-full max-w-md flex-col border-border bg-bg',
+			'group/drawer-content fixed z-50 flex w-full max-w-md flex-col border-foreground-alt-4 bg-background',
 			'data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:left-1/2 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh] data-[vaul-drawer-direction=bottom]:-translate-x-1/2 data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t',
 			containerClass
 		)}
@@ -37,7 +37,7 @@
 	>
 		<div
 			class={cn(
-				'mx-auto mt-2 mb-2 h-1.5 w-[100px] shrink-0 rounded-full bg-border group-data-[vaul-drawer-direction=bottom]/drawer-content:block',
+				'mx-auto mt-2 mb-2 h-1.5 w-[100px] shrink-0 rounded-full bg-foreground-alt-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:block',
 				handleClass
 			)}
 		></div>

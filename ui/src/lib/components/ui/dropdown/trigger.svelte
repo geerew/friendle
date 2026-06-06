@@ -15,7 +15,7 @@
 <DropdownMenu.Trigger
 	bind:ref
 	class={cn(
-		'inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded text-text-muted transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-50',
+		'inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded text-foreground-alt-2 transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50',
 		containerClass
 	)}
 	{...restProps}

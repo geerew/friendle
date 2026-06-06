@@ -30,13 +30,13 @@
 				value={item.value}
 				disabled={item.disabled}
 				class={cn(
-					'size-5 shrink-0 cursor-pointer rounded-full border border-border bg-bg-secondary transition-colors hover:border-text-muted data-[state=checked]:border-button-primary data-[state=checked]:border-[6px] data-disabled:cursor-not-allowed data-disabled:opacity-50',
+					'size-5 shrink-0 cursor-pointer rounded-full border border-foreground-alt-4 bg-background-alt-1 transition-colors hover:border-foreground-alt-3 data-[state=checked]:border-background-primary data-[state=checked]:border-[6px] data-disabled:cursor-not-allowed data-disabled:opacity-50',
 					itemClass
 				)}
 			/>
 			<Label.Root
 				for={id}
-				class={cn('cursor-pointer ps-3 text-sm text-text', labelClass)}
+				class={cn('cursor-pointer ps-3 text-sm text-foreground', labelClass)}
 			>
 				{item.label}
 			</Label.Root>

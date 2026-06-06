@@ -1,55 +1,72 @@
 @import 'tailwindcss';
 
-:root {
-	--header-height: 4rem;
-	
-	--bg: #121213;
-	--bg-secondary: #1a1a1b;
-	--text: #ffffff;
-	--text-secondary: #d1d2d3;
-	--text-muted: #818384;
-	--tile-empty: #3a3a3c;
-	--tile-correct: #538d4e;
-	--tile-present: #b59f3b;
-	--tile-absent: #565758;
-	--key-bg: #818384;
-	--key-correct: #538d4e;
-	--key-present: #b59f3b;
-	--key-absent: #3a3a3c;
-	--border: #3a3a3c;
-	--button-primary: #538d4e;
-	--button-secondary: #565758;
-	--error: #ff4444;
-	--error-fg: hsl(5, 70%, 45%);
-	--error-bg: hsl(5, 100%, 21%);
-	--error-bg-hover: hsl(5, 100%, 25%);
+@layer base {
+	@font-face {
+		font-family: 'Inter Variable';
+		src:
+			local('Inter Variable'),
+			local('Inter-Variable'),
+			local('inter variable'),
+			local('inter-variable'),
+			url('/fonts/InterVariable.woff2') format('woff2');
+		font-weight: normal;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Inter Variable';
+		src:
+			local('Inter Variable'),
+			local('Inter-Variable'),
+			local('inter variable'),
+			local('inter-variable'),
+			url('/fonts/InterVariable-Italic.woff2') format('woff2');
+		font-weight: normal;
+		font-style: italic;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Anton';
+		src:
+			local('Anton'),
+			local('Anton Regular'),
+			url('/fonts/Anton.woff2') format('woff2');
+		font-weight: normal;
+		font-style: normal;
+		font-display: swap;
+	}
+}
+
+@theme inline {
+	--font-sans: 'Inter Variable', 'sans-serif';
+	--font-sans--font-feature-settings: 'cv11';
+	--font-anton: 'Anton', 'sans-serif';
 }
 
 @theme {
-	--color-bg: var(--bg);
-	--color-bg-secondary: var(--bg-secondary);
-	--color-text: var(--text);
-	--color-text-secondary: var(--text-secondary);
-	--color-text-muted: var(--text-muted);
-	--color-tile-empty: var(--tile-empty);
-	--color-tile-correct: var(--tile-correct);
-	--color-tile-present: var(--tile-present);
-	--color-tile-absent: var(--tile-absent);
-	--color-key-bg: var(--key-bg);
-	--color-key-correct: var(--key-correct);
-	--color-key-present: var(--key-present);
-	--color-key-absent: var(--key-absent);
-	--color-border: var(--border);
-	--color-button-primary: var(--button-primary);
-	--color-button-secondary: var(--button-secondary);
-	--color-error: var(--error);
-	--color-error-fg: var(--error-fg);
-	--color-error-bg: var(--error-bg);
-	--color-error-bg-hover: var(--error-bg-hover);
+	--color-background: hsl(240, 3%, 7%);
+	--color-background-alt-1: hsl(240, 2%, 10%);
+	--color-background-alt-2: hsl(240, 2%, 23%);
+	--color-background-alt-3: hsl(210, 1%, 34%);
+	--color-background-primary: hsl(115, 29%, 43%);
+	--color-background-primary-alt-1: hsl(115, 29%, 36%);
+	--color-background-primary-alt-2: hsl(115, 29%, 29%);
+	--color-background-error: hsl(5, 100%, 21%);
+	--color-background-error-alt-1: hsl(5, 100%, 25%);
+
+	--color-foreground: hsl(210, 2%, 82%);
+	--color-foreground-alt-1: hsl(205, 2%, 67%);
+	--color-foreground-alt-2: hsl(200, 1%, 51%);
+	--color-foreground-alt-3: hsl(210, 1%, 38%);
+	--color-foreground-alt-4: hsl(240, 2%, 23%);
+	--color-foreground-error: hsl(0, 100%, 63%);
+	--color-foreground-error-alt-1: hsl(5, 70%, 45%);
+
+	--header-height: 4rem;
 
 	--animate-bounce-dot: bounce-dot 0.55s ease-in-out infinite;
-	--animate-shake: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-	--animate-pop: pop 0.1s ease-in-out;
 
 	@keyframes bounce-dot {
 		0%,
@@ -60,51 +77,11 @@
 			transform: translateY(-75%);
 		}
 	}
-
-	@keyframes shake {
-		10%,
-		90% {
-			transform: translate3d(-1px, 0, 0);
-		}
-		20%,
-		80% {
-			transform: translate3d(2px, 0, 0);
-		}
-		30%,
-		50%,
-		70% {
-			transform: translate3d(-4px, 0, 0);
-		}
-		40%,
-		60% {
-			transform: translate3d(4px, 0, 0);
-		}
-	}
-
-	@keyframes pop {
-		0% {
-			transform: scale(1);
-		}
-		50% {
-			transform: scale(1.1);
-		}
-		100% {
-			transform: scale(1);
-		}
-	}
 }
 
 @layer base {
 	body {
-		background-color: var(--bg);
-		color: var(--text);
-		font-family:
-			system-ui,
-			-apple-system,
-			BlinkMacSystemFont,
-			'Segoe UI',
-			sans-serif;
-		min-height: 100dvh;
+		@apply min-h-dvh bg-background font-sans text-foreground;
 	}
 
 	input,
@@ -128,7 +105,7 @@
 	}
 
 	.app-header {
-		@apply sticky top-0 z-10 shrink-0 border-b border-border bg-bg;
+		@apply sticky top-0 z-10 shrink-0 border-b border-foreground-alt-4 bg-background;
 		height: var(--header-height);
 	}
 
@@ -137,10 +114,10 @@
 	}
 
 	.field {
-		@apply w-full rounded border border-border bg-bg-secondary px-3 py-3 text-text outline-none focus-visible:ring-2 focus-visible:ring-tile-correct;
+		@apply w-full rounded border border-foreground-alt-4 bg-background-alt-1 px-3 py-3 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-background-primary;
 	}
 
 	.section-title {
-		@apply text-sm font-semibold tracking-wide text-text-muted uppercase;
+		@apply text-sm font-semibold tracking-wide text-foreground-alt-2 uppercase;
 	}
 }

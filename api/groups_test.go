@@ -124,3 +124,59 @@ func TestGroups_Create(t *testing.T) {
 		require.Contains(t, string(body), "Unauthorized")
 	})
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestGroups_Get exercises fetching a single group
+func TestGroups_Get(t *testing.T) {
+	// Test successfully fetching a group the caller belongs to
+	t.Run("200 (found)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var created service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &created))
+
+		req = httptest.NewRequest(http.MethodGet, "/api/groups/"+created.ID, nil)
+
+		status, body, err = requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var resp service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, created.ID, resp.ID)
+		require.Equal(t, "Friends", resp.Name)
+		require.Empty(t, resp.CreatedBy)
+	})
+
+	// Test error due to a non-existent group
+	t.Run("404 (not found)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/missing-group-id", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(body), "Group not found")
+	})
+
+	// Test error due to missing authentication
+	t.Run("401 (unauthorized)", func(t *testing.T) {
+		router, _, _ := setup(t, "", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/some-id", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusUnauthorized, status)
+		require.Contains(t, string(body), "Unauthorized")
+	})
+}

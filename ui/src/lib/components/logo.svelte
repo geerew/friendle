@@ -14,9 +14,9 @@
 		cn(
 			variant === 'header'
 				? href
-					? 'truncate text-sm font-semibold tracking-[0.18em] text-text-muted uppercase no-underline transition-colors hover:text-text'
-					: 'truncate cursor-default select-none text-sm font-semibold tracking-[0.18em] text-text-muted uppercase'
-				: 'font-[Anton,sans-serif] text-4xl font-normal tracking-[0.2em] uppercase text-text no-underline',
+					? 'truncate text-sm font-semibold tracking-[0.18em] text-foreground-alt-2 uppercase no-underline transition-colors hover:text-foreground'
+					: 'truncate cursor-default select-none text-sm font-semibold tracking-[0.18em] text-foreground-alt-2 uppercase'
+				: 'font-anton text-4xl font-normal tracking-[0.2em] uppercase text-foreground no-underline',
 			className
 		)
 	);

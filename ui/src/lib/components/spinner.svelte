@@ -8,7 +8,7 @@
 	let { class: className = '' }: Props = $props();
 
 	const dotClass = $derived(
-		cn('animate-bounce-dot size-[2.5em] rounded-full bg-button-primary', className)
+		cn('animate-bounce-dot size-[2.5em] rounded-full bg-background-primary', className)
 	);
 </script>
 

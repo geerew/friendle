@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { createGroup } from '$lib/api/groups-api';
-	import { AppShell, Spinner } from '$lib/components';
+	import { AppShell } from '$lib/components';
 	import { Button, Field, Input } from '$lib/components/ui';
 	import { apiErrorMessage } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
@@ -45,12 +45,8 @@
 	<form class="flex flex-col gap-4" onsubmit={handleCreate}>
 		<Input bind:value={name} placeholder="Group Name" autofocus required />
 
-		<Button type="submit" variant="primary" class="h-10" disabled={!canSubmit}>
-			{#if submitting}
-				<Spinner class="size-2 bg-white/70" />
-			{:else}
-				Create Group
-			{/if}
+		<Button type="submit" variant="primary" disabled={!canSubmit} loading={submitting}>
+			Create Group
 		</Button>
 	</form>
 </AppShell>

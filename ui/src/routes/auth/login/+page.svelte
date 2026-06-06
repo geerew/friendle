@@ -6,6 +6,8 @@
 	import { AuthHeader } from '$lib/components';
 	import { Button, Field, Input } from '$lib/components/ui';
 
+	const minLoadingMs = 150;
+
 	let username = $state('');
 	let password = $state('');
 	let signupEnabled = $state(false);
@@ -32,8 +34,13 @@
 		error = null;
 
 		try {
-			const user = await login({ username, password });
+			const [user] = await Promise.all([
+				login({ username, password }),
+				new Promise<void>((resolve) => setTimeout(resolve, minLoadingMs))
+			]);
+
 			auth.setUser(user);
+
 			await goto('/');
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Login failed';
@@ -43,34 +50,36 @@
 	}
 </script>
 
-<div class="app-shell page-content justify-center gap-6 py-10">
+<div class="app-shell page-content justify-center gap-10 py-10">
 	<AuthHeader subtitle="Sign in to your account" />
 
 	{#if loading}
-		<p class="text-center text-sm text-text-muted">Loading…</p>
+		<p class="text-foreground-alt-2 text-center text-sm">Loading…</p>
 	{:else}
-		<form class="flex flex-col gap-4" onsubmit={handleSubmit}>
-			<Field label="Username">
-				<Input bind:value={username} autocomplete="username" required />
-			</Field>
+		<form class="flex flex-col gap-8" onsubmit={handleSubmit}>
+			<div class="flex flex-col gap-4">
+				<Field label="Username">
+					<Input bind:value={username} autocomplete="username" required />
+				</Field>
 
-			<Field label="Password">
-				<Input password bind:value={password} autocomplete="current-password" required />
-			</Field>
+				<Field label="Password">
+					<Input password bind:value={password} autocomplete="current-password" required />
+				</Field>
 
-			{#if error}
-				<p class="text-sm text-error">{error}</p>
-			{/if}
+				{#if error}
+					<p class="text-foreground-error text-sm">{error}</p>
+				{/if}
+			</div>
 
-			<Button type="submit" variant="primary" disabled={submitting}>
-				{submitting ? 'Signing in…' : 'Sign in'}
+			<Button type="submit" variant="primary" loading={submitting}>
+				Sign in
 			</Button>
 		</form>
 
 		{#if signupEnabled}
-			<p class="text-center text-sm text-text-muted">
+			<p class="text-foreground-alt-2 text-center text-sm">
 				No account?
-				<a href="/auth/register/" class="text-tile-correct">Register</a>
+				<a href="/auth/register/" class="text-background-primary">Register</a>
 			</p>
 		{/if}
 	{/if}

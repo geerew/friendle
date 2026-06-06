@@ -4,7 +4,6 @@
 
 	type Props = {
 		submitLabel: string;
-		submittingLabel: string;
 		error?: string | null;
 		submitting?: boolean;
 		onsubmit: (data: { username: string; password: string }) => void | Promise<void>;
@@ -12,7 +11,6 @@
 
 	let {
 		submitLabel,
-		submittingLabel,
 		error = $bindable<string | null>(null),
 		submitting = false,
 		onsubmit
@@ -82,18 +80,18 @@
 	</Field>
 
 	{#if passwordTooShortError}
-		<p class="text-sm text-error">Password must be at least 8 characters</p>
+		<p class="text-sm text-foreground-error">Password must be at least 8 characters</p>
 	{/if}
 
 	{#if passwordMismatchError}
-		<p class="text-sm text-error">Passwords do not match</p>
+		<p class="text-sm text-foreground-error">Passwords do not match</p>
 	{/if}
 
 	{#if error}
-		<p class="text-sm text-error">{error}</p>
+		<p class="text-sm text-foreground-error">{error}</p>
 	{/if}
 
-	<Button type="submit" variant="primary" disabled={submitting}>
-		{submitting ? submittingLabel : submitLabel}
+	<Button type="submit" variant="primary" loading={submitting}>
+		{submitLabel}
 	</Button>
 </form>

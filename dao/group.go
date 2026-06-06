@@ -64,6 +64,18 @@ func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Grou
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GetGroup returns a group record
+func (dao *DAO) GetGroup(ctx context.Context, dbOpts *Options) (*models.Group, error) {
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithColumns(models.GroupColumns()...).
+		SetDbOpts(dbOpts).
+		WithLimit(1)
+
+	return getGeneric[models.Group](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // MemberGroupsWhere builds a WHERE clause for groups the user belongs to
 func MemberGroupsWhere(userID string) (squirrel.Sqlizer, error) {
 	subSQL, subArgs, err := squirrel.Select(models.GROUP_MEMBER_GROUP_ID).

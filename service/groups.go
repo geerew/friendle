@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils/pagination"
@@ -116,6 +117,37 @@ func (g *Groups) ListSelfGroups(ctx context.Context, page *pagination.Pagination
 	}
 
 	return groupsResponseBuilder(groups, false), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetGroup returns a group the authenticated user belongs to
+func (g *Groups) GetGroup(ctx context.Context, groupID string) (*GroupResponse, error) {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	memberWhere, err := dao.MemberGroupsWhere(principal.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	where := squirrel.And{
+		squirrel.Eq{models.GROUP_TABLE_ID: groupID},
+		memberWhere,
+	}
+
+	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(where))
+	if err != nil {
+		return nil, err
+	}
+
+	if group == nil {
+		return nil, ErrGroupNotFound
+	}
+
+	return groupResponseBuilder(group, false), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

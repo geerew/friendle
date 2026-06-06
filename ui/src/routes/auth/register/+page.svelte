@@ -29,14 +29,13 @@
 
 	<AuthRegisterForm
 		submitLabel="Register"
-		submittingLabel="Creating…"
 		bind:error
 		{submitting}
 		onsubmit={handleSubmit}
 	/>
 
-	<p class="text-center text-sm text-text-muted">
+	<p class="text-center text-sm text-foreground-alt-2">
 		Already have an account?
-		<a href="/auth/login/" class="text-tile-correct">Sign in</a>
+		<a href="/auth/login/" class="text-background-primary">Sign in</a>
 	</p>
 </div>

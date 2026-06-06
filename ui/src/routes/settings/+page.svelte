@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { deleteMe, updateMe } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
-	import { AppShell, Spinner } from '$lib/components';
+	import { AppShell } from '$lib/components';
 	import EditableSection from '$lib/components/pages/settings/editable-section.svelte';
 	import { Button, DestroyDialog, Input, Separator } from '$lib/components/ui';
 	import { apiErrorMessage } from '$lib/utils';
@@ -177,14 +177,11 @@
 	<Button
 		type="submit"
 		variant="primary"
-		class="h-10 w-auto min-w-16 self-start px-5 text-xs"
+		class="w-auto min-w-16 self-start px-5 text-xs"
 		disabled={!canSave}
+		{loading}
 	>
-		{#if loading}
-			<Spinner class="size-2 bg-white/70" />
-		{:else}
-			Save
-		{/if}
+		Save
 	</Button>
 {/snippet}
 
@@ -193,7 +190,7 @@
 		<div class="flex flex-col gap-5">
 			<section class="flex flex-col gap-3">
 				<h2 class="section-title">Username</h2>
-				<p class="text-button-primary text-2xl">{auth.user.username}</p>
+				<p class="text-background-primary text-2xl">{auth.user.username}</p>
 			</section>
 
 			<Separator />
@@ -217,7 +214,7 @@
 						{@render saveButton(savingDisplayName, canSaveDisplayName)}
 					</form>
 				{:else}
-					<p class="text-button-primary text-2xl">{auth.user.displayName}</p>
+					<p class="text-background-primary text-2xl">{auth.user.displayName}</p>
 				{/if}
 			</EditableSection>
 
@@ -239,7 +236,7 @@
 						}}
 					>
 						<label class="flex flex-col gap-2">
-							<span class="text-text-muted text-sm">Current password</span>
+							<span class="text-foreground-alt-2 text-sm">Current password</span>
 							<Input
 								password
 								bind:value={currentPassword}
@@ -249,7 +246,7 @@
 							/>
 						</label>
 						<label class="flex flex-col gap-2">
-							<span class="text-text-muted text-sm">New password</span>
+							<span class="text-foreground-alt-2 text-sm">New password</span>
 							<Input
 								password
 								bind:value={newPassword}
@@ -258,7 +255,7 @@
 							/>
 						</label>
 						<label class="flex flex-col gap-2">
-							<span class="text-text-muted text-sm">Confirm password</span>
+							<span class="text-foreground-alt-2 text-sm">Confirm password</span>
 							<Input
 								password
 								bind:value={confirmPassword}
@@ -286,7 +283,7 @@
 				{#if deletingAccount}
 					<div class="flex flex-col gap-3">
 						<label class="flex flex-col gap-2">
-							<span class="text-text-muted text-sm">Current password</span>
+							<span class="text-foreground-alt-2 text-sm">Current password</span>
 							<Input
 								password
 								bind:value={deletePassword}

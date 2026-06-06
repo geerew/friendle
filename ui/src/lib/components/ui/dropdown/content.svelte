@@ -25,7 +25,7 @@
 		align="end"
 		sideOffset={4}
 		class={cn(
-			'z-50 flex min-w-36 flex-col gap-1 rounded-md border border-border bg-bg-secondary p-1.5 text-sm shadow-lg outline-none select-none',
+			'z-50 flex min-w-36 flex-col gap-1 rounded-md border border-foreground-alt-4 bg-background-alt-1 p-1.5 text-sm shadow-lg outline-none select-none',
 			containerClass
 		)}
 		{...restProps}

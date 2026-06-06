@@ -118,6 +118,34 @@ func Test_CreateGroupMember(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_GetGroup(t *testing.T) {
+	// Test successfully retrieving a group record
+	t.Run("success", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		group := &models.Group{Name: "Friends", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		dbOpts := NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID})
+		record, err := dao.GetGroup(ctx, dbOpts)
+		require.NoError(t, err)
+		require.Equal(t, group.ID, record.ID)
+		require.Equal(t, "Friends", record.Name)
+	})
+
+	// Test no error when retrieving a non-existent group record
+	t.Run("not found", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		record, err := dao.GetGroup(ctx, NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: "missing"}))
+		require.NoError(t, err)
+		require.Nil(t, record)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func Test_ListGroups(t *testing.T) {
 	// Test successfully listing groups for a member
 	t.Run("member groups", func(t *testing.T) {
