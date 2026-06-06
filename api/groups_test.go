@@ -318,7 +318,7 @@ func TestGroups_Search(t *testing.T) {
 		other := &models.Group{Name: "Work", CreatedBy: "alice"}
 		require.NoError(t, router.appDao.CreateGroup(ctx, other))
 
-		req := httptest.NewRequest(http.MethodGet, "/api/groups/search?q=name:friend", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/search?name=friend", nil)
 
 		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
@@ -330,23 +330,36 @@ func TestGroups_Search(t *testing.T) {
 		require.Equal(t, "Friends", groups[0].Name)
 	})
 
-	// Test error due to missing search query
-	t.Run("400 (missing query)", func(t *testing.T) {
+	// Test prefix matches are ranked before substring matches
+	t.Run("200 (prefix order)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "alice", types.SiteRoleUser)
+
+		for _, name := range []string{"lightening", "ten", "tento", "toten"} {
+			require.NoError(t, router.appDao.CreateGroup(ctx, &models.Group{Name: name, CreatedBy: "alice"}))
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/search?name=ten", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		pResult, groups := unmarshalHelper[service.GroupResponse](t, body)
+		require.Equal(t, 4, pResult.TotalItems)
+		require.Len(t, groups, 4)
+		require.Equal(t, "ten", groups[0].Name)
+		require.Equal(t, "tento", groups[1].Name)
+		require.Equal(t, "lightening", groups[2].Name)
+		require.Equal(t, "toten", groups[3].Name)
+	})
+
+	// Test error due to missing search name
+	t.Run("400 (missing name)", func(t *testing.T) {
 		router, _, _ := setup(t, "alice", types.SiteRoleUser)
 
 		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/search", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
-		require.Contains(t, string(body), "Search query is required")
-	})
-
-	// Test error due to invalid query syntax
-	t.Run("400 (invalid query)", func(t *testing.T) {
-		router, _, _ := setup(t, "alice", types.SiteRoleUser)
-
-		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/search?q=foo:bar", nil))
-		require.NoError(t, err)
-		require.Equal(t, http.StatusBadRequest, status)
-		require.Contains(t, string(body), "Invalid query")
+		require.Contains(t, string(body), "Name is required")
 	})
 }

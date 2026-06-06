@@ -2,26 +2,19 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
-	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/pagination"
-	"github.com/geerew/friendle/utils/queryparser"
 	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-var (
-	groupListApiAllowedFilters = []string{"name"}
-
-	defaultGroupsListOrderBy = []string{models.GROUP_TABLE_NAME + " asc"}
-)
+var defaultGroupsListOrderBy = []string{models.GROUP_TABLE_NAME + " asc"}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -162,25 +155,25 @@ func (g *Groups) ListSelfGroups(ctx context.Context, page *pagination.Pagination
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SearchGroups returns paginated groups matching an API query
-func (g *Groups) SearchGroups(ctx context.Context, page *pagination.Pagination, apiQuery string) ([]*GroupResponse, error) {
+// SearchGroups returns paginated groups whose names contain the search term
+func (g *Groups) SearchGroups(ctx context.Context, page *pagination.Pagination, name string) ([]*GroupResponse, error) {
 	if _, err := principalFromContext(ctx); err != nil {
 		return nil, err
 	}
 
-	if strings.TrimSpace(apiQuery) == "" {
+	name = strings.TrimSpace(name)
+	if name == "" {
 		return nil, ErrGroupSearchQueryRequired
 	}
 
-	where, err := groupsWhereFromApiQuery(apiQuery)
-	if err != nil {
-		return nil, err
-	}
+	lowerName := strings.ToLower(name)
+	whereClause := squirrel.Like{"LOWER(" + models.GROUP_TABLE_NAME + ")": "%" + lowerName + "%"}
+	orderByClause := squirrel.Expr("CASE WHEN "+models.GROUP_TABLE_NAME+" LIKE ? THEN 0 ELSE 1 END, "+models.GROUP_TABLE_NAME+" ASC", lowerName+"%")
 
 	groups, err := g.dao.ListGroups(ctx, dao.NewOptions().
 		WithPagination(page).
-		WithOrderBy(defaultGroupsListOrderBy...).
-		WithWhere(where))
+		WithOrderByClause(orderByClause).
+		WithWhere(whereClause))
 	if err != nil {
 		return nil, err
 	}
@@ -271,59 +264,5 @@ func groupResponseBuilder(group *models.Group) *GroupResponse {
 		Name:        group.Name,
 		CreatedBy:   group.CreatedBy,
 		MemberCount: group.MemberCount,
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// groupsWhereFromApiQuery parses a group list API query into a WHERE clause
-func groupsWhereFromApiQuery(apiQuery string) (squirrel.Sqlizer, error) {
-	parsed, err := queryparser.Parse(apiQuery, groupListApiAllowedFilters)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", utils.ErrApiQueryParse, err)
-	}
-
-	if parsed == nil {
-		return nil, nil
-	}
-
-	return groupsWhereBuilder(parsed.Expr), nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// groupsWhereBuilder builds a squirrel WHERE expression from a queryparser.QueryExpr
-func groupsWhereBuilder(expr queryparser.QueryExpr) squirrel.Sqlizer {
-	switch node := expr.(type) {
-	case *queryparser.FilterExpr:
-		switch node.Key {
-		case "name":
-			pattern := strings.ToLower(strings.TrimSpace(node.Value))
-			pattern = strings.ReplaceAll(pattern, "*", "%")
-
-			if !strings.Contains(pattern, "%") {
-				pattern = "%" + pattern + "%"
-			}
-
-			return squirrel.Like{"LOWER(" + models.GROUP_TABLE_NAME + ")": pattern}
-		default:
-			return nil
-		}
-	case *queryparser.AndExpr:
-		var andSlice []squirrel.Sqlizer
-		for _, child := range node.Children {
-			andSlice = append(andSlice, groupsWhereBuilder(child))
-		}
-
-		return squirrel.And(andSlice)
-	case *queryparser.OrExpr:
-		var orSlice []squirrel.Sqlizer
-		for _, child := range node.Children {
-			orSlice = append(orSlice, groupsWhereBuilder(child))
-		}
-
-		return squirrel.Or(orSlice)
-	default:
-		return nil
 	}
 }

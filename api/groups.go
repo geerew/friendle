@@ -46,7 +46,7 @@ func (r *Router) searchGroups(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	page := paginationFromCtx(c)
-	groups, err := r.appSvc.Groups.SearchGroups(ctx, page, c.Query("q", ""))
+	groups, err := r.appSvc.Groups.SearchGroups(ctx, page, c.Query("name", ""))
 	if err != nil {
 		return serviceError(c, err)
 	}

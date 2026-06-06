@@ -28,5 +28,5 @@ export type ListGroupsParams = PaginationReqParams;
 export type ListSelfGroupsParams = PaginationReqParams;
 
 export type SearchGroupsParams = PaginationReqParams & {
-	q: string;
+	name: string;
 };

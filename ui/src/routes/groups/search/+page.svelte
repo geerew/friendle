@@ -40,10 +40,6 @@
 		void runSearch();
 	});
 
-	function buildApiQuery(term: string): string {
-		return `name:${term.includes(' ') ? `"${term.replaceAll('"', '\\"')}"` : term}`;
-	}
-
 	async function runSearch(): Promise<void> {
 		if (!searchQuery) {
 			groups = [];
@@ -61,10 +57,10 @@
 		try {
 			const data = await withMinLoadingDelay(
 				searchGroups({
-					q: buildApiQuery(searchQuery),
+					name: searchQuery,
 					page,
 					perPage
-				}), 2000
+				})
 			);
 
 			if (requestId !== searchRequestId) {
