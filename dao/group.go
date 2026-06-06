@@ -118,6 +118,24 @@ func (dao *DAO) GetGroup(ctx context.Context, dbOpts *Options) (*models.Group, e
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// DeleteGroups deletes group records
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteGroups(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
+		return utils.ErrWhere
+	}
+
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).SetDbOpts(dbOpts)
+	sqlStr, args, _ := deleteBuilder(*builderOpts)
+
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
+
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // MemberGroupsWhere builds a WHERE clause for groups the user belongs to
 func MemberGroupsWhere(userID string) (squirrel.Sqlizer, error) {
 	subSQL, subArgs, err := squirrel.Select(models.GROUP_MEMBER_GROUP_ID).

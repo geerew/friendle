@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { listUsers } from '$lib/api/admin-api';
-	import { AppShell, DeleteUser, ListRow, Pagination } from '$lib/components';
-	import { Button } from '$lib/components/ui';
-	import { formatSiteRole, type AdminUserModel } from '$lib/models/admin-user-model';
+	import { AppShell, DeleteUser, Pagination, Spinner } from '$lib/components';
+	import { AdminUserList } from '$lib/components/pages';
+	import { Button, Separator } from '$lib/components/ui';
+	import type { AdminUserModel } from '$lib/models/admin-user-model';
+	import { withMinLoadingDelay } from '$lib/utils';
 
 	let users = $state<AdminUserModel[]>([]);
 	let page = $state(1);
@@ -25,7 +27,7 @@
 		error = null;
 
 		try {
-			const data = await listUsers({ page, perPage });
+			const data = await withMinLoadingDelay(listUsers({ page, perPage }), 2000);
 			users = data.items;
 			totalItems = data.totalItems;
 		} catch (err) {
@@ -57,42 +59,30 @@
 	}
 </script>
 
-<AppShell
-	breadcrumb={[
-		{ label: 'Admin', href: '/admin/' },
-		{ label: 'Users' }
-	]}
->
+<AppShell breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Users' }]}>
 	<div class="flex flex-col gap-6">
-		<Button href="/admin/users/add/" variant="primary" class="w-1/2">+ Add User</Button>
+		<Button href="/admin/users/add/" variant="primary" class="w-auto self-start px-6"
+			>Add User</Button
+		>
 
-		<hr class="border-0 border-t border-foreground-alt-4" />
+		<Separator />
 
 		{#if loading}
-			<p class="text-foreground-alt-2">Loading…</p>
+			<div class="flex min-h-24 items-center justify-center">
+				<Spinner class="bg-foreground-alt-2 size-3" />
+			</div>
 		{:else}
 			{#if error}
-				<p class="text-sm text-foreground-error">{error}</p>
+				<p class="text-foreground-error text-sm">{error}</p>
 			{/if}
 
-			<div class="flex flex-col gap-3">
-				{#if users.length === 0}
-					<p class="text-sm text-foreground-alt-2">No users.</p>
-				{:else}
-					{#each users as user (user.id)}
-						<ListRow
-							title={user.displayName}
-							subtitle="{user.username} · {formatSiteRole(user.siteRole)}"
-						>
-							{#snippet trailing()}
-								<Button variant="destructive" size="inline" onclick={() => openDeleteUser(user)}>
-									Delete
-								</Button>
-							{/snippet}
-						</ListRow>
-					{/each}
-				{/if}
-			</div>
+			{#if users.length === 0}
+				<p class="text-foreground-alt-2 text-sm italic">No users</p>
+			{:else}
+				<div class="px-2">
+					<AdminUserList {users} onDelete={openDeleteUser} />
+				</div>
+			{/if}
 
 			<Pagination
 				count={totalItems}

@@ -4,7 +4,8 @@
 </script>
 
 <AppShell title="Admin">
-	<div class="flex flex-col gap-2">
-		<Button href="/admin/users/">Users</Button>
+	<div class="flex flex-col gap-3">
+		<Button href="/admin/users/" variant="secondary">Users</Button>
+		<Button href="/admin/groups/" variant="secondary">Groups</Button>
 	</div>
 </AppShell>

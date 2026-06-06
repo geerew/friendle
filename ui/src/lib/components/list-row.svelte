@@ -7,10 +7,11 @@
 		onclick?: () => void;
 		title: string;
 		subtitle?: string;
+		meta?: Snippet;
 		trailing?: Snippet;
 	};
 
-	let { href, onclick, title, subtitle, trailing }: Props = $props();
+	let { href, onclick, title, subtitle, meta, trailing }: Props = $props();
 
 	const interactive =
 		'flex w-full cursor-pointer items-center gap-3 rounded border border-foreground-alt-4 bg-background-alt-1 px-4 py-3 text-left transition-colors hover:border-foreground-alt-3';
@@ -22,7 +23,9 @@
 {#snippet content()}
 	<div class="flex min-w-0 flex-1 flex-col gap-1">
 		<div class="truncate font-semibold">{title}</div>
-		{#if subtitle}
+		{#if meta}
+			<div class="flex min-w-0 flex-wrap items-center gap-2">{@render meta()}</div>
+		{:else if subtitle}
 			<div class="truncate text-sm text-foreground-alt-2">{subtitle}</div>
 		{/if}
 	</div>

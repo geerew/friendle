@@ -14,6 +14,10 @@ export function formatSiteRole(role: SiteRole): string {
 	return SelectSiteRoles.find((item) => item.value === role)?.label ?? role;
 }
 
+export function siteRoleBadgeLabel(role: SiteRole): string {
+	return role === 'site_admin' ? 'admin' : 'user';
+}
+
 export const AdminUserSchema = object({
 	id: string(),
 	username: string(),

@@ -56,7 +56,7 @@
 			<Dialog.CloseButton class="text-xs" disabled={loading}>{cancelLabel}</Dialog.CloseButton>
 			<Button
 				variant="destructive"
-				class="w-36 text-xs"
+				class="w-28 text-xs"
 				{disabled}
 				{loading}
 				onclick={handleConfirm}

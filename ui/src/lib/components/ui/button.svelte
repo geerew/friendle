@@ -48,12 +48,12 @@
 			case 'primary':
 				return 'bg-background-primary text-white enabled:hover:brightness-110';
 			case 'secondary':
-				return 'bg-background-alt-3 text-white enabled:hover:brightness-110';
+				return 'bg-background-alt-3 text-foreground enabled:hover:brightness-110';
 			case 'ghost':
 				return 'bg-transparent text-foreground-alt-2 enabled:hover:text-foreground';
 			case 'destructive':
 				if (size === 'inline') {
-					return 'bg-transparent text-foreground-error enabled:hover:bg-background-error enabled:hover:text-foreground';
+					return 'bg-transparent text-foreground-error-alt-1 enabled:hover:bg-background-error enabled:hover:text-foreground';
 				}
 
 				return 'bg-background-error text-foreground enabled:hover:bg-background-error-alt-1';

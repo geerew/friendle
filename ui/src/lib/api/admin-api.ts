@@ -10,7 +10,7 @@ import {
 
 export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
-	const response = await apiFetch('/api/admin/users' + (qs ? `?${qs}` : ''));
+	const response = await apiFetch('/api/admin/users/' + (qs ? `?${qs}` : ''));
 
 	if (response.ok) {
 		const data = await response.json();
@@ -28,7 +28,7 @@ export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserP
 }
 
 export async function createUser(data: AdminUserCreateModel): Promise<void> {
-	const response = await apiFetch('/api/admin/users', {
+	const response = await apiFetch('/api/admin/users/', {
 		method: 'POST',
 		body: JSON.stringify(data)
 	});
@@ -42,7 +42,7 @@ export async function createUser(data: AdminUserCreateModel): Promise<void> {
 }
 
 export async function deleteUser(userId: string): Promise<void> {
-	const response = await apiFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+	const response = await apiFetch(`/api/admin/users/${userId}/`, { method: 'DELETE' });
 
 	if (response.ok || response.status === 204) {
 		return;

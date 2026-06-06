@@ -5,6 +5,7 @@ export { default as LeftChevronIcon } from './left-chevron.svelte';
 export { default as PlusIcon } from './plus.svelte';
 export { default as RightChevronIcon } from './right-chevron.svelte';
 export { default as SettingsIcon } from './settings.svelte';
+export { default as ShieldUserIcon } from './shield-user.svelte';
 export { default as SortAscendingIcon } from './sort-ascending.svelte';
 export { default as SortDescendingIcon } from './sort-descending.svelte';
 export { default as TrashIcon } from './trash.svelte';
