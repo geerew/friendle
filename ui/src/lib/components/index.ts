@@ -1,12 +1,12 @@
 export { default as AppShell } from './app-shell.svelte';
 export { default as Breadcrumb, type BreadcrumbItem } from './breadcrumb.svelte';
-export { default as AuthHeader } from './auth-header.svelte';
-export { default as AuthRegisterForm } from './auth-register-form.svelte';
-export { DeleteUser } from './dialogs';
 export { default as ListRow } from './list-row.svelte';
+export { default as Logo } from './logo.svelte';
 export { default as Pagination } from './pagination.svelte';
 export { default as SortMenu } from './sort-menu.svelte';
 export { default as Spinner } from './spinner.svelte';
-export { default as Logo } from './logo.svelte';
+
+export * from './pages';
+export * from './dialogs';
 export * from './icons';
 export * from './ui';

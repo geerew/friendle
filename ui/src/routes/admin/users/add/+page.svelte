@@ -5,7 +5,7 @@
 	import { AppShell } from '$lib/components';
 	import { Button, Field, Input, RadioGroup } from '$lib/components/ui';
 	import { SelectSiteRoles, type SiteRole } from '$lib/models/admin-user-model';
-	import { isPasswordFieldError } from '$lib/utils';
+	import { isPasswordFieldError, withMinLoadingDelay } from '$lib/utils';
 
 	const minPasswordLength = 8;
 
@@ -77,12 +77,14 @@
 		submitting = true;
 
 		try {
-			await createUser({
-				username,
-				displayName,
-				password,
-				siteRole
-			});
+			await withMinLoadingDelay(
+				createUser({
+					username,
+					displayName,
+					password,
+					siteRole
+				})
+			);
 			await goto('/admin/users/');
 		} catch (err) {
 			error = err instanceof ApiError ? err.message : 'Failed to create user';

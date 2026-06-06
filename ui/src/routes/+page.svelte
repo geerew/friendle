@@ -6,9 +6,9 @@
 	import { RightChevronIcon } from '$lib/components/icons';
 	import { Button, Separator } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
+	import { withMinLoadingDelay } from '$lib/utils';
 
 	const groupsPerPage = 5;
-	const minLoadingMs = 150;
 
 	let groups = $state<GroupModel[]>([]);
 	let page = $state(1);
@@ -42,10 +42,9 @@
 		error = null;
 
 		try {
-			const [data] = await Promise.all([
-				listSelfGroups({ page, perPage: groupsPerPage }),
-				new Promise<void>((resolve) => setTimeout(resolve, minLoadingMs))
-			]);
+			const data = await withMinLoadingDelay(
+				listSelfGroups({ page, perPage: groupsPerPage })
+			);
 
 			if (id !== requestId) {
 				return;

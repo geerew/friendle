@@ -2,10 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { deleteMe, updateMe } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
-	import { AppShell } from '$lib/components';
-	import EditableSection from '$lib/components/pages/settings/editable-section.svelte';
+	import { AppShell, EditableSection } from '$lib/components';
 	import { Button, DestroyDialog, Input, Separator } from '$lib/components/ui';
-	import { apiErrorMessage } from '$lib/utils';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
 	const minPasswordLength = 8;
@@ -68,7 +67,7 @@
 		savingDisplayName = true;
 
 		try {
-			const user = await updateMe({ displayName: trimmed });
+			const user = await withMinLoadingDelay(updateMe({ displayName: trimmed }));
 			auth.setUser(user);
 			closeDisplayNameEdit();
 			toast.success('Display name updated');
@@ -121,7 +120,7 @@
 		savingPassword = true;
 
 		try {
-			await updateMe({ currentPassword, password: newPassword });
+			await withMinLoadingDelay(updateMe({ currentPassword, password: newPassword }));
 			closePasswordEdit();
 			toast.success('Password updated');
 		} catch (err) {
@@ -160,7 +159,7 @@
 		deleting = true;
 
 		try {
-			await deleteMe({ currentPassword: deletePassword });
+			await withMinLoadingDelay(deleteMe({ currentPassword: deletePassword }));
 			deleteConfirmOpen = false;
 			closeDeleteAccount();
 			auth.clear();

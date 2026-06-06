@@ -3,6 +3,7 @@
 	import { deleteUser } from '$lib/api/admin-api';
 	import { Button, Drawer } from '$lib/components/ui';
 	import type { AdminUserModel } from '$lib/models/admin-user-model';
+	import { withMinLoadingDelay } from '$lib/utils';
 
 	type Props = {
 		open?: boolean;
@@ -27,7 +28,7 @@
 		isPosting = true;
 
 		try {
-			await deleteUser(user.id);
+			await withMinLoadingDelay(deleteUser(user.id));
 			open = false;
 			onSuccess?.();
 		} catch (err) {

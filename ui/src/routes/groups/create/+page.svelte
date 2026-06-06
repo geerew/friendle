@@ -3,7 +3,7 @@
 	import { createGroup } from '$lib/api/groups-api';
 	import { AppShell } from '$lib/components';
 	import { Button, Field, Input } from '$lib/components/ui';
-	import { apiErrorMessage } from '$lib/utils';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
 	const maxGroupNameLength = 64;
@@ -30,7 +30,7 @@
 		submitting = true;
 
 		try {
-			await createGroup({ name: trimmed });
+			await withMinLoadingDelay(createGroup({ name: trimmed }));
 			toast.success('Group created');
 			await goto('/');
 		} catch (err) {

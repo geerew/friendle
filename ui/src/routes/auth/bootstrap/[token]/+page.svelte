@@ -5,6 +5,7 @@
 	import { bootstrap } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
 	import { AuthHeader, AuthRegisterForm } from '$lib/components';
+	import { withMinLoadingDelay } from '$lib/utils';
 
 	const token = $derived(page.params.token ?? '');
 
@@ -16,7 +17,8 @@
 		error = null;
 
 		try {
-			const user = await bootstrap(token, data);
+			const user = await withMinLoadingDelay(bootstrap(token, data));
+
 			auth.setUser(user);
 			await goto('/');
 		} catch (err) {
@@ -27,7 +29,7 @@
 	}
 </script>
 
-<div class="app-shell page-content justify-center gap-6 py-10">
+<div class="app-shell page-content justify-center gap-10 py-10">
 	<AuthHeader subtitle="Create the first administrator account" />
 
 	<AuthRegisterForm
