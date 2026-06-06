@@ -90,7 +90,7 @@
 		<button
 			type="button"
 			class={cn(
-				'bg-background/70 fixed inset-0 z-9 transition-opacity duration-200 ease-out',
+				'bg-background/70 fixed inset-0 z-9 !cursor-default transition-opacity duration-200 ease-out',
 				navOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
 			)}
 			aria-label="Close menu"
@@ -138,9 +138,9 @@
 
 			{#if showMenu}
 				<Collapsible.Content
-					class="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down bg-background overflow-hidden"
+					class="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down bg-background cursor-default overflow-hidden"
 				>
-					<nav class="flex flex-col items-center py-1">
+					<nav class="flex cursor-default flex-col items-center py-1">
 						<div class="flex w-56 max-w-full flex-col gap-2">
 							{#each navItems as item, index (item.href)}
 								<Button
