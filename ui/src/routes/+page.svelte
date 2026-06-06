@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { listSelfGroups } from '$lib/api/groups-api';
-	import { AppShell, Pagination, Spinner } from '$lib/components';
+	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { GroupList } from '$lib/components/pages';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { withMinLoadingDelay } from '$lib/utils';
@@ -41,34 +41,34 @@
 	<h2 class="section-title">My Groups</h2>
 
 	<div class="flex flex-col gap-6">
-		{#if loading}
+		{#if error}
+			<p class="text-foreground-error text-sm">{error}</p>
+		{/if}
+
+		{#if loading && groups.length === 0}
 			<div class="flex min-h-24 items-center justify-center">
 				<Spinner class="bg-foreground-alt-2 size-3" />
 			</div>
+		{:else if groups.length === 0}
+			<div class="flex min-h-16 items-center justify-center">
+				<p class="text-foreground-alt-2 text-sm italic">No groups</p>
+			</div>
 		{:else}
-			{#if error}
-				<p class="text-foreground-error text-sm">{error}</p>
-			{/if}
-
-			{#if groups.length === 0}
-				<div class="flex min-h-16 items-center justify-center">
-					<p class="text-foreground-alt-2 text-sm italic">No groups</p>
-				</div>
-			{:else}
+			<LoadingOverlay {loading}>
 				<div class="px-2">
 					<GroupList {groups} />
 				</div>
+			</LoadingOverlay>
 
-				{#if totalItems > perPage}
-					<Pagination
-						count={totalItems}
-						bind:page
-						bind:perPage
-						showPerPageSelect={false}
-						onPageChange={() => {}}
-						onPerPageChange={() => {}}
-					/>
-				{/if}
+			{#if totalItems > perPage}
+				<Pagination
+					count={totalItems}
+					bind:page
+					bind:perPage
+					showPerPageSelect={false}
+					onPageChange={() => {}}
+					onPerPageChange={() => {}}
+				/>
 			{/if}
 		{/if}
 	</div>

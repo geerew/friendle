@@ -20,4 +20,5 @@ var (
 	ErrGroupNameTaken         = errors.New("group name already exists")
 	ErrGroupNameTooLong       = errors.New("group name is too long")
 	ErrGroupNotFound          = errors.New("group not found")
+	ErrGroupSearchQueryRequired = errors.New("group search query is required")
 )

@@ -36,9 +36,6 @@ type Options struct {
 	// Pagination applies OFFSET/LIMIT to list queries. When set, listGeneric runs a COUNT
 	// query and updates the same instance via SetCount before selecting the page.
 	Pagination *pagination.Pagination
-
-	// ApiQuery is the list `q` query string from an HTTP request
-	ApiQuery string
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -88,13 +85,3 @@ func (o *Options) WithPagination(p *pagination.Pagination) *Options {
 	return o
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// WithApiQuery sets the API query for LIST operations, which is typically passed from
-// c.Query("q", ""). An empty string is the same as no query
-//
-// Calling multiple times will override the previous WithApiQuery call
-func (o *Options) WithApiQuery(q string) *Options {
-	o.ApiQuery = q
-	return o
-}

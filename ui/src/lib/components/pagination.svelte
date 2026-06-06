@@ -13,6 +13,7 @@
 		onPerPageChange: () => void;
 		selectTriggerClass?: string;
 		showPerPageSelect?: boolean;
+		minimal?: boolean;
 	};
 
 	let {
@@ -22,7 +23,8 @@
 		perPage = $bindable(),
 		onPerPageChange,
 		selectTriggerClass,
-		showPerPageSelect = true
+		showPerPageSelect = true,
+		minimal = false
 	}: Props = $props();
 
 	let perPageValue = $state(`${perPage}`);
@@ -72,37 +74,39 @@
 				</div>
 			{/if}
 
-			<div class={cn('grid w-full gap-3', showPerPageSelect ? 'grid-cols-2' : 'grid-cols-1')}>
-				{#if showPerPageSelect}
-					<div class="flex items-center">
-						<Select
-							type="single"
-							items={SelectPaginationPerPage}
-							bind:value={perPageValue}
-							contentProps={{ sideOffset: 8, loop: true }}
-							triggerClass={cn('w-24', selectTriggerClass)}
-							onValueChange={(v) => {
-								perPage = +v;
+			{#if !minimal}
+				<div class={cn('grid w-full gap-3', showPerPageSelect ? 'grid-cols-2' : 'grid-cols-1')}>
+					{#if showPerPageSelect}
+						<div class="flex items-center">
+							<Select
+								type="single"
+								items={SelectPaginationPerPage}
+								bind:value={perPageValue}
+								contentProps={{ sideOffset: 8, loop: true }}
+								triggerClass={cn('w-24', selectTriggerClass)}
+								onValueChange={(v) => {
+									perPage = +v;
 
-								if (page > Math.ceil(count / perPage)) {
-									page = Math.max(1, Math.ceil(count / perPage));
-								}
+									if (page > Math.ceil(count / perPage)) {
+										page = Math.max(1, Math.ceil(count / perPage));
+									}
 
-								onPerPageChange();
-							}}
-						/>
-					</div>
-				{/if}
+									onPerPageChange();
+								}}
+							/>
+						</div>
+					{/if}
 
-				<p
-					class={cn(
-						'text-foreground-alt-2 flex min-w-0 items-center text-sm whitespace-nowrap',
-						showPerPageSelect ? 'justify-end text-end' : 'justify-center text-center'
-					)}
-				>
-					{range.start} - {range.end} / {count}
-				</p>
-			</div>
+					<p
+						class={cn(
+							'text-foreground-alt-2 flex min-w-0 items-center text-sm whitespace-nowrap',
+							showPerPageSelect ? 'justify-end text-end' : 'justify-center text-center'
+						)}
+					>
+						{range.start} - {range.end} / {count}
+					</p>
+				</div>
+			{/if}
 		</div>
 	{/snippet}
 </Pagination.Root>

@@ -139,10 +139,31 @@ func Test_ListGroups(t *testing.T) {
 		groups, err := dao.ListGroups(ctx, NewOptions().WithWhere(where))
 		require.NoError(t, err)
 		require.Len(t, groups, 2)
+
+		names := make([]string, len(groups))
+		for i, record := range groups {
+			names[i] = record.Name
+			require.Equal(t, 1, record.MemberCount)
+		}
+
+		require.ElementsMatch(t, []string{"Friends", "Work"}, names)
+	})
+
+	// Test successfully filtering groups by a WHERE clause
+	t.Run("where filter", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		friends := &models.Group{Name: "Friends", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, friends))
+
+		work := &models.Group{Name: "Work", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, work))
+
+		groups, err := dao.ListGroups(ctx, NewOptions().WithWhere(squirrel.Like{"LOWER(" + models.GROUP_TABLE_NAME + ")": "%friend%"}))
+		require.NoError(t, err)
+		require.Len(t, groups, 1)
 		require.Equal(t, "Friends", groups[0].Name)
-		require.Equal(t, 1, groups[0].MemberCount)
-		require.Equal(t, "Work", groups[1].Name)
-		require.Equal(t, 1, groups[1].MemberCount)
 	})
 
 	// Test empty list when the user has no memberships

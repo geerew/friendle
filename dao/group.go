@@ -11,10 +11,6 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-var defaultGroupsListOrderBy = []string{models.GROUP_TABLE_NAME + " asc"}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // groupColumns defines the columns to select
 var groupColumns = []string{
 	fmt.Sprintf("%s AS %s", models.GROUP_TABLE_ID, models.BASE_ID),
@@ -91,8 +87,6 @@ func (dao *DAO) CreateGroup(ctx context.Context, group *models.Group) error {
 
 // ListGroups returns group records with member counts
 func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Group, error) {
-	applyDefaultOrderBy(dbOpts, defaultGroupsListOrderBy)
-
 	builderOpts := newBuilderOptions(models.GROUP_TABLE).
 		WithColumns(groupColumns...).
 		WithJoins(groupJoins...).

@@ -8,7 +8,8 @@ import {
 	type GroupModel,
 	type GroupPaginationModel,
 	type ListGroupsParams,
-	type ListSelfGroupsParams
+	type ListSelfGroupsParams,
+	type SearchGroupsParams
 } from '$lib/models/group-model';
 
 export async function listGroups(params?: ListGroupsParams): Promise<GroupPaginationModel> {
@@ -35,6 +36,25 @@ export async function listSelfGroups(
 ): Promise<GroupPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
 	const response = await apiFetch('/api/groups/self' + (qs ? `?${qs}` : ''));
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(GroupPaginationSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+export async function searchGroups(params: SearchGroupsParams): Promise<GroupPaginationModel> {
+	const qs = buildQueryString(params);
+	const response = await apiFetch('/api/groups/search' + (qs ? `?${qs}` : ''));
 
 	if (response.ok) {
 		const data = await response.json();

@@ -14,6 +14,7 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Post("/", r.requireAccess(accessSiteUser), r.createGroup)
 	groupRoutes.Get("/", r.requireAccess(accessSiteUser), r.listGroups)
 	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
+	groupRoutes.Get("/search", r.requireAccess(accessSiteUser), r.searchGroups)
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
 	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup)
 }
@@ -33,6 +34,26 @@ func (r *Router) listGroups(c *fiber.Ctx) error {
 	pResult, err := page.BuildResult(groups)
 	if err != nil {
 		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// searchGroups returns paginated groups matching a name query
+func (r *Router) searchGroups(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	page := paginationFromCtx(c)
+	groups, err := r.appSvc.Groups.SearchGroups(ctx, page, c.Query("q", ""))
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	pResult, err := page.BuildResult(groups)
+	if err != nil {
+		return serviceError(c, err)
 	}
 
 	return c.JSON(pResult)

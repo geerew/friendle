@@ -178,13 +178,3 @@ func (dao *DAO) UsersByIDs(ctx context.Context, userIDs []string) (map[string]*m
 	return userMap, nil
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// applyDefaultOrderBy applies the default order by when the current OrderBy or OrderByClause is not set
-func applyDefaultOrderBy(dbOpts *Options, defaultOrder []string) {
-	if dbOpts == nil || dbOpts.OrderByClause != nil || len(dbOpts.OrderBy) > 0 {
-		return
-	}
-
-	dbOpts.WithOrderBy(defaultOrder...)
-}

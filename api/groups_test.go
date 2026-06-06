@@ -303,3 +303,50 @@ func TestGroups_Delete(t *testing.T) {
 		require.NotNil(t, stillThere)
 	})
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestGroups_Search exercises group name search
+func TestGroups_Search(t *testing.T) {
+	// Test successfully searching groups by name
+	t.Run("200 (found)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: "alice"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+
+		other := &models.Group{Name: "Work", CreatedBy: "alice"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, other))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/search?q=name:friend", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		pResult, groups := unmarshalHelper[service.GroupResponse](t, body)
+		require.Equal(t, 1, pResult.TotalItems)
+		require.Len(t, groups, 1)
+		require.Equal(t, "Friends", groups[0].Name)
+	})
+
+	// Test error due to missing search query
+	t.Run("400 (missing query)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/search", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Search query is required")
+	})
+
+	// Test error due to invalid query syntax
+	t.Run("400 (invalid query)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/search?q=foo:bar", nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Invalid query")
+	})
+}

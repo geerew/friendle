@@ -2,14 +2,25 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/auth"
 	"github.com/geerew/friendle/utils/pagination"
+	"github.com/geerew/friendle/utils/queryparser"
 	"github.com/geerew/friendle/utils/types"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+var (
+	userListApiAllowedFilters = []string{"name", "role", "siteRole"}
+
+	defaultUsersListOrderBy = []string{models.USER_TABLE_CREATED_AT + " desc"}
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,8 +70,9 @@ func newUsers(d deps) *Users {
 
 // ListUsers returns paginated users
 func (u *Users) ListUsers(ctx context.Context, page *pagination.Pagination) ([]*UserResponse, error) {
-	dbOpts := dao.NewOptions().WithPagination(page)
-	users, err := u.dao.ListUsers(ctx, dbOpts)
+	users, err := u.dao.ListUsers(ctx, dao.NewOptions().
+		WithPagination(page).
+		WithOrderBy(defaultUsersListOrderBy...))
 	if err != nil {
 		return nil, err
 	}
@@ -205,5 +217,64 @@ func userResponseBuilder(user *models.User) *UserResponse {
 		Username:    user.Username,
 		DisplayName: user.DisplayName,
 		SiteRole:    user.SiteRole,
+	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// usersWhereFromApiQuery parses a user list API query into a WHERE clause
+func usersWhereFromApiQuery(apiQuery string) (squirrel.Sqlizer, error) {
+	parsed, err := queryparser.Parse(apiQuery, userListApiAllowedFilters)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", utils.ErrApiQueryParse, err)
+	}
+
+	if parsed == nil {
+		return nil, nil
+	}
+
+	return usersWhereBuilder(parsed.Expr), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// usersWhereBuilder builds a squirrel WHERE expression from a queryparser.QueryExpr
+func usersWhereBuilder(expr queryparser.QueryExpr) squirrel.Sqlizer {
+	switch node := expr.(type) {
+	case *queryparser.FilterExpr:
+		switch node.Key {
+		case "name":
+			return squirrel.Or{
+				squirrel.Like{"LOWER(" + models.USER_TABLE_USERNAME + ")": "%" + node.Value + "%"},
+				squirrel.Like{"LOWER(" + models.USER_TABLE_DISPLAY_NAME + ")": "%" + node.Value + "%"},
+			}
+		case "role", "siteRole":
+			val := node.Value
+			if val == "admin" {
+				val = string(types.SiteRoleAdmin)
+			} else if val == "user" {
+				val = string(types.SiteRoleUser)
+			}
+
+			return squirrel.Eq{models.USER_TABLE_SITE_ROLE: val}
+		default:
+			return nil
+		}
+	case *queryparser.AndExpr:
+		var andSlice []squirrel.Sqlizer
+		for _, child := range node.Children {
+			andSlice = append(andSlice, usersWhereBuilder(child))
+		}
+
+		return squirrel.And(andSlice)
+	case *queryparser.OrExpr:
+		var orSlice []squirrel.Sqlizer
+		for _, child := range node.Children {
+			orSlice = append(orSlice, usersWhereBuilder(child))
+		}
+
+		return squirrel.Or(orSlice)
+	default:
+		return nil
 	}
 }
