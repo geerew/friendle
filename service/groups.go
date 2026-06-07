@@ -170,10 +170,12 @@ func (g *Groups) SearchGroups(ctx context.Context, page *pagination.Pagination, 
 	whereClause := squirrel.Like{"LOWER(" + models.GROUP_TABLE_NAME + ")": "%" + lowerName + "%"}
 	orderByClause := squirrel.Expr("CASE WHEN "+models.GROUP_TABLE_NAME+" LIKE ? THEN 0 ELSE 1 END, "+models.GROUP_TABLE_NAME+" ASC", lowerName+"%")
 
-	groups, err := g.dao.ListGroups(ctx, dao.NewOptions().
+	dbOpts := dao.NewOptions().
 		WithPagination(page).
 		WithOrderByClause(orderByClause).
-		WithWhere(whereClause))
+		WithWhere(whereClause)
+
+	groups, err := g.dao.ListGroups(ctx, dbOpts)
 	if err != nil {
 		return nil, err
 	}
