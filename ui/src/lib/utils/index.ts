@@ -2,16 +2,19 @@ import { ApiError } from '$lib/api/fetch';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-export const MIN_BUTTON_LOADING_MS = 150;
 
+// cn merges class values into a single string
 export function cn(...inputs: ClassValue[]): string {
 	return twMerge(clsx(inputs));
 }
 
+// MIN_LOADING_MS is the minimum delay when loading
+export const MIN_LOADING_MS = 150;
+
 // withMinLoadingDelay ensures button spinners do not flicker on fast responses
 export async function withMinLoadingDelay<T>(
 	task: Promise<T>,
-	ms: number = MIN_BUTTON_LOADING_MS
+	ms: number = MIN_LOADING_MS
 ): Promise<T> {
 	const [result] = await Promise.all([
 		task,
@@ -21,6 +24,7 @@ export async function withMinLoadingDelay<T>(
 	return result;
 }
 
+// buildQueryString builds a query string from a record of parameters
 export function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
 	const searchParams = new URLSearchParams();
 
@@ -33,10 +37,12 @@ export function buildQueryString(params: Record<string, string | number | boolea
 	return searchParams.toString();
 }
 
+// apiErrorMessage formats an API error message
 export function apiErrorMessage(err: unknown, fallback: string): string {
 	return err instanceof ApiError ? err.message : fallback;
 }
 
+// isPasswordFieldError reports whether an error message is related to password fields
 export function isPasswordFieldError(error: string | null): boolean {
 	if (!error) return false;
 
@@ -48,4 +54,3 @@ export function isPasswordFieldError(error: string | null): boolean {
 		message.includes('all password fields are required')
 	);
 }
-

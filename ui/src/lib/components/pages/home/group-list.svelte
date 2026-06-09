@@ -8,14 +8,14 @@
 	};
 
 	let { groups }: Props = $props();
-
-	const rowClass =
-		'hover:bg-background-alt-1 flex w-full items-center gap-3 rounded-md px-2 py-3 text-left transition-all';
 </script>
 
 <div class="flex flex-col gap-2">
 	{#each groups as group, index (group.id)}
-		<a href="/groups/{group.id}/" class={rowClass}>
+		<a
+			href="/groups/{group.id}/"
+			class="hover:bg-background-alt-1 flex w-full items-center gap-3 rounded-md px-2 py-3 text-left transition-all"
+		>
 			<div class="flex w-full items-center px-1">
 				<span class="text-foreground-alt-1 min-w-0 flex-1 truncate text-base font-medium">
 					{group.name}

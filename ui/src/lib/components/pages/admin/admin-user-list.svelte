@@ -9,8 +9,6 @@
 	};
 
 	let { users, onDelete }: Props = $props();
-
-	const rowClass = '';
 </script>
 
 <div class="flex flex-col gap-2">

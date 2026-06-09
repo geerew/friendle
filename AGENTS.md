@@ -446,3 +446,72 @@ func TestNewSiteRole(t *testing.T) {
 	})
 }
 ```
+
+---
+
+## Svelte (UI) coding standards
+
+These rules apply to `.svelte` files under `ui/`.
+
+### 1. Tailwind classes on elements
+
+Put Tailwind classes **directly on the element** (`class="..."`). Do not extract static class strings into script constants such as `const rowClass = '...'` or `const editButtonClass = '...'`.
+
+**Avoid:**
+
+```svelte
+<script lang="ts">
+	const rowClass = 'flex w-full items-center gap-3 px-2 py-3';
+</script>
+
+<div class={rowClass}>...</div>
+```
+
+**Prefer:**
+
+```svelte
+<div class="flex w-full items-center gap-3 px-2 py-3">...</div>
+```
+
+**Exceptions**
+
+- **`$derived` / `$derived.by`** when classes depend on props or state (e.g. button variants, spinner size)
+- **Lookup maps** keyed by a variant when several mutually exclusive class sets are selected (e.g. `Record<Variant, string>`)
+- **`cn(...)`** when merging conditional or overlapping classes in one expression—not as a single-string alias for a static class list
+
+### 2. Page-specific components
+
+Under `ui/src/lib/components/pages/`, colocate components with the route they serve:
+
+- **One page only** → subfolder named for that route (e.g. `pages/groups/members/` for `/groups/[id]/members`, `pages/groups/search/` for `/groups/search`, `pages/groups/detail/` for `/groups/[id]`, `pages/home/` for `/`)
+- **Shared within an area** → stay at that area’s root (e.g. `pages/groups/group-coming-soon-page.svelte` for pending and rejected, `pages/groups/group-join-button.svelte` for detail and search)
+- **Internal to an area** → import with relative paths (e.g. `../group-status-badge.svelte` from `members/` or `search/`); do not re-export from the area barrel unless a route imports it
+
+Each subfolder has an `index.ts` barrel. The parent area re-exports page-specific components so routes can import from `$lib/components/pages`.
+
+**Example layout (`pages/groups/`):**
+
+```
+pages/groups/
+  group-coming-soon-page.svelte   # pending + rejected
+  group-join-button.svelte        # detail + search
+  group-status-badge.svelte       # members + search (internal)
+  index.ts
+  detail/group-stat-link.svelte   # /groups/[id]
+  members/group-member-list.svelte
+  search/group-search-list.svelte
+pages/home/
+  group-list.svelte               # /
+```
+
+### 3. Imports
+
+Remove **unused imports** before committing. Every symbol in an `import` must be used in that file—types included. Run `pnpm run check` from `ui/` (`noUnusedLocals` is enabled in `tsconfig.json`). Do not leave dead imports “for later” or re-export a component from a barrel if nothing imports it through that barrel
+
+### 4. Group route access
+
+Routes under `/groups/[id]/` are **members only** in the UI. A `+layout.svelte` loads the group via `GET /api/groups/:id`, checks `groupRole` with `isGroupMember`, and redirects to `/` when the viewer is not a member. The API still returns basic group data (name, join status) for search and join flows; non-members interact with groups on `/groups/search/`, not on group detail pages
+
+### 5. Utils layout
+
+Use `ui/src/lib/utils/` as a **directory**, not a sibling `utils.ts` file. Put shared helpers in `utils/index.ts` (`cn`, `withMinLoadingDelay`, …). Add domain-specific helpers as separate files (e.g. `utils/group.ts` for `isGroupMember`). Import general helpers from `$lib/utils` and domain helpers from `$lib/utils/group`

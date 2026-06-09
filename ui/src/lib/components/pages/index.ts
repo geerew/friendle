@@ -1,4 +1,5 @@
 export * from './admin';
 export * from './auth';
 export * from './groups';
+export * from './home';
 export * from './settings';

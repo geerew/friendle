@@ -12,12 +12,6 @@
 	};
 
 	let { href, onclick, title, subtitle, meta, trailing }: Props = $props();
-
-	const interactive =
-		'flex w-full cursor-pointer items-center gap-3 rounded border border-foreground-alt-4 bg-background-alt-1 px-4 py-3 text-left transition-colors hover:border-foreground-alt-3';
-
-	const staticRow =
-		'flex w-full items-center gap-3 rounded border border-foreground-alt-4 bg-background-alt-1 px-4 py-3 text-left';
 </script>
 
 {#snippet content()}
@@ -37,15 +31,24 @@
 {/snippet}
 
 {#if href}
-	<a {href} class={interactive}>
+	<a
+		{href}
+		class="flex w-full cursor-pointer items-center gap-3 rounded border border-foreground-alt-4 bg-background-alt-1 px-4 py-3 text-left transition-colors hover:border-foreground-alt-3"
+	>
 		{@render content()}
 	</a>
 {:else if onclick}
-	<button type="button" class={interactive} {onclick}>
+	<button
+		type="button"
+		class="flex w-full cursor-pointer items-center gap-3 rounded border border-foreground-alt-4 bg-background-alt-1 px-4 py-3 text-left transition-colors hover:border-foreground-alt-3"
+		{onclick}
+	>
 		{@render content()}
 	</button>
 {:else}
-	<div class={staticRow}>
+	<div
+		class="flex w-full items-center gap-3 rounded border border-foreground-alt-4 bg-background-alt-1 px-4 py-3 text-left"
+	>
 		{@render content()}
 	</div>
 {/if}

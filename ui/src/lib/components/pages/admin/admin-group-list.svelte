@@ -9,8 +9,6 @@
 
 	let { groups, onDelete }: Props = $props();
 
-	const rowClass = 'flex w-full items-center gap-3 px-2 py-3';
-
 	function memberLabel(count: number): string {
 		return `${count} ${count === 1 ? 'member' : 'members'}`;
 	}
@@ -18,7 +16,7 @@
 
 <div class="flex flex-col gap-2">
 	{#each groups as group, index (group.id)}
-		<div class={rowClass}>
+		<div class="flex w-full items-center gap-3 px-2 py-3">
 			<span class="text-foreground-alt-1 min-w-0 flex-1 truncate px-1 text-base font-medium">
 				{group.name}
 			</span>

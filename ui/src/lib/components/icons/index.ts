@@ -7,6 +7,7 @@ export { default as LogOutIcon } from './log-out.svelte';
 export { default as LeftChevronIcon } from './left-chevron.svelte';
 export { default as MenuIcon } from './menu.svelte';
 export { default as MenuToggleIcon } from './menu-toggle.svelte';
+export { default as PencilIcon } from './pencil.svelte';
 export { default as PlusIcon } from './plus.svelte';
 export { default as RightChevronIcon } from './right-chevron.svelte';
 export { default as SearchIcon } from './search.svelte';

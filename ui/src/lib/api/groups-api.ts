@@ -11,6 +11,11 @@ import {
 	type ListSelfGroupsParams,
 	type SearchGroupsParams
 } from '$lib/models/group-model';
+import {
+	GroupMemberPaginationSchema,
+	type GroupMemberPaginationModel,
+	type ListGroupMembersParams
+} from '$lib/models/group-member-model';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -123,6 +128,31 @@ export async function requestGroupJoin(groupId: string): Promise<GroupModel> {
 	if (response.ok) {
 		const data = await response.json();
 		const result = safeParse(GroupSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query group members (paginated)
+export async function listGroupMembers(
+	groupId: string,
+	params?: ListGroupMembersParams
+): Promise<GroupMemberPaginationModel> {
+	const qs = params ? buildQueryString(params) : '';
+	const response = await apiFetch(`/api/groups/${groupId}/members` + (qs ? `?${qs}` : ''));
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(GroupMemberPaginationSchema, data);
 
 		if (!result.success) {
 			throw new ApiError('Invalid response from the server', response.status);

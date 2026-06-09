@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { createGroup } from '$lib/api/groups-api';
 	import { AppShell } from '$lib/components';
-	import { Button, Field, Input } from '$lib/components/ui';
+	import { Button, Input } from '$lib/components/ui';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 

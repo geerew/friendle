@@ -2,7 +2,6 @@
 	import { RightChevronIcon, SortAscendingIcon, SortDescendingIcon } from '$lib/components/icons';
 	import { Dropdown } from '$lib/components/ui';
 	import type { SortColumns, SortDirection } from '$lib/types/sort';
-	import { cn } from '$lib/utils';
 
 	type Props = {
 		columns: SortColumns;
@@ -31,14 +30,13 @@
 	});
 
 	const selectedColumnMeta = $derived(columns.find((column) => column.column === selectedColumn));
-
-	const triggerClass = cn(
-		'field inline-flex h-9 w-36 shrink-0 items-center justify-between gap-1 px-2 hover:cursor-pointer hover:border-foreground-alt-3 data-[state=open]:border-background-primary data-[state=open]:ring-2 data-[state=open]:ring-background-primary [&[data-state=open]>svg:last-child]:rotate-90'
-	);
 </script>
 
 <Dropdown.Root>
-	<Dropdown.Trigger class={triggerClass} {disabled}>
+	<Dropdown.Trigger
+		class="field inline-flex h-9 w-36 shrink-0 items-center justify-between gap-1 px-2 hover:cursor-pointer hover:border-foreground-alt-3 data-[state=open]:border-background-primary data-[state=open]:ring-2 data-[state=open]:ring-background-primary [&[data-state=open]>svg:last-child]:rotate-90"
+		{disabled}
+	>
 		<div class="flex min-w-0 items-center gap-1.5">
 			{#if selectedDirection === 'asc'}
 				<SortAscendingIcon class="size-4 shrink-0" />

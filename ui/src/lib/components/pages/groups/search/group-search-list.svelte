@@ -6,10 +6,11 @@
 		UserRoundXIcon,
 		UserStarIcon
 	} from '$lib/components/icons';
-	import GroupJoinButton from './group-join-button.svelte';
-	import GroupStatusBadge from './group-status-badge.svelte';
+	import GroupJoinButton from '../group-join-button.svelte';
+	import GroupStatusBadge from '../group-status-badge.svelte';
 	import { Separator } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
+	import { isGroupMember } from '$lib/utils/group';
 
 	type Props = {
 		groups: GroupModel[];
@@ -19,12 +20,8 @@
 
 	let joinErrors = $state<Record<string, string>>({});
 
-	function isMember(group: GroupModel): boolean {
-		return group.groupRole === 'group_admin' || group.groupRole === 'group_user';
-	}
-
 	function canRequestJoin(group: GroupModel): boolean {
-		return !isMember(group) && group.joinRequestStatus !== 'pending';
+		return !isGroupMember(group) && group.joinRequestStatus !== 'pending';
 	}
 
 	function markJoinPending(groupId: string): void {
@@ -42,7 +39,7 @@
 <div class="flex flex-col gap-2">
 	{#each groups as group, index (group.id)}
 		<div class="flex flex-col gap-1">
-			{#if isMember(group)}
+			{#if isGroupMember(group)}
 				<a
 					href="/groups/{group.id}/"
 					class="hover:bg-background-alt-1 flex w-full items-start gap-3 rounded-md px-2 py-3 text-left transition-all"
