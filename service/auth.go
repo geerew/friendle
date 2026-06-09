@@ -46,14 +46,14 @@ type DeleteMeRequest struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Auth orchestrates registration, login, and self-service profile operations
+// Auth represents the authentication service
 type Auth struct {
 	deps
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// newAuth creates an Auth service
+// newAuth creates an authentication service
 func newAuth(d deps) *Auth {
 	return &Auth{deps: d}
 }

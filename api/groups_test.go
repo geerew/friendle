@@ -224,6 +224,37 @@ func TestGroups_Get(t *testing.T) {
 		require.Equal(t, "alice", resp.CreatedBy)
 	})
 
+	// Test successfully fetching a group the caller does not belong to
+	t.Run("200 (non-member)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID, nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var resp service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, group.ID, resp.ID)
+		require.Equal(t, "Friends", resp.Name)
+	})
+
 	// Test error due to a non-existent group
 	t.Run("404 (not found)", func(t *testing.T) {
 		router, _, _ := setup(t, "alice", types.SiteRoleUser)
@@ -318,7 +349,7 @@ func TestGroups_Search(t *testing.T) {
 		other := &models.Group{Name: "Work", CreatedBy: "alice"}
 		require.NoError(t, router.appDao.CreateGroup(ctx, other))
 
-		req := httptest.NewRequest(http.MethodGet, "/api/groups/search?name=friend", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/?name=friend", nil)
 
 		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
@@ -328,6 +359,8 @@ func TestGroups_Search(t *testing.T) {
 		require.Equal(t, 1, pResult.TotalItems)
 		require.Len(t, groups, 1)
 		require.Equal(t, "Friends", groups[0].Name)
+		require.Nil(t, groups[0].GroupRole)
+		require.Nil(t, groups[0].JoinRequestStatus)
 	})
 
 	// Test prefix matches are ranked before substring matches
@@ -338,7 +371,7 @@ func TestGroups_Search(t *testing.T) {
 			require.NoError(t, router.appDao.CreateGroup(ctx, &models.Group{Name: name, CreatedBy: "alice"}))
 		}
 
-		req := httptest.NewRequest(http.MethodGet, "/api/groups/search?name=ten", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/?name=ten", nil)
 
 		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
@@ -353,11 +386,73 @@ func TestGroups_Search(t *testing.T) {
 		require.Equal(t, "toten", groups[3].Name)
 	})
 
+	// Test successfully returning viewer status for each search result
+	t.Run("200 (member status)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		memberGroup := &models.Group{Name: "Member Group", CreatedBy: "alice"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, memberGroup))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   memberGroup.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		adminGroup := &models.Group{Name: "Admin Group", CreatedBy: "alice"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, adminGroup))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   adminGroup.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		requestedGroup := &models.Group{Name: "Requested Group", CreatedBy: "alice"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, requestedGroup))
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: requestedGroup.ID,
+			UserID:  principal.userID,
+			Status:  types.JoinPending,
+		}))
+
+		rejectedGroup := &models.Group{Name: "Rejected Group", CreatedBy: "alice"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, rejectedGroup))
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: rejectedGroup.ID,
+			UserID:  principal.userID,
+			Status:  types.JoinRejected,
+		}))
+
+		openGroup := &models.Group{Name: "Open Group", CreatedBy: "alice"}
+		require.NoError(t, router.appDao.CreateGroup(ctx, openGroup))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/?name=group", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		pResult, groups := unmarshalHelper[service.GroupResponse](t, body)
+		require.Equal(t, 5, pResult.TotalItems)
+		require.Len(t, groups, 5)
+
+		byName := make(map[string]service.GroupResponse, len(groups))
+		for _, group := range groups {
+			byName[group.Name] = group
+		}
+
+		require.Equal(t, types.GroupRoleAdmin, *byName["Admin Group"].GroupRole)
+		require.Equal(t, types.GroupRoleUser, *byName["Member Group"].GroupRole)
+		require.Equal(t, types.JoinPending, *byName["Requested Group"].JoinRequestStatus)
+		require.Equal(t, types.JoinRejected, *byName["Rejected Group"].JoinRequestStatus)
+		require.Nil(t, byName["Open Group"].GroupRole)
+		require.Nil(t, byName["Open Group"].JoinRequestStatus)
+	})
+
 	// Test error due to missing search name
 	t.Run("400 (missing name)", func(t *testing.T) {
 		router, _, _ := setup(t, "alice", types.SiteRoleUser)
 
-		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/search", nil))
+		status, body, err := requestHelper(t, router, httptest.NewRequest(http.MethodGet, "/api/groups/?name=", nil))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "Name is required")

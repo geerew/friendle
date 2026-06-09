@@ -8,6 +8,7 @@ import (
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/pagination"
 	"github.com/geerew/friendle/utils/types"
 )
@@ -31,12 +32,26 @@ type CreateGroupRequest struct {
 
 // GroupResponse represents a group response
 type GroupResponse struct {
-	ID          string         `json:"id"`
-	CreatedAt   types.DateTime `json:"createdAt"`
-	UpdatedAt   types.DateTime `json:"updatedAt"`
-	Name        string         `json:"name"`
-	CreatedBy   string         `json:"createdBy,omitempty"`
-	MemberCount int            `json:"memberCount"`
+	ID                string                   `json:"id"`
+	CreatedAt         types.DateTime           `json:"createdAt"`
+	UpdatedAt         types.DateTime           `json:"updatedAt"`
+	Name              string                   `json:"name"`
+	CreatedBy         string                   `json:"createdBy,omitempty"`
+	MemberCount       int                      `json:"memberCount"`
+	GroupRole         *types.GroupRole         `json:"groupRole,omitempty"`
+	JoinRequestStatus *types.JoinRequestStatus `json:"joinRequestStatus,omitempty"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+type groupRolesByGroupID map[string]types.GroupRole
+
+type joinRequestStatusesByGroupID map[string]types.JoinRequestStatus
+
+// userMemberStatus holds the caller's group role and join request status keyed by group ID
+type userMemberStatus struct {
+	roles    groupRolesByGroupID
+	requests joinRequestStatusesByGroupID
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -55,8 +70,8 @@ func newGroups(d deps) *Groups {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CreateGroup creates a group and adds the caller as group admin
-func (g *Groups) CreateGroup(ctx context.Context, req CreateGroupRequest) (*GroupResponse, error) {
+// Create creates a group and sets the caller as group admin
+func (g *Groups) Create(ctx context.Context, req CreateGroupRequest) (*GroupResponse, error) {
 	principal, err := principalFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -99,13 +114,13 @@ func (g *Groups) CreateGroup(ctx context.Context, req CreateGroupRequest) (*Grou
 
 	group.MemberCount = 1
 
-	return groupResponseBuilder(group), nil
+	return groupResponseBuilder(group, nil, nil), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListGroups returns paginated groups
-func (g *Groups) ListGroups(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
+// List returns a paginated slice of groups
+func (g *Groups) List(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
 	if _, err := principalFromContext(ctx); err != nil {
 		return nil, err
 	}
@@ -121,13 +136,13 @@ func (g *Groups) ListGroups(ctx context.Context, page *pagination.Pagination) ([
 		return []*GroupResponse{}, nil
 	}
 
-	return groupsResponseBuilder(groups), nil
+	return groupsResponsesBuilder(groups, userMemberStatus{}), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListSelfGroups returns paginated groups the authenticated user belongs to
-func (g *Groups) ListSelfGroups(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
+// ListSelf returns a paginated slice of groups the authenticated user belongs to
+func (g *Groups) ListSelf(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
 	principal, err := principalFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -150,14 +165,25 @@ func (g *Groups) ListSelfGroups(ctx context.Context, page *pagination.Pagination
 		return []*GroupResponse{}, nil
 	}
 
-	return groupsResponseBuilder(groups), nil
+	groupIDs := utils.Map(groups, func(group *models.Group) string { return group.ID })
+	status, err := g.getUserMemberStatus(ctx, principal.UserID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return groupsResponsesBuilder(groups, status), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// SearchGroups returns paginated groups whose names contain the search term
-func (g *Groups) SearchGroups(ctx context.Context, page *pagination.Pagination, name string) ([]*GroupResponse, error) {
-	if _, err := principalFromContext(ctx); err != nil {
+// Search returns a paginated slice of groups whose names contain the search term
+//
+// # The result is ordered by prefix matches first, then substring matches
+//
+// Results include the caller's group role and join request status for each group
+func (g *Groups) Search(ctx context.Context, page *pagination.Pagination, name string) ([]*GroupResponse, error) {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
 		return nil, err
 	}
 
@@ -168,14 +194,15 @@ func (g *Groups) SearchGroups(ctx context.Context, page *pagination.Pagination, 
 
 	lowerName := strings.ToLower(name)
 	whereClause := squirrel.Like{"LOWER(" + models.GROUP_TABLE_NAME + ")": "%" + lowerName + "%"}
-	orderByClause := squirrel.Expr("CASE WHEN "+models.GROUP_TABLE_NAME+" LIKE ? THEN 0 ELSE 1 END, "+models.GROUP_TABLE_NAME+" ASC", lowerName+"%")
+	orderByClause := squirrel.Expr(
+		"CASE WHEN LOWER("+models.GROUP_TABLE_NAME+") LIKE ? THEN 0 ELSE 1 END, LOWER("+models.GROUP_TABLE_NAME+") ASC",
+		lowerName+"%",
+	)
 
-	dbOpts := dao.NewOptions().
+	groups, err := g.dao.ListGroups(ctx, dao.NewOptions().
 		WithPagination(page).
 		WithOrderByClause(orderByClause).
-		WithWhere(whereClause)
-
-	groups, err := g.dao.ListGroups(ctx, dbOpts)
+		WithWhere(whereClause))
 	if err != nil {
 		return nil, err
 	}
@@ -184,29 +211,25 @@ func (g *Groups) SearchGroups(ctx context.Context, page *pagination.Pagination, 
 		return []*GroupResponse{}, nil
 	}
 
-	return groupsResponseBuilder(groups), nil
+	groupIDs := utils.Map(groups, func(group *models.Group) string { return group.ID })
+	status, err := g.getUserMemberStatus(ctx, principal.UserID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return groupsResponsesBuilder(groups, status), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetGroup returns a group the authenticated user belongs to
-func (g *Groups) GetGroup(ctx context.Context, groupID string) (*GroupResponse, error) {
+// Get returns a group by ID
+func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error) {
 	principal, err := principalFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	memberWhere, err := dao.MemberGroupsWhere(principal.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	where := squirrel.And{
-		squirrel.Eq{models.GROUP_TABLE_ID: groupID},
-		memberWhere,
-	}
-
-	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(where))
+	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
 	if err != nil {
 		return nil, err
 	}
@@ -215,13 +238,20 @@ func (g *Groups) GetGroup(ctx context.Context, groupID string) (*GroupResponse, 
 		return nil, ErrGroupNotFound
 	}
 
-	return groupResponseBuilder(group), nil
+	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
+	if err != nil {
+		return nil, err
+	}
+
+	groupRole, joinRequestStatus := status.forGroup(groupID)
+
+	return groupResponseBuilder(group, groupRole, joinRequestStatus), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DeleteGroup deletes a group and its associated data
-func (g *Groups) DeleteGroup(ctx context.Context, groupID string) error {
+// Delete deletes a group and its associated data
+func (g *Groups) Delete(ctx context.Context, groupID string) error {
 	principal, err := principalFromContext(ctx)
 	if err != nil {
 		return err
@@ -244,12 +274,15 @@ func (g *Groups) DeleteGroup(ctx context.Context, groupID string) error {
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Response builders
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// groupsResponseBuilder maps group models to API response slices
-func groupsResponseBuilder(groups []*models.Group) []*GroupResponse {
+// groupsResponsesBuilder builds a slice of GroupResponse from group models
+func groupsResponsesBuilder(groups []*models.Group, status userMemberStatus) []*GroupResponse {
 	out := make([]*GroupResponse, len(groups))
 	for i, group := range groups {
-		out[i] = groupResponseBuilder(group)
+		groupRole, joinRequestStatus := status.forGroup(group.ID)
+		out[i] = groupResponseBuilder(group, groupRole, joinRequestStatus)
 	}
 
 	return out
@@ -257,14 +290,76 @@ func groupsResponseBuilder(groups []*models.Group) []*GroupResponse {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// groupResponseBuilder maps a group model to a single API response
-func groupResponseBuilder(group *models.Group) *GroupResponse {
+// groupResponseBuilder builds a GroupResponse from a group model
+func groupResponseBuilder(group *models.Group, groupRole *types.GroupRole, joinRequestStatus *types.JoinRequestStatus) *GroupResponse {
 	return &GroupResponse{
-		ID:          group.ID,
-		CreatedAt:   group.CreatedAt,
-		UpdatedAt:   group.UpdatedAt,
-		Name:        group.Name,
-		CreatedBy:   group.CreatedBy,
-		MemberCount: group.MemberCount,
+		ID:                group.ID,
+		CreatedAt:         group.CreatedAt,
+		UpdatedAt:         group.UpdatedAt,
+		Name:              group.Name,
+		CreatedBy:         group.CreatedBy,
+		MemberCount:       group.MemberCount,
+		GroupRole:         groupRole,
+		JoinRequestStatus: joinRequestStatus,
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// User member status
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// userMemberStatus queries a user's group role and join request status for a list of group IDs
+func (g *Groups) getUserMemberStatus(ctx context.Context, userID string, groupIDs []string) (userMemberStatus, error) {
+	if len(groupIDs) == 0 {
+		return userMemberStatus{}, nil
+	}
+
+	where := squirrel.And{
+		squirrel.Eq{models.GROUP_MEMBER_USER_ID: userID},
+		squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupIDs},
+	}
+
+	members, err := g.dao.ListGroupMembers(ctx, dao.NewOptions().WithWhere(where))
+	if err != nil {
+		return userMemberStatus{}, err
+	}
+
+	roles := make(groupRolesByGroupID, len(members))
+	for _, member := range members {
+		roles[member.GroupID] = member.GroupRole
+	}
+
+	where = squirrel.And{
+		squirrel.Eq{models.JOIN_REQUEST_USER_ID: userID},
+		squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupIDs},
+	}
+
+	joinRequests, err := g.dao.ListGroupJoinRequests(ctx, dao.NewOptions().WithWhere(where))
+	if err != nil {
+		return userMemberStatus{}, err
+	}
+
+	requests := make(joinRequestStatusesByGroupID, len(joinRequests))
+	for _, request := range joinRequests {
+		requests[request.GroupID] = request.Status
+	}
+
+	return userMemberStatus{roles: roles, requests: requests}, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// forGroup returns the group role and join request status for a group ID
+func (s userMemberStatus) forGroup(groupID string) (*types.GroupRole, *types.JoinRequestStatus) {
+	if role := s.roles[groupID]; role.IsValid() {
+		r := role
+		return &r, nil
+	}
+
+	if status := s.requests[groupID]; status == types.JoinPending || status == types.JoinRejected {
+		s := status
+		return nil, &s
+	}
+
+	return nil, nil
 }

@@ -9,21 +9,42 @@ import (
 
 // initAdminUserRoutes registers site-admin user routes on the admin API group
 func (r *Router) initAdminUserRoutes(a fiber.Router) {
-	a.Get("/users", r.requireAccess(accessSiteAdmin), r.getUsers)
-	a.Post("/users", r.requireAccess(accessSiteAdmin), r.createUser)
-	a.Put("/users/:id", r.requireAccess(accessSiteAdmin), r.updateUser)
-	a.Delete("/users/:id", r.requireAccess(accessSiteAdmin), r.deleteUser)
-	a.Delete("/users/:id/sessions", r.requireAccess(accessSiteAdmin), r.deleteUserSessions)
+	userRoutes := r.apiGroup("users")
+
+	userRoutes.Post("/", r.requireAccess(accessSiteAdmin), r.createUser)
+	userRoutes.Get("/", r.requireAccess(accessSiteAdmin), r.listUsers)
+	userRoutes.Put("/:id", r.requireAccess(accessSiteAdmin), r.updateUser)
+	userRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteUser)
+	userRoutes.Delete("/:id/sessions", r.requireAccess(accessSiteAdmin), r.deleteUserSessions)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// getUsers returns a paginated site-wide user list
-func (r *Router) getUsers(c *fiber.Ctx) error {
+// createUser creates a user from the site admin API
+func (r *Router) createUser(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	req := &service.UserCreateRequest{}
+	if err := c.BodyParser(req); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	err := r.appSvc.Users.Create(ctx, *req)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.SendStatus(fiber.StatusCreated)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// listUsers returns a paginated site-wide user list
+func (r *Router) listUsers(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	page := paginationFromCtx(c)
-	users, err := r.appSvc.Users.ListUsers(ctx, page)
+	users, err := r.appSvc.Users.List(ctx, page)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -38,35 +59,16 @@ func (r *Router) getUsers(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// createUser creates a user from the site admin API
-func (r *Router) createUser(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
-	req := &service.CreateUserRequest{}
-	if err := c.BodyParser(req); err != nil {
-		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
-	}
-
-	err := r.appSvc.Users.CreateUser(ctx, *req)
-	if err != nil {
-		return serviceError(c, err)
-	}
-
-	return c.SendStatus(fiber.StatusCreated)
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 // updateUser updates a user and refreshes sessions when the site role changes
 func (r *Router) updateUser(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	req := &service.UpdateUserRequest{}
+	req := &service.UserUpdateRequest{}
 	if err := c.BodyParser(req); err != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	view, roleChanged, err := r.appSvc.Users.UpdateUser(ctx, c.Params("id"), *req)
+	view, roleChanged, err := r.appSvc.Users.Update(ctx, c.Params("id"), *req)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -87,7 +89,7 @@ func (r *Router) deleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")
 	_, ctx := principalAndCtx(c)
 
-	if err := r.appSvc.Users.DeleteUser(ctx, id); err != nil {
+	if err := r.appSvc.Users.Delete(ctx, id); err != nil {
 		return serviceError(c, err)
 	}
 

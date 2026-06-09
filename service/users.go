@@ -2,24 +2,19 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
-	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/auth"
 	"github.com/geerew/friendle/utils/pagination"
-	"github.com/geerew/friendle/utils/queryparser"
 	"github.com/geerew/friendle/utils/types"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 var (
-	userListApiAllowedFilters = []string{"name", "role", "siteRole"}
-
 	defaultUsersListOrderBy = []string{models.USER_TABLE_CREATED_AT + " desc"}
 )
 
@@ -35,8 +30,8 @@ type UserResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CreateUserRequest represents a user create request
-type CreateUserRequest struct {
+// UserCreateRequest represents a user create request
+type UserCreateRequest struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"displayName"`
 	Password    string `json:"password"`
@@ -45,8 +40,8 @@ type CreateUserRequest struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateUserRequest represents a user update request
-type UpdateUserRequest struct {
+// UserUpdateRequest represents a user update request
+type UserUpdateRequest struct {
 	DisplayName string `json:"displayName"`
 	Password    string `json:"password"`
 	SiteRole    string `json:"siteRole"`
@@ -54,22 +49,22 @@ type UpdateUserRequest struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Users orchestrates site-admin user reads and writes
+// Users represents the user service
 type Users struct {
 	deps
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// newUsers creates a Users service
+// newUsers creates a user service
 func newUsers(d deps) *Users {
 	return &Users{deps: d}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListUsers returns paginated users
-func (u *Users) ListUsers(ctx context.Context, page *pagination.Pagination) ([]*UserResponse, error) {
+// List returns paginated slice of users
+func (u *Users) List(ctx context.Context, page *pagination.Pagination) ([]*UserResponse, error) {
 	users, err := u.dao.ListUsers(ctx, dao.NewOptions().
 		WithPagination(page).
 		WithOrderBy(defaultUsersListOrderBy...))
@@ -86,8 +81,8 @@ func (u *Users) ListUsers(ctx context.Context, page *pagination.Pagination) ([]*
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CreateUser creates a user from the site admin API
-func (u *Users) CreateUser(ctx context.Context, req CreateUserRequest) error {
+// Create creates a user
+func (u *Users) Create(ctx context.Context, req UserCreateRequest) error {
 	username := strings.TrimSpace(req.Username)
 	displayName := strings.TrimSpace(req.DisplayName)
 	password := strings.TrimSpace(req.Password)
@@ -135,8 +130,8 @@ func (u *Users) CreateUser(ctx context.Context, req CreateUserRequest) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateUser updates a user and reports whether the site role changed
-func (u *Users) UpdateUser(ctx context.Context, userID string, req UpdateUserRequest) (*UserResponse, bool, error) {
+// Update updates a user and reports whether the site role changed
+func (u *Users) Update(ctx context.Context, userID string, req UserUpdateRequest) (*UserResponse, bool, error) {
 	displayName := strings.TrimSpace(req.DisplayName)
 	password := strings.TrimSpace(req.Password)
 	role := strings.TrimSpace(req.SiteRole)
@@ -190,15 +185,17 @@ func (u *Users) UpdateUser(ctx context.Context, userID string, req UpdateUserReq
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// DeleteUser deletes a user
-func (u *Users) DeleteUser(ctx context.Context, userID string) error {
+// Delete deletes a user
+func (u *Users) Delete(ctx context.Context, userID string) error {
 	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: userID})
 	return u.dao.DeleteUsers(ctx, dbOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Response builders
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// usersResponseBuilder maps user models to API responses
+// usersResponseBuilder builds a slice of UserResponse from a slice of user models
 func usersResponseBuilder(users []*models.User) []*UserResponse {
 	responses := make([]*UserResponse, 0, len(users))
 	for _, user := range users {
@@ -210,71 +207,12 @@ func usersResponseBuilder(users []*models.User) []*UserResponse {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// userResponseBuilder maps a user model to an API response
+// userResponseBuilder builds a UserResponse from a user model
 func userResponseBuilder(user *models.User) *UserResponse {
 	return &UserResponse{
 		ID:          user.ID,
 		Username:    user.Username,
 		DisplayName: user.DisplayName,
 		SiteRole:    user.SiteRole,
-	}
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// usersWhereFromApiQuery parses a user list API query into a WHERE clause
-func usersWhereFromApiQuery(apiQuery string) (squirrel.Sqlizer, error) {
-	parsed, err := queryparser.Parse(apiQuery, userListApiAllowedFilters)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", utils.ErrApiQueryParse, err)
-	}
-
-	if parsed == nil {
-		return nil, nil
-	}
-
-	return usersWhereBuilder(parsed.Expr), nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// usersWhereBuilder builds a squirrel WHERE expression from a queryparser.QueryExpr
-func usersWhereBuilder(expr queryparser.QueryExpr) squirrel.Sqlizer {
-	switch node := expr.(type) {
-	case *queryparser.FilterExpr:
-		switch node.Key {
-		case "name":
-			return squirrel.Or{
-				squirrel.Like{"LOWER(" + models.USER_TABLE_USERNAME + ")": "%" + node.Value + "%"},
-				squirrel.Like{"LOWER(" + models.USER_TABLE_DISPLAY_NAME + ")": "%" + node.Value + "%"},
-			}
-		case "role", "siteRole":
-			val := node.Value
-			if val == "admin" {
-				val = string(types.SiteRoleAdmin)
-			} else if val == "user" {
-				val = string(types.SiteRoleUser)
-			}
-
-			return squirrel.Eq{models.USER_TABLE_SITE_ROLE: val}
-		default:
-			return nil
-		}
-	case *queryparser.AndExpr:
-		var andSlice []squirrel.Sqlizer
-		for _, child := range node.Children {
-			andSlice = append(andSlice, usersWhereBuilder(child))
-		}
-
-		return squirrel.And(andSlice)
-	case *queryparser.OrExpr:
-		var orSlice []squirrel.Sqlizer
-		for _, child := range node.Children {
-			orSlice = append(orSlice, usersWhereBuilder(child))
-		}
-
-		return squirrel.Or(orSlice)
-	default:
-		return nil
 	}
 }

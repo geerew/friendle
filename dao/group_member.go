@@ -53,16 +53,27 @@ func (dao *DAO) CreateGroupMember(ctx context.Context, member *models.GroupMembe
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithData(
 			map[string]interface{}{
-				models.BASE_ID:                    member.ID,
-				models.GROUP_MEMBER_GROUP_ID:      member.GroupID,
-				models.GROUP_MEMBER_USER_ID:       member.UserID,
-				models.GROUP_MEMBER_GROUP_ROLE:    member.GroupRole,
-				models.GROUP_MEMBER_TIMES_PICKED:  member.TimesPicked,
-				models.GROUP_MEMBER_PICKER_SKIPS:  member.PickerSkips,
-				models.BASE_CREATED_AT:            member.CreatedAt,
-				models.BASE_UPDATED_AT:            member.UpdatedAt,
+				models.BASE_ID:                   member.ID,
+				models.GROUP_MEMBER_GROUP_ID:     member.GroupID,
+				models.GROUP_MEMBER_USER_ID:      member.UserID,
+				models.GROUP_MEMBER_GROUP_ROLE:   member.GroupRole,
+				models.GROUP_MEMBER_TIMES_PICKED: member.TimesPicked,
+				models.GROUP_MEMBER_PICKER_SKIPS: member.PickerSkips,
+				models.BASE_CREATED_AT:           member.CreatedAt,
+				models.BASE_UPDATED_AT:           member.UpdatedAt,
 			},
 		)
 
 	return createGeneric(ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ListGroupMembers returns group membership records
+func (dao *DAO) ListGroupMembers(ctx context.Context, dbOpts *Options) ([]*models.GroupMember, error) {
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
+		WithColumns(groupMemberColumns...).
+		SetDbOpts(dbOpts)
+
+	return listGeneric[models.GroupMember](ctx, dao, *builderOpts)
 }
