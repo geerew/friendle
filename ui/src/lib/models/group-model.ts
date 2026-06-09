@@ -1,5 +1,13 @@
-import { array, number, object, string, type InferOutput } from 'valibot';
+import { array, number, object, optional, picklist, string, type InferOutput } from 'valibot';
 import { BasePaginationSchema, type PaginationReqParams } from './pagination-model';
+
+export const GroupRoleSchema = picklist(['group_admin', 'group_user']);
+
+export type GroupRole = InferOutput<typeof GroupRoleSchema>;
+
+export const JoinRequestStatusSchema = picklist(['pending', 'rejected']);
+
+export type JoinRequestStatus = InferOutput<typeof JoinRequestStatusSchema>;
 
 export const GroupSchema = object({
 	id: string(),
@@ -7,7 +15,9 @@ export const GroupSchema = object({
 	updatedAt: string(),
 	name: string(),
 	createdBy: string(),
-	memberCount: number()
+	memberCount: number(),
+	groupRole: optional(GroupRoleSchema),
+	joinRequestStatus: optional(JoinRequestStatusSchema)
 });
 
 export type GroupModel = InferOutput<typeof GroupSchema>;

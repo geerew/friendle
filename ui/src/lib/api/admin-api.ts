@@ -8,6 +8,9 @@ import {
 	type AdminUserReqParams
 } from '$lib/models/admin-user-model';
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query a list of users (paginated)
 export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
 	const response = await apiFetch('/api/admin/users/' + (qs ? `?${qs}` : ''));
@@ -27,6 +30,9 @@ export async function listUsers(params?: AdminUserReqParams): Promise<AdminUserP
 	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Create a user
 export async function createUser(data: AdminUserCreateModel): Promise<void> {
 	const response = await apiFetch('/api/admin/users/', {
 		method: 'POST',
@@ -41,6 +47,9 @@ export async function createUser(data: AdminUserCreateModel): Promise<void> {
 	throw new ApiError(body.message || 'Request failed', response.status);
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Delete a user
 export async function deleteUser(userId: string): Promise<void> {
 	const response = await apiFetch(`/api/admin/users/${userId}/`, { method: 'DELETE' });
 

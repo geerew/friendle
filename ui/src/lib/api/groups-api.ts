@@ -12,6 +12,9 @@ import {
 	type SearchGroupsParams
 } from '$lib/models/group-model';
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query a list of groups (paginated)
 export async function listGroups(params?: ListGroupsParams): Promise<GroupPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
 	const response = await apiFetch('/api/groups/' + (qs ? `?${qs}` : ''));
@@ -31,6 +34,9 @@ export async function listGroups(params?: ListGroupsParams): Promise<GroupPagina
 	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query a list of groups the authenticated user belongs to (paginated)
 export async function listSelfGroups(
 	params?: ListSelfGroupsParams
 ): Promise<GroupPaginationModel> {
@@ -52,9 +58,12 @@ export async function listSelfGroups(
 	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Search for groups (paginated)
 export async function searchGroups(params: SearchGroupsParams): Promise<GroupPaginationModel> {
 	const qs = buildQueryString(params);
-	const response = await apiFetch('/api/groups/search' + (qs ? `?${qs}` : ''));
+	const response = await apiFetch('/api/groups/' + (qs ? `?${qs}` : ''));
 
 	if (response.ok) {
 		const data = await response.json();
@@ -71,6 +80,9 @@ export async function searchGroups(params: SearchGroupsParams): Promise<GroupPag
 	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query a group by ID
 export async function getGroup(id: string): Promise<GroupModel> {
 	const response = await apiFetch(`/api/groups/${id}`);
 
@@ -89,6 +101,9 @@ export async function getGroup(id: string): Promise<GroupModel> {
 	throw new ApiError(data.message || 'Request failed', response.status);
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Create a group
 export async function createGroup(data: CreateGroupRequest): Promise<GroupModel> {
 	const response = await apiFetch('/api/groups/', {
 		method: 'POST',
@@ -97,6 +112,9 @@ export async function createGroup(data: CreateGroupRequest): Promise<GroupModel>
 	return parseJson(response);
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Delete a group
 export async function deleteGroup(groupId: string): Promise<void> {
 	const response = await apiFetch(`/api/groups/${groupId}`, { method: 'DELETE' });
 

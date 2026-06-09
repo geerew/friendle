@@ -16,5 +16,8 @@ export { default as SortAscendingIcon } from './sort-ascending.svelte';
 export { default as SortDescendingIcon } from './sort-descending.svelte';
 export { default as TrashIcon } from './trash.svelte';
 export { default as UserRoundIcon } from './user-round.svelte';
+export { default as UserRoundPlusIcon } from './user-round-plus.svelte';
+export { default as UserRoundXIcon } from './user-round-x.svelte';
+export { default as UserStarIcon } from './user-star.svelte';
 export { default as TickIcon } from './tick.svelte';
 export { default as XIcon } from './x.svelte';

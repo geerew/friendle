@@ -21,7 +21,7 @@ export async function withMinLoadingDelay<T>(
 	return result;
 }
 
-export function buildQueryString(params: Record<string, string | number | undefined>): string {
+export function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
 	const searchParams = new URLSearchParams();
 
 	for (const [key, value] of Object.entries(params)) {

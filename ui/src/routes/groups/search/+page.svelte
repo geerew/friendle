@@ -3,7 +3,7 @@
 	import { searchGroups } from '$lib/api/groups-api';
 	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { XIcon } from '$lib/components/icons';
-	import { GroupList } from '$lib/components/pages';
+	import { GroupSearchList } from '$lib/components/pages';
 	import { Button, Input } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { withMinLoadingDelay } from '$lib/utils';
@@ -13,9 +13,11 @@
 	let query = $state('');
 	let searchQuery = $state('');
 	let groups = $state<GroupModel[]>([]);
-	let page = $state(1);
+
 	const perPage = 7;
+	let page = $state(1);
 	let totalItems = $state(0);
+
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let searchRequestId = 0;
@@ -130,7 +132,7 @@
 			{:else if groups.length > 0}
 				<LoadingOverlay {loading}>
 					<div class="px-2">
-						<GroupList {groups} />
+						<GroupSearchList {groups} />
 					</div>
 				</LoadingOverlay>
 
