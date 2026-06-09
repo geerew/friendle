@@ -33,4 +33,7 @@ type GroupMember struct {
 	GroupRole   types.GroupRole `json:"groupRole" db:"group_role"` // Mutable
 	TimesPicked int             `db:"times_picked"`                // Mutable
 	PickerSkips int             `db:"picker_skips"`                // Mutable
+
+	// Added via JOIN
+	DisplayName string `json:"displayName" db:"display_name"`
 }

@@ -53,6 +53,15 @@ type GroupAdminSummary struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GroupMemberResponse represents a group member in list responses
+type GroupMemberResponse struct {
+	UserID      string          `json:"userId"`
+	DisplayName string          `json:"displayName"`
+	GroupRole   types.GroupRole `json:"groupRole"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type groupRolesByGroupID map[string]types.GroupRole
 
 type joinRequestStatusesByGroupID map[string]types.JoinRequestStatus
@@ -269,6 +278,56 @@ func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// ListMembers returns paginated group members with display names for authenticated group
+// members
+func (g *Groups) ListMembers(ctx context.Context, groupID string, page *pagination.Pagination) ([]*GroupMemberResponse, error) {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the caller is a member of this group
+	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
+	if err != nil {
+		return nil, err
+	}
+
+	if group == nil {
+		return nil, ErrGroupNotFound
+	}
+
+	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
+	if err != nil {
+		return nil, err
+	}
+
+	groupRole, _ := status.forGroup(groupID)
+	if groupRole == nil || !groupRole.IsValid() {
+		return nil, ErrGroupNotMember
+	}
+
+	// List group members and order by admin first, then display name
+	daoOpts := dao.NewOptions().
+		WithWhere(squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupID}).
+		WithPagination(page).
+		WithOrderByClause(squirrel.Expr(
+			"CASE WHEN " + models.GROUP_MEMBER_TABLE_GROUP_ROLE + " = 'group_admin' THEN 0 ELSE 1 END, LOWER(" + models.USER_TABLE_DISPLAY_NAME + ") ASC",
+		))
+
+	members, err := g.dao.ListGroupMembers(ctx, daoOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return []*GroupMemberResponse{}, nil
+	}
+
+	return groupMemberResponsesBuilder(members), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // RequestJoin creates a pending join request for the authenticated user
 func (g *Groups) RequestJoin(ctx context.Context, groupID string) (*GroupResponse, error) {
 	principal, err := principalFromContext(ctx)
@@ -390,6 +449,22 @@ func groupResponseBuilder(group *models.Group, groupRole *types.GroupRole, joinR
 		GroupRole:         groupRole,
 		JoinRequestStatus: joinRequestStatus,
 	}
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupMemberResponsesBuilder builds a slice of GroupMemberResponse from group member models
+func groupMemberResponsesBuilder(members []*models.GroupMember) []*GroupMemberResponse {
+	out := make([]*GroupMemberResponse, len(members))
+	for i, member := range members {
+		out[i] = &GroupMemberResponse{
+			UserID:      member.UserID,
+			DisplayName: member.DisplayName,
+			GroupRole:   member.GroupRole,
+		}
+	}
+
+	return out
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

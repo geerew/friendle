@@ -19,8 +19,19 @@ var groupMemberColumns = []string{
 	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_GROUP_ID, models.GROUP_MEMBER_GROUP_ID),
 	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_USER_ID, models.GROUP_MEMBER_USER_ID),
 	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_GROUP_ROLE, models.GROUP_MEMBER_GROUP_ROLE),
+	fmt.Sprintf("%s AS %s", models.USER_TABLE_DISPLAY_NAME, models.USER_DISPLAY_NAME),
 	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_TIMES_PICKED, models.GROUP_MEMBER_TIMES_PICKED),
 	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_PICKER_SKIPS, models.GROUP_MEMBER_PICKER_SKIPS),
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+var groupMemberJoins = []join{
+	{
+		Type:      joinTypeInner,
+		Table:     models.USER_TABLE,
+		Condition: models.GROUP_MEMBER_TABLE_USER_ID + " = " + models.USER_TABLE_ID,
+	},
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -69,10 +80,11 @@ func (dao *DAO) CreateGroupMember(ctx context.Context, member *models.GroupMembe
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListGroupMembers returns group membership records
+// ListGroupMembers returns group membership records with user display names
 func (dao *DAO) ListGroupMembers(ctx context.Context, dbOpts *Options) ([]*models.GroupMember, error) {
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithColumns(groupMemberColumns...).
+		WithJoins(groupMemberJoins...).
 		SetDbOpts(dbOpts)
 
 	return listGeneric[models.GroupMember](ctx, dao, *builderOpts)

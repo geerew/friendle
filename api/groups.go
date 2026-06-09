@@ -17,6 +17,9 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
 	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup) // TODO: support group admin
 
+	// Members
+	groupRoutes.Get("/:id/members", r.requireAccess(accessSiteUser), r.listGroupMembers)
+
 	// Join
 	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
 }
@@ -52,6 +55,26 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(group)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// listGroupMembers returns paginated group members for authenticated group members
+func (r *Router) listGroupMembers(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	page := paginationFromCtx(c)
+	members, err := r.appSvc.Groups.ListMembers(ctx, c.Params("id"), page)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	pResult, err := page.BuildResult(members)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

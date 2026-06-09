@@ -667,3 +667,139 @@ func TestGroups_RequestJoin(t *testing.T) {
 		require.Contains(t, string(body), "Group not found")
 	})
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestGroups_ListMembers exercises listing group members
+func TestGroups_ListMembers(t *testing.T) {
+	// Test successfully listing members as a group admin
+	t.Run("200 (admin)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    bob.ID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/members", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		respData, members := unmarshalHelper[service.GroupMemberResponse](t, body)
+		require.Equal(t, 2, respData.TotalItems)
+		require.Len(t, members, 2)
+		require.Equal(t, "Test User", members[0].DisplayName)
+		require.Equal(t, types.GroupRoleAdmin, members[0].GroupRole)
+		require.Equal(t, "Bob", members[1].DisplayName)
+		require.Equal(t, types.GroupRoleUser, members[1].GroupRole)
+	})
+
+	// Test successfully listing members as a group user
+	t.Run("200 (member)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/members", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		respData, members := unmarshalHelper[service.GroupMemberResponse](t, body)
+		require.Equal(t, 1, respData.TotalItems)
+		require.Len(t, members, 1)
+	})
+
+	// Test successfully paginating group members
+	t.Run("200 (pagination)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    bob.ID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/members?page=1&perPage=1", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		respData, members := unmarshalHelper[service.GroupMemberResponse](t, body)
+		require.Equal(t, 1, respData.Page)
+		require.Equal(t, 1, respData.PerPage)
+		require.Equal(t, 2, respData.TotalItems)
+		require.Equal(t, 2, respData.TotalPages)
+		require.Len(t, members, 1)
+		require.Equal(t, "Test User", members[0].DisplayName)
+		require.Equal(t, types.GroupRoleAdmin, members[0].GroupRole)
+	})
+
+	// Test error due to a non-member caller
+	t.Run("403 (forbidden)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/members", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, status)
+		require.Contains(t, string(body), "Forbidden")
+	})
+}

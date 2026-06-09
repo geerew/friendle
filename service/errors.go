@@ -22,6 +22,7 @@ var (
 	ErrGroupNotFound          = errors.New("group not found")
 	ErrGroupSearchQueryRequired = errors.New("group search query is required")
 	ErrGroupAlreadyMember     = errors.New("already a group member")
+	ErrGroupNotMember         = errors.New("not a group member")
 	ErrGroupJoinRequestPending  = errors.New("join request already pending")
 	ErrGroupJoinRequestRejected = errors.New("join request was rejected")
 )
