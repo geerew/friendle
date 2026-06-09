@@ -114,6 +114,29 @@ export async function createGroup(data: CreateGroupRequest): Promise<GroupModel>
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Request to join a group
+export async function requestGroupJoin(groupId: string): Promise<GroupModel> {
+	const response = await apiFetch(`/api/groups/${groupId}/join`, {
+		method: 'POST'
+	});
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(GroupSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Delete a group
 export async function deleteGroup(groupId: string): Promise<void> {
 	const response = await apiFetch(`/api/groups/${groupId}`, { method: 'DELETE' });

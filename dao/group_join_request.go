@@ -60,3 +60,14 @@ func (dao *DAO) ListGroupJoinRequests(ctx context.Context, dbOpts *Options) ([]*
 
 	return listGeneric[models.GroupJoinRequest](ctx, dao, *builderOpts)
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetGroupJoinRequest returns a group join request record
+func (dao *DAO) GetGroupJoinRequest(ctx context.Context, dbOpts *Options) (*models.GroupJoinRequest, error) {
+	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).
+		WithColumns(models.GroupJoinRequestColumns()...).
+		SetDbOpts(dbOpts)
+
+	return getGeneric[models.GroupJoinRequest](ctx, dao, *builderOpts)
+}

@@ -40,6 +40,9 @@ var serviceErrorMappings = []serviceErrorMapping{
 	{err: service.ErrGroupNameTooLong, status: fiber.StatusBadRequest, message: "Group name is too long"},
 	{err: service.ErrGroupNotFound, status: fiber.StatusNotFound, message: "Group not found"},
 	{err: service.ErrGroupSearchQueryRequired, status: fiber.StatusBadRequest, message: "Name is required"},
+	{err: service.ErrGroupAlreadyMember, status: fiber.StatusBadRequest, message: "Already a group member"},
+	{err: service.ErrGroupJoinRequestPending, status: fiber.StatusBadRequest, message: "Join request already pending"},
+	{err: service.ErrGroupJoinRequestRejected, status: fiber.StatusBadRequest, message: "Join request was rejected"},
 
 	{err: utils.ErrApiQueryParse, status: fiber.StatusBadRequest, message: "Invalid query"},
 }

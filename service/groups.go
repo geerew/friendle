@@ -250,6 +250,75 @@ func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// RequestJoin creates a pending join request for the authenticated user
+func (g *Groups) RequestJoin(ctx context.Context, groupID string) (*GroupResponse, error) {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
+	if err != nil {
+		return nil, err
+	}
+
+	if group == nil {
+		return nil, ErrGroupNotFound
+	}
+
+	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
+	if err != nil {
+		return nil, err
+	}
+
+	groupRole, joinRequestStatus := status.forGroup(groupID)
+	if groupRole != nil && groupRole.IsValid() {
+		return nil, ErrGroupAlreadyMember
+	}
+
+	if joinRequestStatus != nil {
+		switch *joinRequestStatus {
+		case types.JoinPending:
+			return nil, ErrGroupJoinRequestPending
+		case types.JoinRejected:
+			return nil, ErrGroupJoinRequestRejected
+		}
+	}
+
+	err = g.dao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+		GroupID: groupID,
+		UserID:  principal.UserID,
+		Status:  types.JoinPending,
+	})
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
+			daoOpts := dao.NewOptions().WithWhere(squirrel.And{
+				squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+				squirrel.Eq{models.JOIN_REQUEST_USER_ID: principal.UserID},
+			})
+
+			existing, getErr := g.dao.GetGroupJoinRequest(ctx, daoOpts)
+			if getErr != nil {
+				return nil, getErr
+			}
+
+			if existing != nil && existing.Status == types.JoinRejected {
+				return nil, ErrGroupJoinRequestRejected
+			}
+
+			return nil, ErrGroupJoinRequestPending
+		}
+
+		return nil, err
+	}
+
+	pending := types.JoinPending
+
+	return groupResponseBuilder(group, nil, &pending), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Delete deletes a group and its associated data
 func (g *Groups) Delete(ctx context.Context, groupID string) error {
 	principal, err := principalFromContext(ctx)

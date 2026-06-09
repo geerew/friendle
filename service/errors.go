@@ -21,4 +21,7 @@ var (
 	ErrGroupNameTooLong       = errors.New("group name is too long")
 	ErrGroupNotFound          = errors.New("group not found")
 	ErrGroupSearchQueryRequired = errors.New("group search query is required")
+	ErrGroupAlreadyMember     = errors.New("already a group member")
+	ErrGroupJoinRequestPending  = errors.New("join request already pending")
+	ErrGroupJoinRequestRejected = errors.New("join request was rejected")
 )

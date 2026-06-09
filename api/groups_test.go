@@ -458,3 +458,120 @@ func TestGroups_Search(t *testing.T) {
 		require.Contains(t, string(body), "Name is required")
 	})
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestGroups_RequestJoin exercises creating a group join request
+func TestGroups_RequestJoin(t *testing.T) {
+	// Test successfully creating a join request
+	t.Run("201 (created)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var resp service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, group.ID, resp.ID)
+		require.Nil(t, resp.GroupRole)
+		require.Equal(t, types.JoinPending, *resp.JoinRequestStatus)
+
+		stored, err := router.appDao.GetGroupJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: group.ID},
+			squirrel.Eq{models.JOIN_REQUEST_USER_ID: principal.userID},
+		}))
+		require.NoError(t, err)
+		require.NotNil(t, stored)
+		require.Equal(t, types.JoinPending, stored.Status)
+	})
+
+	// Test error due to an existing rejected join request
+	t.Run("400 (rejected)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Closed", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  principal.userID,
+			Status:  types.JoinRejected,
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Join request was rejected")
+	})
+
+	// Test error due to an existing pending join request
+	t.Run("400 (pending)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Pending", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  principal.userID,
+			Status:  types.JoinPending,
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Join request already pending")
+	})
+
+	// Test error due to the caller already being a group member
+	t.Run("400 (member)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Member", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Already a group member")
+	})
+
+	// Test error due to a missing group
+	t.Run("404 (not found)", func(t *testing.T) {
+		router, _, _ := setup(t, "bob", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/missing-group-id/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(body), "Group not found")
+	})
+}

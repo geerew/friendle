@@ -132,7 +132,7 @@
 			{:else if groups.length > 0}
 				<LoadingOverlay {loading}>
 					<div class="px-2">
-						<GroupSearchList {groups} />
+						<GroupSearchList bind:groups />
 					</div>
 				</LoadingOverlay>
 

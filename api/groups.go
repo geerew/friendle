@@ -15,8 +15,10 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Get("/", r.requireAccess(accessSiteUser), r.listGroups)
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
-	// TODO: support group admin
-	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup)
+	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup) // TODO: support group admin
+
+	// Join
+	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -114,4 +116,18 @@ func (r *Router) deleteGroup(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createGroupJoinRequest creates a pending join request for the authenticated user
+func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	group, err := r.appSvc.Groups.RequestJoin(ctx, c.Params("id"))
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(group)
 }
