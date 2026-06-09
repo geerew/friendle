@@ -10,6 +10,15 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// CountGroupJoinRequests returns the number of group join request records
+func (dao *DAO) CountGroupJoinRequests(ctx context.Context, dbOpts *Options) (int, error) {
+	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).SetDbOpts(dbOpts)
+
+	return countGeneric(ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // CreateGroupJoinRequest inserts a group join request record
 func (dao *DAO) CreateGroupJoinRequest(ctx context.Context, request *models.GroupJoinRequest) error {
 	if request == nil {

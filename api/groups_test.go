@@ -222,6 +222,97 @@ func TestGroups_Get(t *testing.T) {
 		require.Equal(t, "Friends", resp.Name)
 		require.Equal(t, 1, resp.MemberCount)
 		require.Equal(t, "alice", resp.CreatedBy)
+		require.Equal(t, types.GroupRoleAdmin, *resp.GroupRole)
+		require.NotNil(t, resp.AdminSummary)
+		require.Equal(t, 0, resp.AdminSummary.PendingJoinRequestCount)
+		require.Equal(t, 0, resp.AdminSummary.RejectedJoinRequestCount)
+	})
+
+	// Test successfully fetching a group as a non-admin member
+	t.Run("200 (member)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID, nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var resp service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, types.GroupRoleUser, *resp.GroupRole)
+		require.Equal(t, 2, resp.MemberCount)
+		require.Nil(t, resp.AdminSummary)
+	})
+
+	// Test successfully returning join request counts for a group admin
+	t.Run("200 (admin summary)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:     models.Base{ID: "bob"},
+			Username: "bob",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+
+		carol := &models.User{
+			Base:     models.Base{ID: "carol"},
+			Username: "carol",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, carol)
+
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  bob.ID,
+			Status:  types.JoinPending,
+		}))
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  carol.ID,
+			Status:  types.JoinRejected,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID, nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var resp service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.NotNil(t, resp.AdminSummary)
+		require.Equal(t, 1, resp.AdminSummary.PendingJoinRequestCount)
+		require.Equal(t, 1, resp.AdminSummary.RejectedJoinRequestCount)
 	})
 
 	// Test successfully fetching a group the caller does not belong to
@@ -253,6 +344,7 @@ func TestGroups_Get(t *testing.T) {
 		require.NoError(t, json.Unmarshal(body, &resp))
 		require.Equal(t, group.ID, resp.ID)
 		require.Equal(t, "Friends", resp.Name)
+		require.Nil(t, resp.AdminSummary)
 	})
 
 	// Test error due to a non-existent group

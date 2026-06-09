@@ -2,16 +2,42 @@
 	import { page } from '$app/state';
 	import { ApiError } from '$lib/api';
 	import { getGroup } from '$lib/api/groups-api';
-	import { auth } from '$lib/auth.svelte';
 	import { AppShell, Spinner } from '$lib/components';
+	import { GroupJoinButton } from '$lib/components/pages';
 	import { Separator } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
+	import { toast } from 'svelte-sonner';
 
 	const groupId = $derived(page.params.id ?? '');
 
 	let group = $state<GroupModel | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+
+	const isGroupAdmin = $derived(group?.groupRole === 'group_admin');
+	const isGroupMember = $derived(group?.groupRole === 'group_user');
+	const canRequestJoin = $derived(
+		group != null && !isGroupAdmin && !isGroupMember && group.joinRequestStatus == null
+	);
+	const joinRequestMessage = $derived.by(() => {
+		if (group?.joinRequestStatus === 'pending') {
+			return 'Your join request is pending';
+		}
+
+		if (group?.joinRequestStatus === 'rejected') {
+			return 'Your join request was rejected';
+		}
+
+		return null;
+	});
+
+	function markJoinPending(): void {
+		if (!group) {
+			return;
+		}
+
+		group = { ...group, joinRequestStatus: 'pending' };
+	}
 
 	$effect(() => {
 		groupId;
@@ -54,13 +80,52 @@
 				<p class="text-background-primary text-2xl">{group.name}</p>
 			</section>
 
-			<Separator />
+			{#if isGroupAdmin && group.adminSummary}
+				<Separator />
 
-			<section class="flex flex-col gap-3">
-				<h2 class="section-title">
-					Members ({group.memberCount})
-				</h2>
-			</section>
+				<section class="grid grid-cols-3 gap-3">
+					<div class="flex flex-col items-center gap-3 text-center">
+						<h2 class="section-title">Members</h2>
+						<p class="text-background-primary text-2xl tabular-nums">{group.memberCount}</p>
+					</div>
+					<div class="flex flex-col items-center gap-3 text-center">
+						<h2 class="section-title">Pending</h2>
+						<p class="text-background-primary text-2xl tabular-nums">
+							{group.adminSummary.pendingJoinRequestCount}
+						</p>
+					</div>
+					<div class="flex flex-col items-center gap-3 text-center">
+						<h2 class="section-title">Rejected</h2>
+						<p class="text-background-primary text-2xl tabular-nums">
+							{group.adminSummary.rejectedJoinRequestCount}
+						</p>
+					</div>
+				</section>
+			{:else if isGroupMember}
+				<Separator />
+
+				<section class="flex flex-col gap-3">
+					<h2 class="section-title">Members</h2>
+					<p class="text-background-primary text-2xl tabular-nums">{group.memberCount}</p>
+				</section>
+			{:else}
+				<Separator />
+
+				<section class="flex flex-col gap-3">
+					<p class="text-foreground text-sm">You are not a member of this group</p>
+					{#if joinRequestMessage}
+						<p class="text-foreground-alt-2 text-sm">{joinRequestMessage}</p>
+					{/if}
+					{#if canRequestJoin}
+						<GroupJoinButton
+							groupId={group.id}
+							appearance="button"
+							onjoined={markJoinPending}
+							onerror={(message) => toast.error(message)}
+						/>
+					{/if}
+				</section>
+			{/if}
 		</div>
 	{/if}
 </AppShell>

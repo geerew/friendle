@@ -40,6 +40,15 @@ type GroupResponse struct {
 	MemberCount       int                      `json:"memberCount"`
 	GroupRole         *types.GroupRole         `json:"groupRole,omitempty"`
 	JoinRequestStatus *types.JoinRequestStatus `json:"joinRequestStatus,omitempty"`
+	AdminSummary      *GroupAdminSummary       `json:"adminSummary,omitempty"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GroupAdminSummary holds join request counts for a group admin
+type GroupAdminSummary struct {
+	PendingJoinRequestCount  int `json:"pendingJoinRequestCount"`
+	RejectedJoinRequestCount int `json:"rejectedJoinRequestCount"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -245,7 +254,17 @@ func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error
 
 	groupRole, joinRequestStatus := status.forGroup(groupID)
 
-	return groupResponseBuilder(group, groupRole, joinRequestStatus), nil
+	resp := groupResponseBuilder(group, groupRole, joinRequestStatus)
+	if groupRole != nil && *groupRole == types.GroupRoleAdmin {
+		adminSummary, err := g.getAdminSummary(ctx, groupID)
+		if err != nil {
+			return nil, err
+		}
+
+		resp.AdminSummary = adminSummary
+	}
+
+	return resp, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -431,4 +450,30 @@ func (s userMemberStatus) forGroup(groupID string) (*types.GroupRole, *types.Joi
 	}
 
 	return nil, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getAdminSummary returns a count of pending and rejected join requests for a group
+func (g *Groups) getAdminSummary(ctx context.Context, groupID string) (*GroupAdminSummary, error) {
+	pending, err := g.dao.CountGroupJoinRequests(ctx, dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+		squirrel.Eq{models.JOIN_REQUEST_STATUS: types.JoinPending},
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	rejected, err := g.dao.CountGroupJoinRequests(ctx, dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+		squirrel.Eq{models.JOIN_REQUEST_STATUS: types.JoinRejected},
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	return &GroupAdminSummary{
+		PendingJoinRequestCount:  pending,
+		RejectedJoinRequestCount: rejected,
+	}, nil
 }
