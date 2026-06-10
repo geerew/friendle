@@ -23,22 +23,22 @@
 			label: 'bg-background-primary-alt-1 text-foreground'
 		},
 		member: {
-			root: 'border-foreground-alt-3',
-			icon: 'bg-foreground-alt-3 text-foreground',
-			divider: 'border-foreground-alt-3',
-			label: 'bg-background-alt-2 text-foreground-alt-1'
+			root: 'border-background-primary/35',
+			icon: 'bg-background-primary/15 text-foreground-alt-1',
+			divider: 'border-background-primary/35',
+			label: 'bg-background-alt-1 text-foreground-alt-1'
 		},
 		pending: {
 			root: 'border-foreground-alt-4',
-			icon: 'bg-foreground-alt-4 text-foreground-alt-2',
+			icon: 'bg-foreground-alt-4 text-foreground-alt-1',
 			divider: 'border-foreground-alt-4',
-			label: 'bg-background-alt-1 text-foreground-alt-2'
+			label: 'bg-background-alt-1 text-foreground-alt-1'
 		},
 		rejected: {
 			root: 'border-foreground-error/30',
-			icon: 'bg-background-error text-foreground-error',
-			divider: 'border-foreground-error/30',
-			label: 'bg-background-error-alt-1 text-foreground-error'
+			icon: 'bg-background-error text-foreground',
+			divider: 'border-foreground-error/40',
+			label: 'bg-background-error-alt-1 text-foreground'
 		}
 	};
 

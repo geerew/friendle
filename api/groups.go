@@ -20,6 +20,11 @@ func (r *Router) initGroupRoutes() {
 	// Members
 	groupRoutes.Get("/:id/members", r.requireAccess(accessSiteUser), r.listGroupMembers)
 
+	// Pending join requests
+	groupRoutes.Get("/:id/pending", r.requireAccess(accessSiteUser), r.listGroupPendingJoinRequests)
+	groupRoutes.Post("/:id/pending/:userId/approve", r.requireAccess(accessSiteUser), r.approveGroupJoinRequest)
+	groupRoutes.Post("/:id/pending/:userId/decline", r.requireAccess(accessSiteUser), r.declineGroupJoinRequest)
+
 	// Join
 	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
 }
@@ -75,6 +80,52 @@ func (r *Router) listGroupMembers(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(pResult)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// listGroupPendingJoinRequests returns paginated pending join requests for group admins
+func (r *Router) listGroupPendingJoinRequests(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	page := paginationFromCtx(c)
+	requests, err := r.appSvc.Groups.ListPendingJoinRequests(ctx, c.Params("id"), page)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	pResult, err := page.BuildResult(requests)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// approveGroupJoinRequest approves a pending join request for a group admin
+func (r *Router) approveGroupJoinRequest(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	if err := r.appSvc.Groups.ApproveJoinRequest(ctx, c.Params("id"), c.Params("userId")); err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// declineGroupJoinRequest rejects a pending join request for a group admin
+func (r *Router) declineGroupJoinRequest(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	if err := r.appSvc.Groups.DeclineJoinRequest(ctx, c.Params("id"), c.Params("userId")); err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

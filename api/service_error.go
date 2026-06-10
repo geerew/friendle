@@ -42,8 +42,10 @@ var serviceErrorMappings = []serviceErrorMapping{
 	{err: service.ErrGroupSearchQueryRequired, status: fiber.StatusBadRequest, message: "Name is required"},
 	{err: service.ErrGroupAlreadyMember, status: fiber.StatusBadRequest, message: "Already a group member"},
 	{err: service.ErrGroupNotMember, status: fiber.StatusForbidden, message: "Forbidden"},
+	{err: service.ErrGroupNotAdmin, status: fiber.StatusForbidden, message: "Forbidden"},
 	{err: service.ErrGroupJoinRequestPending, status: fiber.StatusBadRequest, message: "Join request already pending"},
 	{err: service.ErrGroupJoinRequestRejected, status: fiber.StatusBadRequest, message: "Join request was rejected"},
+	{err: service.ErrGroupJoinRequestNotFound, status: fiber.StatusNotFound, message: "Join request not found"},
 
 	{err: utils.ErrApiQueryParse, status: fiber.StatusBadRequest, message: "Invalid query"},
 }

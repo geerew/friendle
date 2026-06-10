@@ -20,10 +20,6 @@
 
 	let joinErrors = $state<Record<string, string>>({});
 
-	function canRequestJoin(group: GroupModel): boolean {
-		return !isGroupMember(group) && group.joinRequestStatus !== 'pending';
-	}
-
 	function markJoinPending(groupId: string): void {
 		groups = groups.map((group) =>
 			group.id === groupId ? { ...group, joinRequestStatus: 'pending' as const } : group
@@ -89,6 +85,27 @@
 						></div>
 					</div>
 				</div>
+			{:else if group.joinRequestStatus === 'rejected'}
+				<div
+					class="flex w-full cursor-default items-start gap-3 rounded-md px-2 py-3 text-left transition-all"
+				>
+					<div class="flex w-full items-start gap-3 px-1">
+						<span
+							class="text-foreground-alt-1 min-w-0 flex-1 wrap-break-word text-base leading-5 font-medium"
+						>
+							{group.name}
+						</span>
+						<GroupStatusBadge variant="rejected" label="Rejected">
+							{#snippet icon()}
+								<UserRoundXIcon class="size-3.5 shrink-0 stroke-2" />
+							{/snippet}
+						</GroupStatusBadge>
+						<div
+							class="flex h-5 w-5 shrink-0 items-center justify-center self-start"
+							aria-hidden="true"
+						></div>
+					</div>
+				</div>
 			{:else}
 				<div
 					class="flex w-full cursor-default items-start gap-3 rounded-md px-2 py-3 text-left transition-all"
@@ -99,21 +116,12 @@
 						>
 							{group.name}
 						</span>
-						{#if group.joinRequestStatus === 'rejected'}
-							<GroupStatusBadge variant="rejected" label="Rejected">
-								{#snippet icon()}
-									<UserRoundXIcon class="size-3.5 shrink-0 stroke-2" />
-								{/snippet}
-							</GroupStatusBadge>
-						{/if}
 						<div class="flex h-5 w-5 shrink-0 items-center justify-center self-start">
-							{#if canRequestJoin(group)}
-								<GroupJoinButton
-									groupId={group.id}
-									onjoined={() => markJoinPending(group.id)}
-									onerror={(message) => setJoinError(group.id, message)}
-								/>
-							{/if}
+							<GroupJoinButton
+								groupId={group.id}
+								onjoined={() => markJoinPending(group.id)}
+								onerror={(message) => setJoinError(group.id, message)}
+							/>
 						</div>
 					</div>
 				</div>

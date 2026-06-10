@@ -99,9 +99,12 @@
 			class="pe-11"
 			placeholder="Search groups"
 			autocomplete="off"
+			autofocus
 		/>
 
-		<div class="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center">
+		<div
+			class="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center"
+		>
 			{#if loading && groups.length === 0}
 				<Spinner class="bg-foreground-alt-2 size-1.5" />
 			{:else if query}

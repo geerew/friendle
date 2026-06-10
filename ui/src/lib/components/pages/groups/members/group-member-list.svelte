@@ -13,14 +13,14 @@
 
 <div class="flex flex-col gap-2">
 	{#each members as member, index (member.userId)}
-		<div class="flex w-full items-start gap-3 rounded-md px-2 py-3 text-left">
-			<div class="flex w-full items-start gap-3 px-1">
+		<div class="flex w-full items-center gap-3 rounded-md px-2 py-3 text-left">
+			<div class="flex w-full items-center gap-3 px-1">
 				<span
 					class="text-foreground-alt-1 min-w-0 flex-1 truncate text-base leading-5 font-medium"
 				>
 					{member.displayName}
 				</span>
-				<div class="flex shrink-0 items-center gap-1.5 self-start">
+				<div class="flex shrink-0 items-center gap-1.5">
 					{#if member.groupRole === 'group_admin'}
 						<GroupStatusBadge variant="admin" label="Admin">
 							{#snippet icon()}

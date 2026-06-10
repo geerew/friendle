@@ -62,6 +62,14 @@ type GroupMemberResponse struct {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GroupJoinRequestResponse represents a pending join request in list responses
+type GroupJoinRequestResponse struct {
+	UserID      string `json:"userId"`
+	DisplayName string `json:"displayName"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 type groupRolesByGroupID map[string]types.GroupRole
 
 type joinRequestStatusesByGroupID map[string]types.JoinRequestStatus
@@ -278,15 +286,15 @@ func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListMembers returns paginated group members with display names for authenticated group
-// members
+// ListMembers returns paginated group members with display names
+//
+// Action limited to group member and admins
 func (g *Groups) ListMembers(ctx context.Context, groupID string, page *pagination.Pagination) ([]*GroupMemberResponse, error) {
 	principal, err := principalFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Ensure the caller is a member of this group
 	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
 	if err != nil {
 		return nil, err
@@ -324,6 +332,85 @@ func (g *Groups) ListMembers(ctx context.Context, groupID string, page *paginati
 	}
 
 	return groupMemberResponsesBuilder(members), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ListPendingJoinRequests returns paginated pending join requests
+//
+// Action limited to group admins
+func (g *Groups) ListPendingJoinRequests(ctx context.Context, groupID string, page *pagination.Pagination) ([]*GroupJoinRequestResponse, error) {
+	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
+		return nil, err
+	}
+
+	daoOpts := dao.NewOptions().
+		WithWhere(squirrel.And{
+			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+			squirrel.Eq{models.JOIN_REQUEST_STATUS: types.JoinPending},
+		}).
+		WithPagination(page).
+		WithOrderByClause(squirrel.Expr("LOWER(" + models.USER_TABLE_DISPLAY_NAME + ") ASC"))
+
+	requests, err := g.dao.ListGroupJoinRequests(ctx, daoOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(requests) == 0 {
+		return []*GroupJoinRequestResponse{}, nil
+	}
+
+	return groupJoinRequestResponsesBuilder(requests), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ApproveJoinRequest approves a pending join request and adds the user as a group member
+//
+// Action limited to group admins
+func (g *Groups) ApproveJoinRequest(ctx context.Context, groupID, userID string) error {
+	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
+		return err
+	}
+
+	return g.dao.RunInTransaction(ctx, func(txCtx context.Context) error {
+		request, err := g.getPendingJoinRequest(txCtx, groupID, userID)
+		if err != nil {
+			return err
+		}
+
+		request.Status = types.JoinApproved
+		if err := g.dao.UpdateGroupJoinRequest(txCtx, request); err != nil {
+			return err
+		}
+
+		return g.dao.CreateGroupMember(txCtx, &models.GroupMember{
+			GroupID:   groupID,
+			UserID:    userID,
+			GroupRole: types.GroupRoleUser,
+		})
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DeclineJoinRequest rejects a pending join request
+//
+// Action limited to group admins
+func (g *Groups) DeclineJoinRequest(ctx context.Context, groupID, userID string) error {
+	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
+		return err
+	}
+
+	request, err := g.getPendingJoinRequest(ctx, groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	request.Status = types.JoinRejected
+
+	return g.dao.UpdateGroupJoinRequest(ctx, request)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -468,6 +555,22 @@ func groupMemberResponsesBuilder(members []*models.GroupMember) []*GroupMemberRe
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupJoinRequestResponsesBuilder builds a slice of GroupJoinRequestResponse from join request
+// models
+func groupJoinRequestResponsesBuilder(requests []*models.GroupJoinRequest) []*GroupJoinRequestResponse {
+	out := make([]*GroupJoinRequestResponse, len(requests))
+	for i, request := range requests {
+		out[i] = &GroupJoinRequestResponse{
+			UserID:      request.UserID,
+			DisplayName: request.DisplayName,
+		}
+	}
+
+	return out
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // User member status
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -551,4 +654,55 @@ func (g *Groups) getAdminSummary(ctx context.Context, groupID string) (*GroupAdm
 		PendingJoinRequestCount:  pending,
 		RejectedJoinRequestCount: rejected,
 	}, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// requireGroupAdmin ensures the caller is a group admin for the given group
+func (g *Groups) requireGroupAdmin(ctx context.Context, groupID string) error {
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
+	if err != nil {
+		return err
+	}
+
+	if group == nil {
+		return ErrGroupNotFound
+	}
+
+	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
+	if err != nil {
+		return err
+	}
+
+	groupRole, _ := status.forGroup(groupID)
+	if groupRole == nil || *groupRole != types.GroupRoleAdmin {
+		return ErrGroupNotAdmin
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getPendingJoinRequest loads a pending join request for a group and user
+func (g *Groups) getPendingJoinRequest(ctx context.Context, groupID, userID string) (*models.GroupJoinRequest, error) {
+	request, err := g.dao.GetGroupJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+		squirrel.Eq{models.JOIN_REQUEST_USER_ID: userID},
+		squirrel.Eq{models.JOIN_REQUEST_STATUS: types.JoinPending},
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	if request == nil {
+		return nil, ErrGroupJoinRequestNotFound
+	}
+
+	return request, nil
 }

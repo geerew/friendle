@@ -16,6 +16,11 @@ import {
 	type GroupMemberPaginationModel,
 	type ListGroupMembersParams
 } from '$lib/models/group-member-model';
+import {
+	GroupJoinRequestPaginationSchema,
+	type GroupJoinRequestPaginationModel,
+	type ListGroupPendingJoinRequestsParams
+} from '$lib/models/group-join-request-model';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -159,6 +164,63 @@ export async function listGroupMembers(
 		}
 
 		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query pending group join requests (paginated)
+export async function listGroupPendingJoinRequests(
+	groupId: string,
+	params?: ListGroupPendingJoinRequestsParams
+): Promise<GroupJoinRequestPaginationModel> {
+	const qs = params ? buildQueryString(params) : '';
+	const response = await apiFetch(`/api/groups/${groupId}/pending` + (qs ? `?${qs}` : ''));
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(GroupJoinRequestPaginationSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Approve a pending group join request
+export async function approveGroupJoinRequest(groupId: string, userId: string): Promise<void> {
+	const response = await apiFetch(`/api/groups/${groupId}/pending/${userId}/approve`, {
+		method: 'POST'
+	});
+
+	if (response.ok || response.status === 204) {
+		return;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Decline a pending group join request
+export async function declineGroupJoinRequest(groupId: string, userId: string): Promise<void> {
+	const response = await apiFetch(`/api/groups/${groupId}/pending/${userId}/decline`, {
+		method: 'POST'
+	});
+
+	if (response.ok || response.status === 204) {
+		return;
 	}
 
 	const data = (await response.json()) as { message?: string };

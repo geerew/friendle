@@ -24,13 +24,38 @@
 
 	setContext(GROUP_PAGE_KEY, groupPage);
 
+	let previousPathname = $state('');
+
+	// isGroupHomePath reports whether pathname is the group detail route
+	function isGroupHomePath(pathname: string, id: string): boolean {
+		return pathname.replace(/\/+$/, '') === `/groups/${id}`;
+	}
+
 	$effect(() => {
 		groupId;
 		void loadGroupPage();
 	});
 
+	$effect(() => {
+		const id = groupId;
+		const pathname = page.url.pathname;
+		const previous = previousPathname;
+		previousPathname = pathname;
+
+		if (
+			!id ||
+			!isGroupHomePath(pathname, id) ||
+			groupPage.group?.id !== id ||
+			previous === pathname
+		) {
+			return;
+		}
+
+		void loadGroupPage({ silent: true });
+	});
+
 	// loadGroupPage fetches the group and redirects non-members away from this route tree
-	async function loadGroupPage(): Promise<void> {
+	async function loadGroupPage(options?: { silent?: boolean }): Promise<void> {
 		if (!groupId) {
 			groupPage.group = null;
 			groupPage.error = 'Group not found';
@@ -39,7 +64,10 @@
 			return;
 		}
 
-		groupPage.loading = true;
+		if (!options?.silent) {
+			groupPage.loading = true;
+		}
+
 		groupPage.error = null;
 
 		try {

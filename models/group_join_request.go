@@ -31,6 +31,9 @@ type GroupJoinRequest struct {
 	GroupID string                  `db:"group_id"` // Immutable
 	UserID  string                  `db:"user_id"`  // Immutable
 	Status  types.JoinRequestStatus `db:"status"`   // Mutable
+
+	// Added via JOIN
+	DisplayName string `db:"display_name"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
