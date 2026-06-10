@@ -6,9 +6,8 @@
 		UserRoundPlusIcon,
 		UserRoundXIcon
 	} from '$lib/components/icons';
-	import { Button, Table } from '$lib/components/ui';
+	import { Button, StatusBadge, Table } from '$lib/components/ui';
 	import GroupRoleBadge from '../group-role-badge.svelte';
-	import GroupStatusBadge from '../group-status-badge.svelte';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { isGroupMember } from '$lib/utils/group';
@@ -59,11 +58,11 @@
 	<Table.Row label={group.name} wrapLabel>
 		{#snippet trailing()}
 			<div class="flex shrink-0 items-center gap-1.5">
-				<GroupStatusBadge variant="pending" label="Pending">
+				<StatusBadge variant="pending" label="Pending">
 					{#snippet icon()}
 						<UserRoundPlusIcon class="size-3.5 shrink-0 stroke-2" />
 					{/snippet}
-				</GroupStatusBadge>
+				</StatusBadge>
 				<div class="size-5 shrink-0" aria-hidden="true"></div>
 			</div>
 		{/snippet}
@@ -72,11 +71,11 @@
 	<Table.Row label={group.name} wrapLabel>
 		{#snippet trailing()}
 			<div class="flex shrink-0 items-center gap-1.5">
-				<GroupStatusBadge variant="rejected" label="Rejected">
+				<StatusBadge variant="rejected" label="Rejected">
 					{#snippet icon()}
 						<UserRoundXIcon class="size-3.5 shrink-0 stroke-2" />
 					{/snippet}
-				</GroupStatusBadge>
+				</StatusBadge>
 				<div class="size-5 shrink-0" aria-hidden="true"></div>
 			</div>
 		{/snippet}

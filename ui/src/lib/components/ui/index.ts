@@ -1,5 +1,6 @@
 export { default as Button } from './button.svelte';
 export { default as Badge } from './badge.svelte';
+export { default as StatusBadge } from './status-badge.svelte';
 export { default as Field } from './field.svelte';
 export { default as Input } from './input.svelte';
 export { default as RadioGroup } from './radio-group.svelte';

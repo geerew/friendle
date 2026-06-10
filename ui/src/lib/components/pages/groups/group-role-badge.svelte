@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { UserRoundIcon, UserStarIcon } from '$lib/components/icons';
-	import GroupStatusBadge from './group-status-badge.svelte';
+	import { StatusBadge } from '$lib/components/ui';
 
 	type Props = {
 		role: 'group_admin' | 'group_user';
@@ -10,15 +10,15 @@
 </script>
 
 {#if role === 'group_admin'}
-	<GroupStatusBadge variant="admin" label="Admin">
+	<StatusBadge variant="admin" label="Admin">
 		{#snippet icon()}
 			<UserStarIcon class="size-3.5 shrink-0 stroke-2" />
 		{/snippet}
-	</GroupStatusBadge>
+	</StatusBadge>
 {:else}
-	<GroupStatusBadge variant="member" label="Member">
+	<StatusBadge variant="member" label="Member">
 		{#snippet icon()}
 			<UserRoundIcon class="size-3.5 shrink-0 stroke-2" />
 		{/snippet}
-	</GroupStatusBadge>
+	</StatusBadge>
 {/if}

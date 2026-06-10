@@ -10,17 +10,27 @@
 		loading: boolean;
 		emptyMessage: string;
 		list: Snippet;
+		minimal?: boolean;
+		showPerPageSelect?: boolean;
+		selectTriggerClass?: string;
+		alwaysShowPagination?: boolean;
 	};
 
 	let {
 		itemCount,
 		totalItems,
-		perPage = $bindable(10),
 		page = $bindable(1),
+		perPage = $bindable(10),
 		loading,
 		emptyMessage,
-		list
+		list,
+		minimal = true,
+		showPerPageSelect = false,
+		selectTriggerClass,
+		alwaysShowPagination = false
 	}: Props = $props();
+
+	const showPagination = $derived(alwaysShowPagination || totalItems > perPage);
 </script>
 
 <div class="flex flex-col gap-6">
@@ -39,13 +49,14 @@
 			</div>
 		</LoadingOverlay>
 
-		{#if totalItems > perPage}
+		{#if showPagination}
 			<Pagination
 				count={totalItems}
 				bind:page
 				{perPage}
-				minimal
-				showPerPageSelect={false}
+				{minimal}
+				{showPerPageSelect}
+				{selectTriggerClass}
 			/>
 		{/if}
 	{/if}

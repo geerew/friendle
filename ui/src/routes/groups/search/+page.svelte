@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { searchGroups } from '$lib/api/groups-api';
-	import { LoadingOverlay, Pagination, Spinner } from '$lib/components';
+	import { Spinner } from '$lib/components';
 	import { XIcon } from '$lib/components/icons';
 	import GroupSearchRow from '$lib/components/pages/groups/search/group-search-row.svelte';
 	import { Button, Input, Table } from '$lib/components/ui';
@@ -126,35 +126,24 @@
 	</div>
 
 	{#if searchQuery}
-		<div class="mt-6 flex flex-col gap-6">
-			{#if groups.length === 0 && !loading}
-				<div class="flex min-h-16 items-center justify-center">
-					<p class="text-foreground-alt-2 text-sm italic">No groups found</p>
-				</div>
-			{:else if groups.length > 0}
-				<LoadingOverlay {loading}>
-					<div class="px-2">
-						<Table.List>
-							{#each groups as group, index (group.id)}
-								<GroupSearchRow {group} onjoined={markJoinPending} />
-								{#if index < groups.length - 1}
-									<Table.Separator />
-								{/if}
-							{/each}
-						</Table.List>
-					</div>
-				</LoadingOverlay>
-
-				{#if totalItems > perPage}
-					<Pagination
-						count={totalItems}
-						bind:page
-						{perPage}
-						minimal
-						showPerPageSelect={false}
-					/>
-				{/if}
-			{/if}
-		</div>
+		<Table.PaginatedBody
+			itemCount={groups.length}
+			{totalItems}
+			bind:page
+			perPage={7}
+			{loading}
+			emptyMessage="No groups found"
+		>
+			{#snippet list()}
+				<Table.List>
+					{#each groups as group, index (group.id)}
+						<GroupSearchRow {group} onjoined={markJoinPending} />
+						{#if index < groups.length - 1}
+							<Table.Separator />
+						{/if}
+					{/each}
+				</Table.List>
+			{/snippet}
+		</Table.PaginatedBody>
 	{/if}
 </Table.Root>

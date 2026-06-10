@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { listGroupMembers } from '$lib/api/groups-api';
 	import { PencilIcon } from '$lib/components/icons';
-	import { GroupNameSection, GroupPaginatedListSection } from '$lib/components/pages';
+	import { GroupNameSection } from '$lib/components/pages';
 	import GroupRoleBadge from '$lib/components/pages/groups/group-role-badge.svelte';
 	import { Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
@@ -64,7 +64,7 @@
 		<GroupNameSection />
 	{/snippet}
 
-	<GroupPaginatedListSection
+	<Table.PaginatedBody
 		itemCount={members.length}
 		{totalItems}
 		bind:page={pageNum}
@@ -95,5 +95,5 @@
 				{/each}
 			</Table.List>
 		{/snippet}
-	</GroupPaginatedListSection>
+	</Table.PaginatedBody>
 </Table.Root>

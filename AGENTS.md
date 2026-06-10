@@ -484,7 +484,7 @@ Put Tailwind classes **directly on the element** (`class="..."`). Do not extract
 Under `ui/src/lib/components/pages/`, colocate components with the route they serve:
 
 - **One page only** → subfolder when the route has reusable pieces (e.g. `pages/groups/search/` for `/groups/search`, `pages/groups/detail/` for `/groups/[id]`, `pages/home/` for `/`); keep simple list markup inline in `+page.svelte` when it is not shared
-- **Shared within an area** → stay at that area’s root when used by multiple routes (e.g. `pages/groups/group-status-badge.svelte` for search and members)
+- **Shared within an area** → stay at that area’s root when used by multiple routes in that area (e.g. `pages/groups/group-role-badge.svelte` for search and members)
 - **Internal to an area** → import with relative paths (e.g. `../group-status-badge.svelte` from `search/`); do not re-export from the area barrel unless a route imports it
 
 Each subfolder has an `index.ts` barrel. The parent area re-exports page-specific components so routes can import from `$lib/components/pages`.
@@ -493,7 +493,7 @@ Each subfolder has an `index.ts` barrel. The parent area re-exports page-specifi
 
 ```
 pages/groups/
-  group-status-badge.svelte       # search + members page (internal)
+  group-role-badge.svelte         # search + members (group-specific)
   index.ts
   detail/group-stat-link.svelte   # /groups/[id]
   search/group-search-row.svelte  # /groups/search
@@ -518,6 +518,8 @@ Use `ui/src/lib/utils/` as a **directory**, not a sibling `utils.ts` file. Put s
 Use **`Table`** from `$lib/components/ui` for standard in-app pages and list rows:
 
 - **`Table.Root`** — `AppShell` + breadcrumb + optional **`section-title`** heading + body. Pass **`title`** always; omit **`breadcrumb`** to default to `[{ label: title }]`, or pass **`breadcrumb={[]}`** for no breadcrumb trail (e.g. home). Set **`showTitle={false}`** when the page uses its own heading block (group detail with `GroupNameSection`, settings with section headings).
-- **`Table.List`**, **`Table.Row`**, **`Table.Separator`** — shared list row layout (home, search, members, admin lists, etc.). **`Table.Row`** takes **`label`**, optional **`href`**, and a **`trailing`** snippet for badges/actions.
+- **`Table.PaginatedBody`** — loading spinner, empty state, **`LoadingOverlay`** on refetch, and pagination around a **`list`** snippet. Use for paginated list pages (home, group sub-pages, search results, admin lists). Defaults: minimal pagination, no per-page select. Admin lists set **`minimal={false}`**, **`showPerPageSelect`**, and **`alwaysShowPagination`**.
+- **`Table.List`**, **`Table.Row`**, **`Table.Separator`** — shared list row layout (home, search, members, admin lists, etc.). **`Table.Row`** takes **`label`**, optional **`href`**, and an optional **`trailing`** snippet for badges/actions.
+- **`StatusBadge`** — icon + label badge with semantic variants (`admin`, `member`, `pending`, `rejected`). Use directly when the label/icon are caller-specific; use domain wrappers (e.g. **`GroupRoleBadge`**) when mapping domain types to variants.
 
 Namespace matches **`Dialog.Root`**, **`Drawer.Root`**, etc.

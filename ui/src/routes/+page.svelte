@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { listSelfGroups } from '$lib/api/groups-api';
-	import { GroupList, GroupPaginatedListSection } from '$lib/components/pages';
+	import { GroupList } from '$lib/components/pages';
 	import { Table } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
@@ -36,7 +36,7 @@
 </script>
 
 <Table.Root title="My Groups" breadcrumb={[]}>
-	<GroupPaginatedListSection
+	<Table.PaginatedBody
 		itemCount={groups.length}
 		{totalItems}
 		bind:page
@@ -47,5 +47,5 @@
 		{#snippet list()}
 			<GroupList {groups} />
 		{/snippet}
-	</GroupPaginatedListSection>
+	</Table.PaginatedBody>
 </Table.Root>

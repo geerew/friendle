@@ -7,7 +7,7 @@
 		listGroupPendingJoinRequests
 	} from '$lib/api/groups-api';
 	import { TickIcon, XIcon } from '$lib/components/icons';
-	import { GroupNameSection, GroupPaginatedListSection } from '$lib/components/pages';
+	import { GroupNameSection } from '$lib/components/pages';
 	import { Button, Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
@@ -114,7 +114,7 @@
 		<GroupNameSection />
 	{/snippet}
 
-	<GroupPaginatedListSection
+	<Table.PaginatedBody
 		itemCount={requests.length}
 		{totalItems}
 		bind:page={pageNum}
@@ -161,5 +161,5 @@
 				{/each}
 			</Table.List>
 		{/snippet}
-	</GroupPaginatedListSection>
+	</Table.PaginatedBody>
 </Table.Root>
