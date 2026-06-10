@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { PencilIcon } from '$lib/components/icons';
-	import GroupListShell from '../group-list-shell.svelte';
-	import GroupListRow from '../group-list-row.svelte';
-	import GroupListSeparator from '../group-list-separator.svelte';
+	import { Table } from '$lib/components/ui';
 	import GroupRoleBadge from '../group-role-badge.svelte';
 	import type { GroupMemberModel } from '$lib/models/group-member-model';
 
@@ -13,9 +11,9 @@
 	let { members }: Props = $props();
 </script>
 
-<GroupListShell>
+<Table.List>
 	{#each members as member, index (member.userId)}
-		<GroupListRow name={member.displayName}>
+		<Table.Row label={member.displayName}>
 			{#snippet trailing()}
 				<div class="flex shrink-0 items-center gap-1.5">
 					<GroupRoleBadge role={member.groupRole} />
@@ -28,9 +26,9 @@
 					</button>
 				</div>
 			{/snippet}
-		</GroupListRow>
+		</Table.Row>
 		{#if index < members.length - 1}
-			<GroupListSeparator />
+			<Table.Separator />
 		{/if}
 	{/each}
-</GroupListShell>
+</Table.List>

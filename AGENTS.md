@@ -515,3 +515,12 @@ Routes under `/groups/[id]/` are **members only** in the UI. A `+layout.svelte` 
 ### 5. Utils layout
 
 Use `ui/src/lib/utils/` as a **directory**, not a sibling `utils.ts` file. Put shared helpers in `utils/index.ts` (`cn`, `withMinLoadingDelay`, …). Add domain-specific helpers as separate files (e.g. `utils/group.ts` for `isGroupMember`). Import general helpers from `$lib/utils` and domain helpers from `$lib/utils/group`
+
+### 6. Table layout
+
+Use **`Table`** from `$lib/components/ui` for standard in-app pages and list rows:
+
+- **`Table.Root`** — `AppShell` + breadcrumb + optional **`section-title`** heading + body. Pass **`title`** always; omit **`breadcrumb`** to default to `[{ label: title }]`, or pass **`breadcrumb={[]}`** for no breadcrumb trail (e.g. home). Set **`showTitle={false}`** when the page uses its own heading block (group detail with `GroupNameSection`, settings with section headings).
+- **`Table.List`**, **`Table.Row`**, **`Table.Separator`** — shared list row layout (home, search, members, admin lists, etc.). **`Table.Row`** takes **`label`**, optional **`href`**, and a **`trailing`** snippet for badges/actions.
+
+Namespace matches **`Dialog.Root`**, **`Drawer.Root`**, etc.

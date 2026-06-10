@@ -2,8 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { deleteMe, updateMe } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
-	import { AppShell, EditableSection } from '$lib/components';
-	import { Button, DestroyDialog, Input, Separator } from '$lib/components/ui';
+	import { EditableSection } from '$lib/components';
+	import { Button, DestroyDialog, Input, Separator, Table } from '$lib/components/ui';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
@@ -185,7 +185,7 @@
 {/snippet}
 
 {#if auth.user}
-	<AppShell title="Settings">
+	<Table.Root title="Settings" showTitle={false}>
 		<div class="flex flex-col gap-5">
 			<section class="flex flex-col gap-3">
 				<h2 class="section-title">Username</h2>
@@ -303,7 +303,7 @@
 				{/if}
 			</EditableSection>
 		</div>
-	</AppShell>
+	</Table.Root>
 
 	<DestroyDialog
 		bind:open={deleteConfirmOpen}

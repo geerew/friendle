@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { AppShell } from '$lib/components';
 	import { GroupNameSection, GroupStatLink } from '$lib/components/pages';
+	import { Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import { groupHomeBreadcrumb, isGroupAdmin } from '$lib/utils/group';
 	import { getContext } from 'svelte';
@@ -15,41 +15,39 @@
 </script>
 
 {#if group}
-	<AppShell {breadcrumb}>
-		<div class="flex flex-col gap-5">
-			<GroupNameSection />
+	<Table.Root title="Group" {breadcrumb} showTitle={false}>
+		<GroupNameSection />
 
-			{#if isAdmin && group.adminSummary}
-				<section class="grid grid-cols-3 gap-3">
-					<GroupStatLink
-						label="Members"
-						count={group.memberCount}
-						href="/groups/{group.id}/members"
-						ariaLabel="View members"
-					/>
-					<GroupStatLink
-						label="Pending"
-						count={group.adminSummary.pendingJoinRequestCount}
-						href="/groups/{group.id}/pending"
-						ariaLabel="View pending join requests"
-					/>
-					<GroupStatLink
-						label="Rejected"
-						count={group.adminSummary.rejectedJoinRequestCount}
-						href="/groups/{group.id}/rejected"
-						ariaLabel="View rejected join requests"
-					/>
-				</section>
-			{:else}
-				<section class="flex flex-col gap-3">
-					<GroupStatLink
-						label="Members"
-						count={group.memberCount}
-						href="/groups/{group.id}/members"
-						ariaLabel="View members"
-					/>
-				</section>
-			{/if}
-		</div>
-	</AppShell>
+		{#if isAdmin && group.adminSummary}
+			<section class="grid grid-cols-3 gap-3">
+				<GroupStatLink
+					label="Members"
+					count={group.memberCount}
+					href="/groups/{group.id}/members"
+					ariaLabel="View members"
+				/>
+				<GroupStatLink
+					label="Pending"
+					count={group.adminSummary.pendingJoinRequestCount}
+					href="/groups/{group.id}/pending"
+					ariaLabel="View pending join requests"
+				/>
+				<GroupStatLink
+					label="Rejected"
+					count={group.adminSummary.rejectedJoinRequestCount}
+					href="/groups/{group.id}/rejected"
+					ariaLabel="View rejected join requests"
+				/>
+			</section>
+		{:else}
+			<section class="flex flex-col gap-3">
+				<GroupStatLink
+					label="Members"
+					count={group.memberCount}
+					href="/groups/{group.id}/members"
+					ariaLabel="View members"
+				/>
+			</section>
+		{/if}
+	</Table.Root>
 {/if}

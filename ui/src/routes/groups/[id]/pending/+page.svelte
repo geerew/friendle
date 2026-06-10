@@ -2,11 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { listGroupPendingJoinRequests } from '$lib/api/groups-api';
-	import {
-		GroupPaginatedListSection,
-		GroupPendingList,
-		GroupSubPage
-	} from '$lib/components/pages';
+	import { GroupPaginatedListSection, GroupPendingList } from '$lib/components/pages';
+	import { Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
@@ -72,7 +69,7 @@
 	}
 </script>
 
-<GroupSubPage title="Pending Requests" {breadcrumb}>
+<Table.Root title="Pending Requests" {breadcrumb}>
 	<GroupPaginatedListSection
 		itemCount={requests.length}
 		{totalItems}
@@ -85,4 +82,4 @@
 			<GroupPendingList {groupId} {requests} onchange={handlePendingChange} />
 		{/snippet}
 	</GroupPaginatedListSection>
-</GroupSubPage>
+</Table.Root>

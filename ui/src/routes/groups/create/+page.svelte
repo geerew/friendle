@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { createGroup } from '$lib/api/groups-api';
-	import { AppShell } from '$lib/components';
-	import { Button, Input } from '$lib/components/ui';
+	import { Button, Input, Table } from '$lib/components/ui';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 
@@ -41,7 +40,7 @@
 	}
 </script>
 
-<AppShell title="Create Group">
+<Table.Root title="Create Group">
 	<form class="flex flex-col gap-4" onsubmit={handleCreate}>
 		<Input bind:value={name} placeholder="Group Name" autofocus required />
 
@@ -49,4 +48,4 @@
 			Create Group
 		</Button>
 	</form>
-</AppShell>
+</Table.Root>

@@ -4,13 +4,10 @@
 		declineGroupJoinRequest
 	} from '$lib/api/groups-api';
 	import { TickIcon, XIcon } from '$lib/components/icons';
-	import { Button } from '$lib/components/ui';
+	import { Button, Table } from '$lib/components/ui';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
-	import GroupListShell from '../group-list-shell.svelte';
-	import GroupListRow from '../group-list-row.svelte';
-	import GroupListSeparator from '../group-list-separator.svelte';
 
 	type Props = {
 		groupId: string;
@@ -59,9 +56,9 @@
 	}
 </script>
 
-<GroupListShell>
+<Table.List>
 	{#each requests as request, index (request.userId)}
-		<GroupListRow name={request.displayName}>
+		<Table.Row label={request.displayName}>
 			{#snippet trailing()}
 				<div class="flex shrink-0 items-center gap-1.5">
 					<Button
@@ -90,9 +87,9 @@
 					</Button>
 				</div>
 			{/snippet}
-		</GroupListRow>
+		</Table.Row>
 		{#if index < requests.length - 1}
-			<GroupListSeparator />
+			<Table.Separator />
 		{/if}
 	{/each}
-</GroupListShell>
+</Table.List>

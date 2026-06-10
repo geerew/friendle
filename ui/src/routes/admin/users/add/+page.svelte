@@ -2,8 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { ApiError } from '$lib/api';
 	import { createUser } from '$lib/api/admin-api';
-	import { AppShell } from '$lib/components';
-	import { Button, Field, Input, RadioGroup } from '$lib/components/ui';
+	import { Button, Field, Input, RadioGroup, Table } from '$lib/components/ui';
 	import { SelectSiteRoles, type SiteRole } from '$lib/models/admin-user-model';
 	import { isPasswordFieldError, withMinLoadingDelay } from '$lib/utils';
 
@@ -94,7 +93,8 @@
 	}
 </script>
 
-<AppShell
+<Table.Root
+	title="Add User"
 	breadcrumb={[
 		{ label: 'Admin', href: '/admin/' },
 		{ label: 'Users', href: '/admin/users/' },
@@ -141,4 +141,4 @@
 			</Button>
 		</div>
 	</form>
-</AppShell>
+</Table.Root>

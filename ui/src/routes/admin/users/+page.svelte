@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { listUsers } from '$lib/api/admin-api';
-	import { AppShell, DeleteUser, Pagination, Spinner } from '$lib/components';
+	import { DeleteUser, Pagination, Spinner } from '$lib/components';
 	import { AdminUserList } from '$lib/components/pages';
-	import { Button, Separator } from '$lib/components/ui';
+	import { Button, Separator, Table } from '$lib/components/ui';
 	import type { AdminUserModel } from '$lib/models/admin-user-model';
 	import { withMinLoadingDelay } from '$lib/utils';
 
@@ -59,7 +59,10 @@
 	}
 </script>
 
-<AppShell breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Users' }]}>
+<Table.Root
+	title="Users"
+	breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Users' }]}
+>
 	<div class="flex flex-col gap-6">
 		<Button href="/admin/users/add/" variant="primary" class="w-auto self-start px-6"
 			>Add User</Button
@@ -99,4 +102,4 @@
 		onSuccess={handleDeleteSuccess}
 		onError={handleDeleteError}
 	/>
-</AppShell>
+</Table.Root>

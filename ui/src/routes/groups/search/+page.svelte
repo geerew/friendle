@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { searchGroups } from '$lib/api/groups-api';
-	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
+	import { LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { XIcon } from '$lib/components/icons';
 	import { GroupSearchList } from '$lib/components/pages';
-	import { Button, Input } from '$lib/components/ui';
+	import { Button, Input, Table } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
@@ -88,7 +88,7 @@
 	}
 </script>
 
-<AppShell title="Search Groups">
+<Table.Root title="Search Groups">
 	<div class="relative w-full">
 		<Input
 			id="group-search"
@@ -146,4 +146,4 @@
 			{/if}
 		</div>
 	{/if}
-</AppShell>
+</Table.Root>

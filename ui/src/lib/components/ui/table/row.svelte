@@ -3,20 +3,20 @@
 	import type { Snippet } from 'svelte';
 
 	type Props = {
-		name: string;
+		label: string;
 		trailing: Snippet;
 		href?: string;
 		class?: string;
-		wrapName?: boolean;
+		wrapLabel?: boolean;
 		align?: 'center' | 'start';
 	};
 
 	let {
-		name,
+		label,
 		trailing,
 		href,
 		class: className = '',
-		wrapName = false,
+		wrapLabel = false,
 		align = 'center'
 	}: Props = $props();
 
@@ -30,10 +30,10 @@
 	const innerClass = $derived(
 		cn('flex w-full gap-3 px-1', align === 'start' ? 'items-start' : 'items-center')
 	);
-	const nameClass = $derived(
+	const labelClass = $derived(
 		cn(
 			'text-foreground-alt-1 min-w-0 flex-1 text-base leading-5 font-medium',
-			wrapName ? 'wrap-break-word' : 'truncate'
+			wrapLabel ? 'wrap-break-word' : 'truncate'
 		)
 	);
 </script>
@@ -41,8 +41,8 @@
 {#if href}
 	<a {href} class={rowClass}>
 		<div class={innerClass}>
-			<span class={nameClass}>
-				{name}
+			<span class={labelClass}>
+				{label}
 			</span>
 			{@render trailing()}
 		</div>
@@ -50,8 +50,8 @@
 {:else}
 	<div class={rowClass}>
 		<div class={innerClass}>
-			<span class={nameClass}>
-				{name}
+			<span class={labelClass}>
+				{label}
 			</span>
 			{@render trailing()}
 		</div>

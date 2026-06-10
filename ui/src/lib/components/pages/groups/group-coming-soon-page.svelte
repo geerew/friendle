@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { GroupSubPage } from '$lib/components/pages';
+	import { Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import { groupChildBreadcrumb } from '$lib/utils/group';
 	import { getContext } from 'svelte';
@@ -17,6 +17,6 @@
 	);
 </script>
 
-<GroupSubPage {title} {breadcrumb}>
+<Table.Root {title} {breadcrumb}>
 	<p class="text-foreground-alt-2 text-sm italic">Coming soon</p>
-</GroupSubPage>
+</Table.Root>

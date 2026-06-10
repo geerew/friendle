@@ -1,11 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { listGroupMembers } from '$lib/api/groups-api';
-	import {
-		GroupMemberList,
-		GroupPaginatedListSection,
-		GroupSubPage
-	} from '$lib/components/pages';
+	import { GroupMemberList, GroupPaginatedListSection } from '$lib/components/pages';
+	import { Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupMemberModel } from '$lib/models/group-member-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
@@ -60,7 +57,7 @@
 	}
 </script>
 
-<GroupSubPage title="Members" {breadcrumb}>
+<Table.Root title="Members" {breadcrumb}>
 	<GroupPaginatedListSection
 		itemCount={members.length}
 		{totalItems}
@@ -73,4 +70,4 @@
 			<GroupMemberList {members} />
 		{/snippet}
 	</GroupPaginatedListSection>
-</GroupSubPage>
+</Table.Root>

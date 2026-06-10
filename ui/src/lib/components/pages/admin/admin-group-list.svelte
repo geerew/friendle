@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, Separator } from '$lib/components/ui';
+	import { Badge, Button, Table } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 
 	type Props = {
@@ -14,20 +14,16 @@
 	}
 </script>
 
-<div class="flex flex-col gap-2">
+<Table.List>
 	{#each groups as group, index (group.id)}
-		<div class="flex w-full items-center gap-3 px-2 py-3">
-			<span class="text-foreground-alt-1 min-w-0 flex-1 truncate px-1 text-base font-medium">
-				{group.name}
-			</span>
-			<Badge>{memberLabel(group.memberCount)}</Badge>
-			<Button variant="destructive" size="inline" onclick={() => onDelete(group)}>Delete</Button>
-		</div>
-
+		<Table.Row label={group.name}>
+			{#snippet trailing()}
+				<Badge>{memberLabel(group.memberCount)}</Badge>
+				<Button variant="destructive" size="inline" onclick={() => onDelete(group)}>Delete</Button>
+			{/snippet}
+		</Table.Row>
 		{#if index < groups.length - 1}
-			<div class="flex w-full items-center justify-center">
-				<Separator class="bg-foreground-alt-5 w-full" />
-			</div>
+			<Table.Separator />
 		{/if}
 	{/each}
-</div>
+</Table.List>

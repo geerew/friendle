@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { listSelfGroups } from '$lib/api/groups-api';
-	import { AppShell } from '$lib/components';
 	import { GroupList, GroupPaginatedListSection } from '$lib/components/pages';
+	import { Table } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
@@ -35,9 +35,7 @@
 	}
 </script>
 
-<AppShell>
-	<h2 class="section-title">My Groups</h2>
-
+<Table.Root title="My Groups" breadcrumb={[]}>
 	<GroupPaginatedListSection
 		itemCount={groups.length}
 		{totalItems}
@@ -50,4 +48,4 @@
 			<GroupList {groups} />
 		{/snippet}
 	</GroupPaginatedListSection>
-</AppShell>
+</Table.Root>

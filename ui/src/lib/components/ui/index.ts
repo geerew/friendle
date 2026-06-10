@@ -10,3 +10,4 @@ export { default as DestroyDialog } from './destroy-dialog.svelte';
 export * as Dialog from './dialog';
 export * as Drawer from './drawer';
 export * as Dropdown from './dropdown';
+export * as Table from './table';

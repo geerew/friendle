@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api';
 	import { listGroups } from '$lib/api/groups-api';
-	import { AppShell, DeleteGroup, Pagination, Spinner } from '$lib/components';
+	import { DeleteGroup, Pagination, Spinner } from '$lib/components';
 	import { AdminGroupList } from '$lib/components/pages';
-	import { Separator } from '$lib/components/ui';
+	import { Separator, Table } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { withMinLoadingDelay } from '$lib/utils';
 
@@ -59,7 +59,10 @@
 	}
 </script>
 
-<AppShell breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Groups' }]}>
+<Table.Root
+	title="Groups"
+	breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Groups' }]}
+>
 	<div class="flex flex-col gap-6">
 		<Separator />
 
@@ -95,4 +98,4 @@
 		onSuccess={handleDeleteSuccess}
 		onError={handleDeleteError}
 	/>
-</AppShell>
+</Table.Root>
