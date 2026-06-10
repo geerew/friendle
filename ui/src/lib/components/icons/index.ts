@@ -5,6 +5,8 @@ export { default as GithubIcon } from './github.svelte';
 export { default as HomeIcon } from './home.svelte';
 export { default as LogOutIcon } from './log-out.svelte';
 export { default as LeftChevronIcon } from './left-chevron.svelte';
+export { default as ListChevronsDownUpIcon } from './list-chevrons-down-up.svelte';
+export { default as ListChevronsUpDownIcon } from './list-chevrons-up-down.svelte';
 export { default as MenuIcon } from './menu.svelte';
 export { default as MenuToggleIcon } from './menu-toggle.svelte';
 export { default as PencilIcon } from './pencil.svelte';

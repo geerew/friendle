@@ -1,15 +1,27 @@
 <script lang="ts">
+	import { cn } from '$lib/utils';
+
 	type Props = {
 		label: string;
 		count: number;
 		href: string;
 		ariaLabel: string;
+		align?: 'center' | 'start' | 'end';
 	};
 
-	let { label, count, href, ariaLabel }: Props = $props();
+	let { label, count, href, ariaLabel, align = 'center' }: Props = $props();
+
+	const linkClass = $derived(
+		cn(
+			'group inline-flex w-fit flex-col gap-3',
+			align === 'start' && 'items-start justify-self-start',
+			align === 'center' && 'items-center justify-self-center',
+			align === 'end' && 'items-end justify-self-end'
+		)
+	);
 </script>
 
-<a {href} class="group flex flex-col items-center gap-3 text-center" aria-label={ariaLabel}>
+<a {href} class={linkClass} aria-label={ariaLabel}>
 	<span class="section-title">{label}</span>
 	<div class="relative h-8 w-full overflow-hidden">
 		<span

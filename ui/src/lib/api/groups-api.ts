@@ -13,8 +13,11 @@ import {
 } from '$lib/models/group-model';
 import {
 	GroupMemberPaginationSchema,
+	GroupMemberSchema,
+	type GroupMemberModel,
 	type GroupMemberPaginationModel,
-	type ListGroupMembersParams
+	type ListGroupMembersParams,
+	type UpdateGroupMemberRoleRequest
 } from '$lib/models/group-member-model';
 import {
 	GroupJoinRequestPaginationSchema,
@@ -159,6 +162,35 @@ export async function listGroupMembers(
 	if (response.ok) {
 		const data = await response.json();
 		const result = safeParse(GroupMemberPaginationSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Update a group member role
+export async function updateGroupMemberRole(
+	groupId: string,
+	userId: string,
+	body: UpdateGroupMemberRoleRequest
+): Promise<GroupMemberModel> {
+	const response = await apiFetch(`/api/groups/${groupId}/members/${userId}`, {
+		method: 'PATCH',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(GroupMemberSchema, data);
 
 		if (!result.success) {
 			throw new ApiError('Invalid response from the server', response.status);
