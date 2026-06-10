@@ -2,17 +2,20 @@
 	import { AppShell } from '$lib/components';
 	import { GroupNameSection, GroupStatLink } from '$lib/components/pages';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
-	import { isGroupAdmin } from '$lib/utils/group';
+	import { groupHomeBreadcrumb, isGroupAdmin } from '$lib/utils/group';
 	import { getContext } from 'svelte';
 
 	const groupPage = getContext<GroupPageContext>(GROUP_PAGE_KEY);
 	const group = $derived(groupPage.group);
 
 	const isAdmin = $derived(group != null && isGroupAdmin(group));
+	const breadcrumb = $derived(
+		group ? groupHomeBreadcrumb(group.name) : [{ label: 'Group' }]
+	);
 </script>
 
 {#if group}
-	<AppShell breadcrumb={[{ label: 'Group' }]}>
+	<AppShell {breadcrumb}>
 		<div class="flex flex-col gap-5">
 			<GroupNameSection />
 

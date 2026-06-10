@@ -6,6 +6,7 @@
 	import { Button, Input } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
+	import { toast } from 'svelte-sonner';
 
 	export const SEARCH_DEBOUNCE_MS = 250;
 
@@ -18,7 +19,6 @@
 	let totalItems = $state(0);
 
 	let loading = $state(false);
-	let error = $state<string | null>(null);
 	let searchRequestId = 0;
 
 	$effect(() => {
@@ -45,7 +45,6 @@
 		if (!searchQuery) {
 			groups = [];
 			totalItems = 0;
-			error = null;
 			loading = false;
 
 			return;
@@ -53,7 +52,6 @@
 
 		const requestId = ++searchRequestId;
 		loading = true;
-		error = null;
 
 		try {
 			const data = await withMinLoadingDelay(
@@ -77,7 +75,7 @@
 
 			groups = [];
 			totalItems = 0;
-			error = apiErrorMessage(err, 'Failed to search groups');
+			toast.error(apiErrorMessage(err, 'Failed to search groups'));
 		} finally {
 			if (requestId === searchRequestId) {
 				loading = false;
@@ -123,10 +121,6 @@
 
 	{#if searchQuery}
 		<div class="mt-6 flex flex-col gap-6">
-			{#if error}
-				<p class="text-foreground-error text-sm">{error}</p>
-			{/if}
-
 			{#if groups.length === 0 && !loading}
 				<div class="flex min-h-16 items-center justify-center">
 					<p class="text-foreground-alt-2 text-sm italic">No groups found</p>

@@ -17,7 +17,8 @@
 
 	const groupPage = $state<GroupPageContext>({
 		group: null,
-		loading: true
+		loading: true,
+		reloadGroup: async () => {}
 	});
 
 	setContext(GROUP_PAGE_KEY, groupPage);
@@ -28,29 +29,6 @@
 	function isGroupHomePath(pathname: string, id: string): boolean {
 		return pathname.replace(/\/+$/, '') === `/groups/${id}`;
 	}
-
-	$effect(() => {
-		groupId;
-		void loadGroupPage();
-	});
-
-	$effect(() => {
-		const id = groupId;
-		const pathname = page.url.pathname;
-		const previous = previousPathname;
-		previousPathname = pathname;
-
-		if (
-			!id ||
-			!isGroupHomePath(pathname, id) ||
-			groupPage.group?.id !== id ||
-			previous === pathname
-		) {
-			return;
-		}
-
-		void loadGroupPage({ silent: true });
-	});
 
 	// loadGroupPage fetches the group and redirects non-members away from this route tree
 	async function loadGroupPage(options?: { silent?: boolean }): Promise<void> {
@@ -82,6 +60,31 @@
 			groupPage.loading = false;
 		}
 	}
+
+	groupPage.reloadGroup = loadGroupPage;
+
+	$effect(() => {
+		groupId;
+		void loadGroupPage();
+	});
+
+	$effect(() => {
+		const id = groupId;
+		const pathname = page.url.pathname;
+		const previous = previousPathname;
+		previousPathname = pathname;
+
+		if (
+			!id ||
+			!isGroupHomePath(pathname, id) ||
+			groupPage.group?.id !== id ||
+			previous === pathname
+		) {
+			return;
+		}
+
+		void loadGroupPage({ silent: true });
+	});
 </script>
 
 {#if groupPage.loading}

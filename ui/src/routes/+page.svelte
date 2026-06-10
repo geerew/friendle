@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { listSelfGroups } from '$lib/api/groups-api';
-	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
-	import { GroupList } from '$lib/components/pages';
+	import { AppShell } from '$lib/components';
+	import { GroupList, GroupPaginatedListSection } from '$lib/components/pages';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
+	import { toast } from 'svelte-sonner';
 
 	let groups = $state<GroupModel[]>([]);
 	let page = $state(1);
 	let perPage = $state(5);
 	let totalItems = $state(0);
 	let loading = $state(true);
-	let error = $state<string | null>(null);
 
 	$effect(() => {
 		page;
@@ -20,14 +20,13 @@
 
 	async function loadGroups(): Promise<void> {
 		loading = true;
-		error = null;
 
 		try {
 			const data = await withMinLoadingDelay(listSelfGroups({ page, perPage }));
 			groups = data.items;
 			totalItems = data.totalItems;
 		} catch (err) {
-			error = apiErrorMessage(err, 'Failed to load groups');
+			toast.error(apiErrorMessage(err, 'Failed to load groups'));
 			groups = [];
 			totalItems = 0;
 		} finally {
@@ -39,37 +38,16 @@
 <AppShell>
 	<h2 class="section-title">My Groups</h2>
 
-	<div class="flex flex-col gap-6">
-		{#if error}
-			<p class="text-foreground-error text-sm">{error}</p>
-		{/if}
-
-		{#if loading && groups.length === 0}
-			<div class="flex min-h-24 items-center justify-center">
-				<Spinner class="bg-foreground-alt-2 size-3" />
-			</div>
-		{:else if groups.length === 0}
-			<div class="flex min-h-16 items-center justify-center">
-				<p class="text-foreground-alt-2 text-sm italic">No groups</p>
-			</div>
-		{:else}
-			<LoadingOverlay {loading}>
-				<div class="px-2">
-					<GroupList {groups} />
-				</div>
-			</LoadingOverlay>
-
-			{#if totalItems > perPage}
-				<Pagination
-					count={totalItems}
-					bind:page
-					bind:perPage
-					minimal
-					showPerPageSelect={false}
-					onPageChange={() => {}}
-					onPerPageChange={() => {}}
-				/>
-			{/if}
-		{/if}
-	</div>
+	<GroupPaginatedListSection
+		itemCount={groups.length}
+		{totalItems}
+		bind:page
+		bind:perPage
+		{loading}
+		emptyMessage="No groups"
+	>
+		{#snippet list()}
+			<GroupList {groups} />
+		{/snippet}
+	</GroupPaginatedListSection>
 </AppShell>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { AppShell } from '$lib/components';
+	import { GroupSubPage } from '$lib/components/pages';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import { groupChildBreadcrumb } from '$lib/utils/group';
 	import { getContext } from 'svelte';
@@ -17,10 +17,6 @@
 	);
 </script>
 
-<AppShell {breadcrumb}>
-	<div class="flex flex-col gap-5">
-		<h2 class="section-title">{title}</h2>
-
-		<p class="text-foreground-alt-2 text-sm italic">Coming soon</p>
-	</div>
-</AppShell>
+<GroupSubPage {title} {breadcrumb}>
+	<p class="text-foreground-alt-2 text-sm italic">Coming soon</p>
+</GroupSubPage>

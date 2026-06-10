@@ -15,6 +15,19 @@ export function truncateGroupBreadcrumbName(
 	return `${name.slice(0, maxLength)}…`;
 }
 
+// groupHomeBreadcrumb builds breadcrumb items for the group detail page
+export function groupHomeBreadcrumb(groupName: string): BreadcrumbItem[] {
+	const truncatedName = truncateGroupBreadcrumbName(groupName);
+
+	return [
+		{
+			label: 'Group',
+			accentLabel: truncatedName,
+			title: truncatedName !== groupName ? groupName : undefined
+		}
+	];
+}
+
 // groupChildBreadcrumb builds breadcrumb items for a group sub-page
 export function groupChildBreadcrumb(
 	groupId: string,

@@ -3,14 +3,14 @@
 	import { PlusIcon } from '$lib/components/icons';
 	import { Button } from '$lib/components/ui';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
+	import { toast } from 'svelte-sonner';
 
 	type Props = {
 		groupId: string;
 		onjoined?: () => void;
-		onerror?: (message: string) => void;
 	};
 
-	let { groupId, onjoined, onerror }: Props = $props();
+	let { groupId, onjoined }: Props = $props();
 
 	let loading = $state(false);
 
@@ -26,7 +26,7 @@
 			await withMinLoadingDelay(requestGroupJoin(groupId));
 			onjoined?.();
 		} catch (err) {
-			onerror?.(apiErrorMessage(err, 'Failed to request join'));
+			toast.error(apiErrorMessage(err, 'Failed to request join'));
 		} finally {
 			loading = false;
 		}
