@@ -19,7 +19,8 @@ import {
 import {
 	GroupJoinRequestPaginationSchema,
 	type GroupJoinRequestPaginationModel,
-	type ListGroupPendingJoinRequestsParams
+	type ListGroupPendingJoinRequestsParams,
+	type ListGroupRejectedJoinRequestsParams
 } from '$lib/models/group-join-request-model';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -179,6 +180,31 @@ export async function listGroupPendingJoinRequests(
 ): Promise<GroupJoinRequestPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
 	const response = await apiFetch(`/api/groups/${groupId}/pending` + (qs ? `?${qs}` : ''));
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(GroupJoinRequestPaginationSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query rejected group join requests (paginated)
+export async function listGroupRejectedJoinRequests(
+	groupId: string,
+	params?: ListGroupRejectedJoinRequestsParams
+): Promise<GroupJoinRequestPaginationModel> {
+	const qs = params ? buildQueryString(params) : '';
+	const response = await apiFetch(`/api/groups/${groupId}/rejected` + (qs ? `?${qs}` : ''));
 
 	if (response.ok) {
 		const data = await response.json();

@@ -20,13 +20,17 @@ func (r *Router) initGroupRoutes() {
 	// Members
 	groupRoutes.Get("/:id/members", r.requireAccess(accessSiteUser), r.listGroupMembers)
 
-	// Pending join requests
+	// Join
+	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
+
+	// Pending
 	groupRoutes.Get("/:id/pending", r.requireAccess(accessSiteUser), r.listGroupPendingJoinRequests)
 	groupRoutes.Post("/:id/pending/:userId/approve", r.requireAccess(accessSiteUser), r.approveGroupJoinRequest)
 	groupRoutes.Post("/:id/pending/:userId/decline", r.requireAccess(accessSiteUser), r.declineGroupJoinRequest)
 
-	// Join
-	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
+	// Rejected
+	groupRoutes.Get("/:id/rejected", r.requireAccess(accessSiteUser), r.listGroupRejectedJoinRequests)
+
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,6 +94,26 @@ func (r *Router) listGroupPendingJoinRequests(c *fiber.Ctx) error {
 
 	page := paginationFromCtx(c)
 	requests, err := r.appSvc.Groups.ListPendingJoinRequests(ctx, c.Params("id"), page)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	pResult, err := page.BuildResult(requests)
+	if err != nil {
+		return errorResponse(c, fiber.StatusInternalServerError, "Error building pagination result", err)
+	}
+
+	return c.JSON(pResult)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// listGroupRejectedJoinRequests returns paginated rejected join requests for group admins
+func (r *Router) listGroupRejectedJoinRequests(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	page := paginationFromCtx(c)
+	requests, err := r.appSvc.Groups.ListRejectedJoinRequests(ctx, c.Params("id"), page)
 	if err != nil {
 		return serviceError(c, err)
 	}

@@ -25,3 +25,6 @@ export type GroupJoinRequestPaginationModel = InferOutput<typeof GroupJoinReques
 
 // ListGroupPendingJoinRequestsParams represents the parameters for listing pending join requests
 export type ListGroupPendingJoinRequestsParams = PaginationReqParams;
+
+// ListGroupRejectedJoinRequestsParams represents the parameters for listing rejected join requests
+export type ListGroupRejectedJoinRequestsParams = PaginationReqParams;

@@ -2,7 +2,7 @@
 	import { searchGroups } from '$lib/api/groups-api';
 	import { LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { XIcon } from '$lib/components/icons';
-	import { GroupSearchList } from '$lib/components/pages';
+	import GroupSearchRow from '$lib/components/pages/groups/search/group-search-row.svelte';
 	import { Button, Input, Table } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
@@ -86,6 +86,12 @@
 	function clearSearch(): void {
 		query = '';
 	}
+
+	function markJoinPending(groupId: string): void {
+		groups = groups.map((group) =>
+			group.id === groupId ? { ...group, joinRequestStatus: 'pending' as const } : group
+		);
+	}
 </script>
 
 <Table.Root title="Search Groups">
@@ -128,7 +134,14 @@
 			{:else if groups.length > 0}
 				<LoadingOverlay {loading}>
 					<div class="px-2">
-						<GroupSearchList bind:groups />
+						<Table.List>
+							{#each groups as group, index (group.id)}
+								<GroupSearchRow {group} onjoined={markJoinPending} />
+								{#if index < groups.length - 1}
+									<Table.Separator />
+								{/if}
+							{/each}
+						</Table.List>
 					</div>
 				</LoadingOverlay>
 

@@ -366,6 +366,36 @@ func (g *Groups) ListPendingJoinRequests(ctx context.Context, groupID string, pa
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// ListRejectedJoinRequests returns paginated rejected join requests
+//
+// Action limited to group admins
+func (g *Groups) ListRejectedJoinRequests(ctx context.Context, groupID string, page *pagination.Pagination) ([]*GroupJoinRequestResponse, error) {
+	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
+		return nil, err
+	}
+
+	daoOpts := dao.NewOptions().
+		WithWhere(squirrel.And{
+			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+			squirrel.Eq{models.JOIN_REQUEST_STATUS: types.JoinRejected},
+		}).
+		WithPagination(page).
+		WithOrderByClause(squirrel.Expr("LOWER(" + models.USER_TABLE_DISPLAY_NAME + ") ASC"))
+
+	requests, err := g.dao.ListGroupJoinRequests(ctx, daoOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(requests) == 0 {
+		return []*GroupJoinRequestResponse{}, nil
+	}
+
+	return groupJoinRequestResponsesBuilder(requests), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // ApproveJoinRequest approves a pending join request and adds the user as a group member
 //
 // Action limited to group admins

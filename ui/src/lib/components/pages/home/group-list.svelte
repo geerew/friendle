@@ -12,7 +12,7 @@
 
 <Table.List>
 	{#each groups as group, index (group.id)}
-		<Table.Row label={group.name} href="/groups/{group.id}/">
+		<Table.Row label={group.name} href="/groups/{group.id}/" wrapLabel>
 			{#snippet trailing()}
 				<RightChevronIcon class="text-foreground-alt-2 size-5 shrink-0 stroke-2" />
 			{/snippet}

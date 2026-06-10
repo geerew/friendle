@@ -881,6 +881,81 @@ func TestGroups_ListPendingJoinRequests(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestGroups_ListRejectedJoinRequests exercises listing rejected join requests
+func TestGroups_ListRejectedJoinRequests(t *testing.T) {
+	// Test successfully listing rejected join requests as a group admin
+	t.Run("200 (admin)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  bob.ID,
+			Status:  types.JoinRejected,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/rejected", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		respData, requests := unmarshalHelper[service.GroupJoinRequestResponse](t, body)
+		require.Equal(t, 1, respData.TotalItems)
+		require.Len(t, requests, 1)
+		require.Equal(t, "Bob", requests[0].DisplayName)
+		require.Equal(t, bob.ID, requests[0].UserID)
+	})
+
+	// Test error due to a non-admin group member
+	t.Run("403 (member)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/rejected", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, status)
+		require.Contains(t, string(body), "Forbidden")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // TestGroups_ApproveJoinRequest exercises approving pending join requests
 func TestGroups_ApproveJoinRequest(t *testing.T) {
 	// Test successfully approving a pending join request

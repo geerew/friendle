@@ -2,8 +2,7 @@
 	import { ApiError } from '$lib/api';
 	import { listGroups } from '$lib/api/groups-api';
 	import { DeleteGroup, Pagination, Spinner } from '$lib/components';
-	import { AdminGroupList } from '$lib/components/pages';
-	import { Separator, Table } from '$lib/components/ui';
+	import { Badge, Button, Separator, Table } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
 	import { withMinLoadingDelay } from '$lib/utils';
 
@@ -57,6 +56,10 @@
 	function handleDeleteError(message: string): void {
 		error = message;
 	}
+
+	function memberLabel(count: number): string {
+		return `${count} ${count === 1 ? 'member' : 'members'}`;
+	}
 </script>
 
 <Table.Root
@@ -78,7 +81,21 @@
 			{#if groups.length === 0}
 				<p class="text-foreground-alt-2 text-sm italic">No groups</p>
 			{:else}
-				<AdminGroupList {groups} onDelete={openDeleteGroup} />
+				<Table.List>
+					{#each groups as group, index (group.id)}
+						<Table.Row label={group.name}>
+							{#snippet trailing()}
+								<Badge>{memberLabel(group.memberCount)}</Badge>
+								<Button variant="destructive" size="inline" onclick={() => openDeleteGroup(group)}
+									>Delete</Button
+								>
+							{/snippet}
+						</Table.Row>
+						{#if index < groups.length - 1}
+							<Table.Separator />
+						{/if}
+					{/each}
+				</Table.List>
 			{/if}
 
 			<Pagination

@@ -4,7 +4,7 @@
 
 	type Props = {
 		label: string;
-		trailing: Snippet;
+		trailing?: Snippet;
 		href?: string;
 		class?: string;
 		wrapLabel?: boolean;
@@ -44,7 +44,9 @@
 			<span class={labelClass}>
 				{label}
 			</span>
-			{@render trailing()}
+			{#if trailing}
+				{@render trailing()}
+			{/if}
 		</div>
 	</a>
 {:else}
@@ -53,7 +55,9 @@
 			<span class={labelClass}>
 				{label}
 			</span>
-			{@render trailing()}
+			{#if trailing}
+				{@render trailing()}
+			{/if}
 		</div>
 	</div>
 {/if}

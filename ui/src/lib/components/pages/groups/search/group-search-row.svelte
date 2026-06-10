@@ -1,11 +1,18 @@
 <script lang="ts">
-	import { RightChevronIcon, UserRoundPlusIcon, UserRoundXIcon } from '$lib/components/icons';
-	import { Table } from '$lib/components/ui';
-	import GroupJoinButton from '../group-join-button.svelte';
+	import { requestGroupJoin } from '$lib/api/groups-api';
+	import {
+		PlusIcon,
+		RightChevronIcon,
+		UserRoundPlusIcon,
+		UserRoundXIcon
+	} from '$lib/components/icons';
+	import { Button, Table } from '$lib/components/ui';
 	import GroupRoleBadge from '../group-role-badge.svelte';
 	import GroupStatusBadge from '../group-status-badge.svelte';
 	import type { GroupModel } from '$lib/models/group-model';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { isGroupMember } from '$lib/utils/group';
+	import { toast } from 'svelte-sonner';
 
 	type Props = {
 		group: GroupModel;
@@ -14,9 +21,29 @@
 
 	let { group, onjoined }: Props = $props();
 
+	let joining = $state(false);
+
 	const isMember = $derived(isGroupMember(group));
 	const isPending = $derived(group.joinRequestStatus === 'pending');
 	const isRejected = $derived(group.joinRequestStatus === 'rejected');
+
+	// handleJoinClick submits a join request for the group
+	async function handleJoinClick(): Promise<void> {
+		if (joining) {
+			return;
+		}
+
+		joining = true;
+
+		try {
+			await withMinLoadingDelay(requestGroupJoin(group.id));
+			onjoined?.(group.id);
+		} catch (err) {
+			toast.error(apiErrorMessage(err, 'Failed to request join'));
+		} finally {
+			joining = false;
+		}
+	}
 </script>
 
 {#if isMember}
@@ -58,7 +85,17 @@
 	<Table.Row label={group.name} wrapLabel>
 		{#snippet trailing()}
 			<div class="flex shrink-0 items-center">
-				<GroupJoinButton groupId={group.id} onjoined={() => onjoined?.(group.id)} />
+				<Button
+					type="button"
+					variant="ghost"
+					size="inline"
+					class="text-foreground-alt-2 h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case hover:bg-transparent"
+					aria-label="Request to join group"
+					loading={joining}
+					onclick={handleJoinClick}
+				>
+					<PlusIcon class="size-5 shrink-0 stroke-2" />
+				</Button>
 			</div>
 		{/snippet}
 	</Table.Row>

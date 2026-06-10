@@ -483,9 +483,9 @@ Put Tailwind classes **directly on the element** (`class="..."`). Do not extract
 
 Under `ui/src/lib/components/pages/`, colocate components with the route they serve:
 
-- **One page only** → subfolder named for that route (e.g. `pages/groups/members/` for `/groups/[id]/members`, `pages/groups/search/` for `/groups/search`, `pages/groups/detail/` for `/groups/[id]`, `pages/home/` for `/`)
-- **Shared within an area** → stay at that area’s root (e.g. `pages/groups/group-coming-soon-page.svelte` for pending and rejected, `pages/groups/group-join-button.svelte` for detail and search)
-- **Internal to an area** → import with relative paths (e.g. `../group-status-badge.svelte` from `members/` or `search/`); do not re-export from the area barrel unless a route imports it
+- **One page only** → subfolder when the route has reusable pieces (e.g. `pages/groups/search/` for `/groups/search`, `pages/groups/detail/` for `/groups/[id]`, `pages/home/` for `/`); keep simple list markup inline in `+page.svelte` when it is not shared
+- **Shared within an area** → stay at that area’s root when used by multiple routes (e.g. `pages/groups/group-status-badge.svelte` for search and members)
+- **Internal to an area** → import with relative paths (e.g. `../group-status-badge.svelte` from `search/`); do not re-export from the area barrel unless a route imports it
 
 Each subfolder has an `index.ts` barrel. The parent area re-exports page-specific components so routes can import from `$lib/components/pages`.
 
@@ -493,13 +493,10 @@ Each subfolder has an `index.ts` barrel. The parent area re-exports page-specifi
 
 ```
 pages/groups/
-  group-coming-soon-page.svelte   # pending + rejected
-  group-join-button.svelte        # detail + search
-  group-status-badge.svelte       # members + search (internal)
+  group-status-badge.svelte       # search + members page (internal)
   index.ts
   detail/group-stat-link.svelte   # /groups/[id]
-  members/group-member-list.svelte
-  search/group-search-list.svelte
+  search/group-search-row.svelte  # /groups/search
 pages/home/
   group-list.svelte               # /
 ```

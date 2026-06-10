@@ -2,7 +2,7 @@
 	import { ApiError } from '$lib/api';
 	import { listUsers } from '$lib/api/admin-api';
 	import { DeleteUser, Pagination, Spinner } from '$lib/components';
-	import { AdminUserList } from '$lib/components/pages';
+	import { ShieldUserIcon } from '$lib/components/icons';
 	import { Button, Separator, Table } from '$lib/components/ui';
 	import type { AdminUserModel } from '$lib/models/admin-user-model';
 	import { withMinLoadingDelay } from '$lib/utils';
@@ -82,7 +82,26 @@
 			{#if users.length === 0}
 				<p class="text-foreground-alt-2 text-sm italic">No users</p>
 			{:else}
-				<AdminUserList {users} onDelete={openDeleteUser} />
+				<Table.List>
+					{#each users as user, index (user.id)}
+						<Table.Row label={user.username}>
+							{#snippet trailing()}
+								{#if user.siteRole === 'site_admin'}
+									<ShieldUserIcon
+										class="text-background-primary size-5 shrink-0 stroke-2"
+										aria-label="Admin"
+									/>
+								{/if}
+								<Button variant="destructive" size="inline" onclick={() => openDeleteUser(user)}
+									>Delete</Button
+								>
+							{/snippet}
+						</Table.Row>
+						{#if index < users.length - 1}
+							<Table.Separator />
+						{/if}
+					{/each}
+				</Table.List>
 			{/if}
 
 			<Pagination
