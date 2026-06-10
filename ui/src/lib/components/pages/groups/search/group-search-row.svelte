@@ -48,54 +48,46 @@
 {#if isMember}
 	<Table.Row label={group.name} href="/groups/{group.id}/" wrapLabel>
 		{#snippet trailing()}
-			<div class="flex shrink-0 items-center gap-1.5">
-				<GroupRoleBadge role={group.groupRole ?? 'group_user'} />
-				<RightChevronIcon class="text-foreground-alt-2 size-5 shrink-0 stroke-2" />
-			</div>
+			<GroupRoleBadge role={group.groupRole ?? 'group_user'} />
+			<RightChevronIcon class="text-foreground-alt-2 size-5 shrink-0 stroke-2" />
 		{/snippet}
 	</Table.Row>
 {:else if isPending}
 	<Table.Row label={group.name} wrapLabel>
 		{#snippet trailing()}
-			<div class="flex shrink-0 items-center gap-1.5">
-				<StatusBadge variant="pending" label="Pending">
-					{#snippet icon()}
-						<UserRoundPlusIcon class="size-3.5 shrink-0 stroke-2" />
-					{/snippet}
-				</StatusBadge>
-				<div class="size-5 shrink-0" aria-hidden="true"></div>
-			</div>
+			<StatusBadge variant="pending" label="Pending">
+				{#snippet icon()}
+					<UserRoundPlusIcon class="size-3.5 shrink-0 stroke-2" />
+				{/snippet}
+			</StatusBadge>
+			<div class="size-5 shrink-0" aria-hidden="true"></div>
 		{/snippet}
 	</Table.Row>
 {:else if isRejected}
 	<Table.Row label={group.name} wrapLabel>
 		{#snippet trailing()}
-			<div class="flex shrink-0 items-center gap-1.5">
-				<StatusBadge variant="rejected" label="Rejected">
-					{#snippet icon()}
-						<UserRoundXIcon class="size-3.5 shrink-0 stroke-2" />
-					{/snippet}
-				</StatusBadge>
-				<div class="size-5 shrink-0" aria-hidden="true"></div>
-			</div>
+			<StatusBadge variant="rejected" label="Rejected">
+				{#snippet icon()}
+					<UserRoundXIcon class="size-3.5 shrink-0 stroke-2" />
+				{/snippet}
+			</StatusBadge>
+			<div class="size-5 shrink-0" aria-hidden="true"></div>
 		{/snippet}
 	</Table.Row>
 {:else}
 	<Table.Row label={group.name} wrapLabel>
 		{#snippet trailing()}
-			<div class="flex shrink-0 items-center">
-				<Button
-					type="button"
-					variant="ghost"
-					size="inline"
-					class="text-foreground-alt-2 h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case hover:bg-transparent"
-					aria-label="Request to join group"
-					loading={joining}
-					onclick={handleJoinClick}
-				>
-					<PlusIcon class="size-5 shrink-0 stroke-2" />
-				</Button>
-			</div>
+			<Button
+				type="button"
+				variant="ghost"
+				size="inline"
+				class="text-foreground-alt-2 h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case hover:bg-transparent"
+				aria-label="Request to join group"
+				loading={joining}
+				onclick={handleJoinClick}
+			>
+				<PlusIcon class="size-5 shrink-0 stroke-2" />
+			</Button>
 		{/snippet}
 	</Table.Row>
 {/if}

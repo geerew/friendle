@@ -127,32 +127,30 @@
 				{#each requests as request, index (request.userId)}
 					<Table.Row label={request.displayName}>
 						{#snippet trailing()}
-							<div class="flex shrink-0 items-center gap-1.5">
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									class="text-foreground-alt-2 hover:bg-background-primary/25 hover:text-background-primary size-8 min-h-8 min-w-8 shrink-0 p-0 normal-case"
-									loading={acting?.userId === request.userId && acting.action === 'approve'}
-									disabled={acting != null}
-									aria-label="Approve {request.displayName}"
-									onclick={() => handleApprove(request.userId)}
-								>
-									<TickIcon class="size-4 shrink-0 stroke-2" />
-								</Button>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									class="text-foreground-alt-2 hover:bg-background-error hover:text-foreground size-8 min-h-8 min-w-8 shrink-0 p-0 normal-case"
-									loading={acting?.userId === request.userId && acting.action === 'decline'}
-									disabled={acting != null}
-									aria-label="Decline {request.displayName}"
-									onclick={() => handleDecline(request.userId)}
-								>
-									<XIcon class="size-4 shrink-0 stroke-2" />
-								</Button>
-							</div>
+							<Button
+								type="button"
+								variant="ghost"
+								size="inline"
+								class="text-foreground-alt-2 hover:bg-background-primary/25 hover:text-background-primary h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case"
+								loading={acting?.userId === request.userId && acting.action === 'approve'}
+								disabled={acting != null}
+								aria-label="Approve {request.displayName}"
+								onclick={() => handleApprove(request.userId)}
+							>
+								<TickIcon class="size-4 shrink-0 stroke-2" />
+							</Button>
+							<Button
+								type="button"
+								variant="ghost"
+								size="inline"
+								class="text-foreground-alt-2 hover:bg-background-error hover:text-foreground h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case"
+								loading={acting?.userId === request.userId && acting.action === 'decline'}
+								disabled={acting != null}
+								aria-label="Decline {request.displayName}"
+								onclick={() => handleDecline(request.userId)}
+							>
+								<XIcon class="size-4 shrink-0 stroke-2" />
+							</Button>
 						{/snippet}
 					</Table.Row>
 					{#if index < requests.length - 1}

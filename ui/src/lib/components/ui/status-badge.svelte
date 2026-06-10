@@ -47,20 +47,20 @@
 
 <span
 	class={cn(
-		'inline-flex w-auto flex-row items-stretch overflow-hidden rounded-md border text-xs whitespace-nowrap',
+		'inline-flex h-5 w-auto flex-row items-stretch overflow-hidden rounded-md border text-xs whitespace-nowrap',
 		styles.root
 	)}
 >
 	<span
 		class={cn(
-			'flex items-center self-stretch border-r px-1.5 py-0.5',
+			'flex items-center self-stretch border-r px-1.5',
 			styles.icon,
 			styles.divider
 		)}
 	>
 		{@render icon()}
 	</span>
-	<span class={cn('flex items-center px-2 py-0.5', styles.label)}>
+	<span class={cn('flex items-center px-2', styles.label)}>
 		{label}
 	</span>
 </span>

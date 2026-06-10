@@ -22,13 +22,14 @@
 
 	const rowClass = $derived(
 		cn(
-			'flex w-full gap-3 rounded-md px-2 py-3 text-left',
+			'flex w-full gap-3 rounded-md px-3 text-left',
+			wrapLabel ? 'min-h-11 py-3' : 'h-11 items-center',
 			href ? 'hover:bg-background-alt-1 transition-all' : 'cursor-default',
 			className
 		)
 	);
 	const innerClass = $derived(
-		cn('flex w-full gap-3 px-1', align === 'start' ? 'items-start' : 'items-center')
+		cn('flex w-full min-w-0 gap-3', align === 'start' ? 'items-start' : 'items-center')
 	);
 	const labelClass = $derived(
 		cn(
@@ -45,7 +46,9 @@
 				{label}
 			</span>
 			{#if trailing}
-				{@render trailing()}
+				<div class="flex shrink-0 items-center gap-1.5">
+					{@render trailing()}
+				</div>
 			{/if}
 		</div>
 	</a>
@@ -56,7 +59,9 @@
 				{label}
 			</span>
 			{#if trailing}
-				{@render trailing()}
+				<div class="flex shrink-0 items-center gap-1.5">
+					{@render trailing()}
+				</div>
 			{/if}
 		</div>
 	</div>
