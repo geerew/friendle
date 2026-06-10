@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { ApiError } from '$lib/api';
 	import { listGroupPendingJoinRequests } from '$lib/api/groups-api';
 	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { GroupPendingList } from '$lib/components/pages';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
 	import { groupChildBreadcrumb, isGroupAdmin } from '$lib/utils/group';
-	import { withMinLoadingDelay } from '$lib/utils';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { getContext } from 'svelte';
 
 	const groupId = $derived(page.params.id ?? '');
@@ -58,7 +57,7 @@
 		} catch (err) {
 			requests = [];
 			totalItems = 0;
-			error = err instanceof ApiError ? err.message : 'Failed to load pending requests';
+			error = apiErrorMessage(err, 'Failed to load pending requests');
 		} finally {
 			loading = false;
 		}

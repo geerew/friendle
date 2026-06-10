@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { ApiError } from '$lib/api';
 	import { listSelfGroups } from '$lib/api/groups-api';
 	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { GroupList } from '$lib/components/pages';
 	import type { GroupModel } from '$lib/models/group-model';
-	import { withMinLoadingDelay } from '$lib/utils';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 
 	let groups = $state<GroupModel[]>([]);
 	let page = $state(1);
@@ -28,7 +27,7 @@
 			groups = data.items;
 			totalItems = data.totalItems;
 		} catch (err) {
-			error = err instanceof ApiError ? err.message : 'Failed to load groups';
+			error = apiErrorMessage(err, 'Failed to load groups');
 			groups = [];
 			totalItems = 0;
 		} finally {
@@ -65,6 +64,7 @@
 					count={totalItems}
 					bind:page
 					bind:perPage
+					minimal
 					showPerPageSelect={false}
 					onPageChange={() => {}}
 					onPerPageChange={() => {}}

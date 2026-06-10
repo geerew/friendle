@@ -4,16 +4,13 @@
 	import { Button } from '$lib/components/ui';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 
-	type Appearance = 'icon' | 'button';
-
 	type Props = {
 		groupId: string;
-		appearance?: Appearance;
 		onjoined?: () => void;
 		onerror?: (message: string) => void;
 	};
 
-	let { groupId, appearance = 'icon', onjoined, onerror }: Props = $props();
+	let { groupId, onjoined, onerror }: Props = $props();
 
 	let loading = $state(false);
 
@@ -36,26 +33,14 @@
 	}
 </script>
 
-{#if appearance === 'button'}
-	<Button
-		type="button"
-		variant="primary"
-		class="w-40 px-0"
-		{loading}
-		onclick={handleClick}
-	>
-		Request to join
-	</Button>
-{:else}
-	<Button
-		type="button"
-		variant="ghost"
-		size="inline"
-		class="text-foreground-alt-2 h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case hover:bg-transparent"
-		aria-label="Request to join group"
-		{loading}
-		onclick={handleClick}
-	>
-		<PlusIcon class="size-5 shrink-0 stroke-2" />
-	</Button>
-{/if}
+<Button
+	type="button"
+	variant="ghost"
+	size="inline"
+	class="text-foreground-alt-2 h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case hover:bg-transparent"
+	aria-label="Request to join group"
+	{loading}
+	onclick={handleClick}
+>
+	<PlusIcon class="size-5 shrink-0 stroke-2" />
+</Button>

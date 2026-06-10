@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { ApiError } from '$lib/api';
 	import { getGroup } from '$lib/api/groups-api';
 	import { Spinner } from '$lib/components';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
@@ -18,8 +17,7 @@
 
 	const groupPage = $state<GroupPageContext>({
 		group: null,
-		loading: true,
-		error: null
+		loading: true
 	});
 
 	setContext(GROUP_PAGE_KEY, groupPage);
@@ -58,7 +56,6 @@
 	async function loadGroupPage(options?: { silent?: boolean }): Promise<void> {
 		if (!groupId) {
 			groupPage.group = null;
-			groupPage.error = 'Group not found';
 			groupPage.loading = false;
 			await goto('/');
 			return;
@@ -67,8 +64,6 @@
 		if (!options?.silent) {
 			groupPage.loading = true;
 		}
-
-		groupPage.error = null;
 
 		try {
 			const group = await getGroup(groupId);
@@ -79,9 +74,8 @@
 			}
 
 			groupPage.group = group;
-		} catch (err) {
+		} catch {
 			groupPage.group = null;
-			groupPage.error = err instanceof ApiError ? err.message : 'Failed to load group';
 			await goto('/');
 			return;
 		} finally {

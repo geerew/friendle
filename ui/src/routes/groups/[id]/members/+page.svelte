@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { ApiError } from '$lib/api';
 	import { listGroupMembers } from '$lib/api/groups-api';
 	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { GroupMemberList } from '$lib/components/pages';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupMemberModel } from '$lib/models/group-member-model';
-	import { withMinLoadingDelay } from '$lib/utils';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { groupChildBreadcrumb } from '$lib/utils/group';
 	import { getContext } from 'svelte';
 
@@ -52,7 +51,7 @@
 		} catch (err) {
 			members = [];
 			totalItems = 0;
-			error = err instanceof ApiError ? err.message : 'Failed to load members';
+			error = apiErrorMessage(err, 'Failed to load members');
 		} finally {
 			loading = false;
 		}

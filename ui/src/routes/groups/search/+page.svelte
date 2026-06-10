@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { ApiError } from '$lib/api';
 	import { searchGroups } from '$lib/api/groups-api';
 	import { AppShell, LoadingOverlay, Pagination, Spinner } from '$lib/components';
 	import { XIcon } from '$lib/components/icons';
 	import { GroupSearchList } from '$lib/components/pages';
 	import { Button, Input } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
-	import { withMinLoadingDelay } from '$lib/utils';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 
 	export const SEARCH_DEBOUNCE_MS = 250;
 
@@ -78,7 +77,7 @@
 
 			groups = [];
 			totalItems = 0;
-			error = err instanceof ApiError ? err.message : 'Failed to search groups';
+			error = apiErrorMessage(err, 'Failed to search groups');
 		} finally {
 			if (requestId === searchRequestId) {
 				loading = false;
