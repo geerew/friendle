@@ -19,6 +19,7 @@ func (r *Router) initGroupRoutes() {
 
 	// Members
 	groupRoutes.Get("/:id/members", r.requireAccess(accessSiteUser), r.listGroupMembers)
+	groupRoutes.Patch("/:id/members/:userId", r.requireAccess(accessSiteUser), r.updateGroupMemberRole)
 
 	// Join
 	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
@@ -84,6 +85,25 @@ func (r *Router) listGroupMembers(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(pResult)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// updateGroupMemberRole updates a group member role for group admins
+func (r *Router) updateGroupMemberRole(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	req := &service.UpdateMemberRoleRequest{}
+	if err := c.BodyParser(req); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	member, err := r.appSvc.Groups.UpdateMemberRole(ctx, c.Params("id"), c.Params("userId"), *req)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.JSON(member)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

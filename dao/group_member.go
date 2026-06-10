@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/types"
@@ -11,7 +12,7 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// groupMemberColumns defines the columns to select
+// groupMemberColumns defines the columns to select for group member queries
 var groupMemberColumns = []string{
 	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_ID, models.BASE_ID),
 	fmt.Sprintf("%s AS %s", models.GROUP_MEMBER_TABLE_CREATED_AT, models.BASE_CREATED_AT),
@@ -32,6 +33,15 @@ var groupMemberJoins = []join{
 		Table:     models.USER_TABLE,
 		Condition: models.GROUP_MEMBER_TABLE_USER_ID + " = " + models.USER_TABLE_ID,
 	},
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// CountGroupMembers returns the number of group membership records
+func (dao *DAO) CountGroupMembers(ctx context.Context, dbOpts *Options) (int, error) {
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).SetDbOpts(dbOpts)
+
+	return countGeneric(ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,6 +90,18 @@ func (dao *DAO) CreateGroupMember(ctx context.Context, member *models.GroupMembe
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GetGroupMember returns a group membership record with the user display name
+func (dao *DAO) GetGroupMember(ctx context.Context, dbOpts *Options) (*models.GroupMember, error) {
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
+		WithColumns(groupMemberColumns...).
+		WithJoins(groupMemberJoins...).
+		SetDbOpts(dbOpts)
+
+	return getGeneric[models.GroupMember](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // ListGroupMembers returns group membership records with user display names
 func (dao *DAO) ListGroupMembers(ctx context.Context, dbOpts *Options) ([]*models.GroupMember, error) {
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
@@ -88,4 +110,34 @@ func (dao *DAO) ListGroupMembers(ctx context.Context, dbOpts *Options) ([]*model
 		SetDbOpts(dbOpts)
 
 	return listGeneric[models.GroupMember](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateGroupMember updates a group membership record
+func (dao *DAO) UpdateGroupMember(ctx context.Context, member *models.GroupMember) error {
+	if member == nil {
+		return utils.ErrNilPtr
+	}
+
+	if member.ID == "" {
+		return utils.ErrId
+	}
+
+	member.RefreshUpdatedAt()
+
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: member.ID})
+
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
+		WithData(
+			map[string]interface{}{
+				models.GROUP_MEMBER_GROUP_ROLE: member.GroupRole,
+				models.BASE_UPDATED_AT:         member.UpdatedAt,
+			},
+		).
+		SetDbOpts(dbOpts)
+
+	_, err := updateGeneric(ctx, dao, *builderOpts)
+
+	return err
 }

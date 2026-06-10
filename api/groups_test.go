@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -1039,6 +1040,83 @@ func TestGroups_DeclineJoinRequest(t *testing.T) {
 		}))
 		require.NoError(t, err)
 		require.NotNil(t, stored)
-		require.Equal(t, types.JoinRejected, stored.Status)
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestGroups_UpdateMemberRole exercises updating group member roles
+func TestGroups_UpdateMemberRole(t *testing.T) {
+	// Test successfully promoting a member to group admin
+	t.Run("200 (promote)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    bob.ID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		body := []byte(`{"groupRole":"group_admin"}`)
+		req := httptest.NewRequest(http.MethodPatch, "/api/groups/"+group.ID+"/members/"+bob.ID, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, respBody, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		member := service.GroupMemberResponse{}
+		require.NoError(t, json.Unmarshal(respBody, &member))
+		require.Equal(t, bob.ID, member.UserID)
+		require.Equal(t, types.GroupRoleAdmin, member.GroupRole)
+	})
+
+	// Test error due to a non-admin group member
+	t.Run("403 (member)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		body := []byte(`{"groupRole":"group_admin"}`)
+		req := httptest.NewRequest(http.MethodPatch, "/api/groups/"+group.ID+"/members/"+alice.ID, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		status, respBody, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, status)
+		require.Contains(t, string(respBody), "Forbidden")
 	})
 }

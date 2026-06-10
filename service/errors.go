@@ -27,4 +27,7 @@ var (
 	ErrGroupJoinRequestPending  = errors.New("join request already pending")
 	ErrGroupJoinRequestRejected = errors.New("join request was rejected")
 	ErrGroupJoinRequestNotFound = errors.New("join request not found")
+	ErrGroupMemberNotFound      = errors.New("group member not found")
+	ErrGroupMemberSelf          = errors.New("cannot change your own group role")
+	ErrGroupLastAdmin           = errors.New("unable to remove the last group admin")
 )

@@ -58,6 +58,15 @@ type GroupMemberResponse struct {
 	UserID      string          `json:"userId"`
 	DisplayName string          `json:"displayName"`
 	GroupRole   types.GroupRole `json:"groupRole"`
+	TimesPicked int             `json:"timesPicked"`
+	PickerSkips int             `json:"pickerSkips"`
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateMemberRoleRequest represents a group member role update request
+type UpdateMemberRoleRequest struct {
+	GroupRole types.GroupRole `json:"groupRole"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -336,6 +345,73 @@ func (g *Groups) ListMembers(ctx context.Context, groupID string, page *paginati
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// UpdateMemberRole updates a group member's role
+//
+// # Action limited to group admins with the additional that they cannot change their own role
+//
+// It will also ensure there is always at least one admin in the group
+func (g *Groups) UpdateMemberRole(ctx context.Context, groupID, userID string, req UpdateMemberRoleRequest) (*GroupMemberResponse, error) {
+	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
+		return nil, err
+	}
+
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if userID == principal.UserID {
+		return nil, ErrGroupMemberSelf
+	}
+
+	if !req.GroupRole.IsValid() {
+		return nil, ErrNoUpdateData
+	}
+
+	dbOpts := dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupID},
+		squirrel.Eq{models.GROUP_MEMBER_USER_ID: userID},
+	})
+
+	member, err := g.dao.GetGroupMember(ctx, dbOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if member == nil {
+		return nil, ErrGroupMemberNotFound
+	}
+
+	if member.GroupRole == req.GroupRole {
+		return groupMemberResponseBuilder(member), nil
+	}
+
+	if member.GroupRole == types.GroupRoleAdmin && req.GroupRole == types.GroupRoleUser {
+		dbOpts := dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupID},
+			squirrel.Eq{models.GROUP_MEMBER_GROUP_ROLE: types.GroupRoleAdmin},
+		})
+
+		adminCount, err := g.dao.CountGroupMembers(ctx, dbOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		if adminCount <= 1 {
+			return nil, ErrGroupLastAdmin
+		}
+	}
+
+	member.GroupRole = req.GroupRole
+	if err := g.dao.UpdateGroupMember(ctx, member); err != nil {
+		return nil, err
+	}
+
+	return groupMemberResponseBuilder(member), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // ListPendingJoinRequests returns paginated pending join requests
 //
 // Action limited to group admins
@@ -574,14 +650,23 @@ func groupResponseBuilder(group *models.Group, groupRole *types.GroupRole, joinR
 func groupMemberResponsesBuilder(members []*models.GroupMember) []*GroupMemberResponse {
 	out := make([]*GroupMemberResponse, len(members))
 	for i, member := range members {
-		out[i] = &GroupMemberResponse{
-			UserID:      member.UserID,
-			DisplayName: member.DisplayName,
-			GroupRole:   member.GroupRole,
-		}
+		out[i] = groupMemberResponseBuilder(member)
 	}
 
 	return out
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupMemberResponseBuilder builds a GroupMemberResponse from a group member model
+func groupMemberResponseBuilder(member *models.GroupMember) *GroupMemberResponse {
+	return &GroupMemberResponse{
+		UserID:      member.UserID,
+		DisplayName: member.DisplayName,
+		GroupRole:   member.GroupRole,
+		TimesPicked: member.TimesPicked,
+		PickerSkips: member.PickerSkips,
+	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
