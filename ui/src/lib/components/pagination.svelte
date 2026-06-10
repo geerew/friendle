@@ -8,9 +8,9 @@
 	type Props = {
 		count: number;
 		page: number;
-		onPageChange: () => void;
+		onPageChange?: () => void;
 		perPage: number;
-		onPerPageChange: () => void;
+		onPerPageChange?: () => void;
 		selectTriggerClass?: string;
 		showPerPageSelect?: boolean;
 		minimal?: boolean;
@@ -19,9 +19,9 @@
 	let {
 		count,
 		page = $bindable(),
-		onPageChange,
+		onPageChange = () => {},
 		perPage = $bindable(),
-		onPerPageChange,
+		onPerPageChange = () => {},
 		selectTriggerClass,
 		showPerPageSelect = true,
 		minimal = false

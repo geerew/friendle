@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { listGroupPendingJoinRequests } from '$lib/api/groups-api';
-	import { GroupPaginatedListSection, GroupPendingList } from '$lib/components/pages';
+	import { GroupNameSection, GroupPaginatedListSection, GroupPendingList } from '$lib/components/pages';
 	import { Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
@@ -15,9 +15,7 @@
 	const groupPage = getContext<GroupPageContext>(GROUP_PAGE_KEY);
 	const group = $derived(groupPage.group);
 	const breadcrumb = $derived(
-		group
-			? groupChildBreadcrumb(group.id, group.name, 'Pending Requests')
-			: [{ label: 'Pending Requests' }]
+		group ? groupChildBreadcrumb(group.id, 'Pending') : [{ label: 'Pending' }]
 	);
 
 	let requests = $state<GroupJoinRequestModel[]>([]);
@@ -70,6 +68,10 @@
 </script>
 
 <Table.Root title="Pending Requests" {breadcrumb}>
+	{#snippet header()}
+		<GroupNameSection />
+	{/snippet}
+
 	<GroupPaginatedListSection
 		itemCount={requests.length}
 		{totalItems}

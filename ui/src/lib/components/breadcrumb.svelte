@@ -1,7 +1,6 @@
 <script module lang="ts">
 	export type BreadcrumbItem = {
 		label: string;
-		accentLabel?: string;
 		href?: string;
 		title?: string;
 	};
@@ -33,15 +32,9 @@
 			<a
 				href={item.href}
 				title={item.title}
-				class="text-foreground-alt-2 hover:text-foreground flex max-w-full min-w-0 items-center gap-1.5 truncate tracking-wide transition-colors"
+				class="text-foreground-alt-2 hover:text-foreground truncate tracking-wide uppercase transition-colors"
 			>
-				<span class="shrink-0 uppercase">{item.label}</span>
-				{#if item.accentLabel}
-					<span
-						>(<span class="text-background-primary truncate normal-case">{item.accentLabel}</span
-						>)</span
-					>
-				{/if}
+				{item.label}
 			</a>
 		{:else}
 			<span

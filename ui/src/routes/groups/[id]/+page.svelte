@@ -9,9 +9,7 @@
 	const group = $derived(groupPage.group);
 
 	const isAdmin = $derived(group != null && isGroupAdmin(group));
-	const breadcrumb = $derived(
-		group ? groupHomeBreadcrumb(group.name) : [{ label: 'Group' }]
-	);
+	const breadcrumb = $derived(group ? groupHomeBreadcrumb() : [{ label: 'Group' }]);
 </script>
 
 {#if group}

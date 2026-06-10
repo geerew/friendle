@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { listGroupMembers } from '$lib/api/groups-api';
-	import { GroupMemberList, GroupPaginatedListSection } from '$lib/components/pages';
+	import { GroupMemberList, GroupNameSection, GroupPaginatedListSection } from '$lib/components/pages';
 	import { Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupMemberModel } from '$lib/models/group-member-model';
@@ -14,7 +14,7 @@
 	const groupPage = getContext<GroupPageContext>(GROUP_PAGE_KEY);
 	const group = $derived(groupPage.group);
 	const breadcrumb = $derived(
-		group ? groupChildBreadcrumb(group.id, group.name, 'Members') : [{ label: 'Members' }]
+		group ? groupChildBreadcrumb(group.id, 'Members') : [{ label: 'Members' }]
 	);
 
 	let members = $state<GroupMemberModel[]>([]);
@@ -58,6 +58,10 @@
 </script>
 
 <Table.Root title="Members" {breadcrumb}>
+	{#snippet header()}
+		<GroupNameSection />
+	{/snippet}
+
 	<GroupPaginatedListSection
 		itemCount={members.length}
 		{totalItems}

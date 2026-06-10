@@ -21,5 +21,5 @@
 </script>
 
 {#if group && isGroupAdmin(group)}
-	<GroupComingSoonPage title="Rejected" />
+	<GroupComingSoonPage title="Rejected Requests" breadcrumbLabel="Rejected" />
 {/if}

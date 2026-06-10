@@ -90,8 +90,6 @@
 				bind:page
 				bind:perPage
 				selectTriggerClass="h-9 px-2 py-0"
-				onPageChange={() => {}}
-				onPerPageChange={() => {}}
 			/>
 		{/if}
 	</div>

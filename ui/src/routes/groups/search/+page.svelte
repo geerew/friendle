@@ -139,8 +139,6 @@
 						{perPage}
 						minimal
 						showPerPageSelect={false}
-						onPageChange={() => {}}
-						onPerPageChange={() => {}}
 					/>
 				{/if}
 			{/if}
