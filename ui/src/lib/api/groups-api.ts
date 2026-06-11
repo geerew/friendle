@@ -205,6 +205,22 @@ export async function updateGroupMemberRole(
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Remove a group member
+export async function removeGroupMember(groupId: string, userId: string): Promise<void> {
+	const response = await apiFetch(`/api/groups/${groupId}/members/${userId}`, {
+		method: 'DELETE'
+	});
+
+	if (response.ok) {
+		return;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Query pending group join requests (paginated)
 export async function listGroupPendingJoinRequests(
 	groupId: string,

@@ -141,3 +141,21 @@ func (dao *DAO) UpdateGroupMember(ctx context.Context, member *models.GroupMembe
 
 	return err
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DeleteGroupMembers deletes group membership records
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteGroupMembers(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
+		return utils.ErrWhere
+	}
+
+	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).SetDbOpts(dbOpts)
+	sqlStr, args, _ := deleteBuilder(*builderOpts)
+
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
+
+	return err
+}

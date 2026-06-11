@@ -4,6 +4,7 @@
 
 	type Props = {
 		label: string;
+		leading?: Snippet;
 		trailing?: Snippet;
 		href?: string;
 		class?: string;
@@ -13,6 +14,7 @@
 
 	let {
 		label,
+		leading,
 		trailing,
 		href,
 		class: className = '',
@@ -42,6 +44,11 @@
 {#if href}
 	<a {href} class={rowClass}>
 		<div class={innerClass}>
+			{#if leading}
+				<div class="flex w-2 shrink-0 items-center justify-center">
+					{@render leading()}
+				</div>
+			{/if}
 			<span class={labelClass}>
 				{label}
 			</span>
@@ -55,6 +62,11 @@
 {:else}
 	<div class={rowClass}>
 		<div class={innerClass}>
+			{#if leading}
+				<div class="flex w-2 shrink-0 items-center justify-center">
+					{@render leading()}
+				</div>
+			{/if}
 			<span class={labelClass}>
 				{label}
 			</span>

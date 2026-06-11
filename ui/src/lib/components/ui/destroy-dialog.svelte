@@ -8,7 +8,6 @@
 		title: string;
 		description?: string;
 		detail?: string;
-		confirmLabel?: string;
 		cancelLabel?: string;
 		disabled?: boolean;
 		loading?: boolean;
@@ -21,7 +20,6 @@
 		title,
 		description,
 		detail,
-		confirmLabel = 'Delete',
 		cancelLabel = 'Cancel',
 		disabled = false,
 		loading = false,
@@ -61,7 +59,7 @@
 				{loading}
 				onclick={handleConfirm}
 			>
-				{confirmLabel}
+				Confirm
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

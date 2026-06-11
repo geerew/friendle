@@ -47,7 +47,7 @@ var serviceErrorMappings = []serviceErrorMapping{
 	{err: service.ErrGroupJoinRequestRejected, status: fiber.StatusBadRequest, message: "Join request was rejected"},
 	{err: service.ErrGroupJoinRequestNotFound, status: fiber.StatusNotFound, message: "Join request not found"},
 	{err: service.ErrGroupMemberNotFound, status: fiber.StatusNotFound, message: "Group member not found"},
-	{err: service.ErrGroupMemberSelf, status: fiber.StatusBadRequest, message: "Cannot change your own group role"},
+	{err: service.ErrGroupMemberSelf, status: fiber.StatusBadRequest, message: "Cannot modify your own group membership"},
 	{err: service.ErrGroupLastAdmin, status: fiber.StatusBadRequest, message: "Unable to remove the last group admin"},
 
 	{err: utils.ErrApiQueryParse, status: fiber.StatusBadRequest, message: "Invalid query"},

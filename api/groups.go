@@ -20,6 +20,7 @@ func (r *Router) initGroupRoutes() {
 	// Members
 	groupRoutes.Get("/:id/members", r.requireAccess(accessSiteUser), r.listGroupMembers)
 	groupRoutes.Patch("/:id/members/:userId", r.requireAccess(accessSiteUser), r.updateGroupMemberRole)
+	groupRoutes.Delete("/:id/members/:userId", r.requireAccess(accessSiteUser), r.removeGroupMember)
 
 	// Join
 	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
@@ -104,6 +105,19 @@ func (r *Router) updateGroupMemberRole(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(member)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// removeGroupMember removes a group member for group admins
+func (r *Router) removeGroupMember(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	if err := r.appSvc.Groups.RemoveMember(ctx, c.Params("id"), c.Params("userId")); err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

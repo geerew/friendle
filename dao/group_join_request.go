@@ -136,3 +136,21 @@ func (dao *DAO) UpdateGroupJoinRequest(ctx context.Context, request *models.Grou
 
 	return err
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DeleteGroupJoinRequests deletes group join request records
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteGroupJoinRequests(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
+		return utils.ErrWhere
+	}
+
+	builderOpts := newBuilderOptions(models.JOIN_REQUEST_TABLE).SetDbOpts(dbOpts)
+	sqlStr, args, _ := deleteBuilder(*builderOpts)
+
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
+
+	return err
+}

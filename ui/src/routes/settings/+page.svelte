@@ -309,7 +309,6 @@
 		bind:open={deleteConfirmOpen}
 		title="Are you sure you want to delete your account?"
 		description="All associated data will be permanently deleted"
-		confirmLabel="Delete account"
 		loading={deleting}
 		onConfirm={confirmDeleteAccount}
 	/>

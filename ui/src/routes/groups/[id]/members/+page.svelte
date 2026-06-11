@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { listGroupMembers, updateGroupMemberRole } from '$lib/api/groups-api';
+	import { listGroupMembers, removeGroupMember, updateGroupMemberRole } from '$lib/api/groups-api';
 	import { EditableSection } from '$lib/components';
 	import { ListChevronsDownUpIcon, ListChevronsUpDownIcon } from '$lib/components/icons';
 	import { GroupNameSection } from '$lib/components/pages';
 	import GroupRoleBadge from '$lib/components/pages/groups/group-role-badge.svelte';
-	import { Button, AnimatedHeight, Separator, Switch, Table } from '$lib/components/ui';
+	import {
+		Button,
+		AnimatedHeight,
+		DestroyDialog,
+		Separator,
+		Switch,
+		Table
+	} from '$lib/components/ui';
 	import { auth } from '$lib/auth.svelte';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupMemberModel } from '$lib/models/group-member-model';
@@ -33,6 +40,9 @@
 	let editingRoleUserId = $state<string | null>(null);
 	let roleDraft = $state<GroupMemberModel['groupRole']>('group_user');
 	let savingRole = $state(false);
+	let removeTarget = $state<GroupMemberModel | null>(null);
+	let removeConfirmOpen = $state(false);
+	let removingMember = $state(false);
 
 	const canSaveRole = $derived.by(() => {
 		if (editingRoleUserId === null || savingRole) {
@@ -82,8 +92,14 @@
 	function setExpanded(userId: string, open: boolean): void {
 		expandedUserId = open ? userId : null;
 
-		if (!open && editingRoleUserId === userId) {
-			closeRoleEdit();
+		if (!open) {
+			if (editingRoleUserId === userId) {
+				closeRoleEdit();
+			}
+
+			if (removeTarget?.userId === userId) {
+				closeRemoveMember();
+			}
 		}
 	}
 
@@ -135,6 +151,40 @@
 	function setRoleDraftFromSwitch(checked: boolean): void {
 		roleDraft = checked ? 'group_admin' : 'group_user';
 	}
+
+	function openRemoveMember(member: GroupMemberModel): void {
+		closeRoleEdit();
+		removeTarget = member;
+		removeConfirmOpen = true;
+	}
+
+	function closeRemoveMember(): void {
+		removeConfirmOpen = false;
+		removeTarget = null;
+	}
+
+	async function confirmRemoveMember(): Promise<void> {
+		if (!groupId || !removeTarget) {
+			return;
+		}
+
+		const userId = removeTarget.userId;
+		removingMember = true;
+
+		try {
+			await withMinLoadingDelay(removeGroupMember(groupId, userId));
+			members = members.filter((item) => item.userId !== userId);
+			totalItems = Math.max(0, totalItems - 1);
+			expandedUserId = null;
+			closeRemoveMember();
+			void groupPage.reloadGroup({ silent: true });
+			toast.success('Member removed');
+		} catch (err) {
+			toast.error(apiErrorMessage(err, 'Failed to remove member'));
+		} finally {
+			removingMember = false;
+		}
+	}
 </script>
 
 <Table.Root title="Members" {breadcrumb}>
@@ -160,6 +210,14 @@
 						class="flex flex-col"
 					>
 						<Table.Row label={member.displayName}>
+							{#snippet leading()}
+								{#if member.userId === currentUserId}
+									<span
+										class="bg-background-primary size-2 rounded-full"
+										aria-label="You"
+									></span>
+								{/if}
+							{/snippet}
 							{#snippet trailing()}
 								<GroupRoleBadge role={member.groupRole} />
 								{#if canEditMember(member)}
@@ -266,6 +324,26 @@
 												{/if}
 											</AnimatedHeight>
 										</EditableSection>
+
+										<Separator />
+
+										<section class="flex flex-col gap-3">
+											<div class="flex items-center justify-between gap-3">
+												<h2 class="section-title">Remove member</h2>
+												<Button
+													type="button"
+													variant="destructive"
+													size="inline"
+													onclick={() => openRemoveMember(member)}
+												>
+													Delete
+												</Button>
+											</div>
+											<p class="text-foreground-alt-2 text-sm">
+												Remove this member from the group, permanently deleting all group member
+												data.
+											</p>
+										</section>
 									</section>
 								</div>
 							</Collapsible.Content>
@@ -280,3 +358,12 @@
 		{/snippet}
 	</Table.PaginatedBody>
 </Table.Root>
+
+<DestroyDialog
+	bind:open={removeConfirmOpen}
+	title="Are you sure you want to remove this member?"
+	detail={removeTarget?.displayName}
+	description="All member data associated with this group will be permanently deleted"
+	loading={removingMember}
+	onConfirm={confirmRemoveMember}
+/>

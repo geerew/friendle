@@ -412,6 +412,68 @@ func (g *Groups) UpdateMemberRole(ctx context.Context, groupID, userID string, r
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// RemoveMember removes a member from a group
+//
+// Action limited to group admins. Admins cannot remove themselves. The last group admin cannot be
+// removed
+func (g *Groups) RemoveMember(ctx context.Context, groupID, userID string) error {
+	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
+		return err
+	}
+
+	principal, err := principalFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	if userID == principal.UserID {
+		return ErrGroupMemberSelf
+	}
+
+	dbOpts := dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupID},
+		squirrel.Eq{models.GROUP_MEMBER_USER_ID: userID},
+	})
+
+	member, err := g.dao.GetGroupMember(ctx, dbOpts)
+	if err != nil {
+		return err
+	}
+
+	if member == nil {
+		return ErrGroupMemberNotFound
+	}
+
+	if member.GroupRole == types.GroupRoleAdmin {
+		adminOpts := dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupID},
+			squirrel.Eq{models.GROUP_MEMBER_GROUP_ROLE: types.GroupRoleAdmin},
+		})
+
+		adminCount, err := g.dao.CountGroupMembers(ctx, adminOpts)
+		if err != nil {
+			return err
+		}
+
+		if adminCount <= 1 {
+			return ErrGroupLastAdmin
+		}
+	}
+
+	joinOpts := dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+		squirrel.Eq{models.JOIN_REQUEST_USER_ID: userID},
+	})
+
+	if err := g.dao.DeleteGroupJoinRequests(ctx, joinOpts); err != nil {
+		return err
+	}
+
+	return g.dao.DeleteGroupMembers(ctx, dbOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // ListPendingJoinRequests returns paginated pending join requests
 //
 // Action limited to group admins
