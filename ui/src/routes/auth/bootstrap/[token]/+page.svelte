@@ -4,7 +4,8 @@
 	import { ApiError } from '$lib/api';
 	import { bootstrap } from '$lib/api/auth-api';
 	import { auth } from '$lib/auth.svelte';
-	import { AuthHeader, AuthRegisterForm } from '$lib/components';
+	import { AuthHeader } from '$lib/components/pages/auth';
+	import { AuthRegisterForm } from '$lib/components/pages/auth/register';
 	import { withMinLoadingDelay } from '$lib/utils';
 
 	const token = $derived(page.params.token ?? '');

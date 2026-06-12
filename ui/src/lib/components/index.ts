@@ -5,6 +5,7 @@ export { default as Logo } from './logo.svelte';
 export { default as Pagination } from './pagination.svelte';
 export { default as SortMenu } from './sort-menu.svelte';
 export { default as Spinner } from './spinner.svelte';
+export { default as IconSpinner } from './icon-spinner.svelte';
 
 export * from './pages';
 export * from './dialogs';

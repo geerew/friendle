@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { requestGroupJoin } from '$lib/api/groups-api';
+	import { cancelGroupJoinRequest, requestGroupJoin } from '$lib/api/groups-api';
 	import {
 		PlusIcon,
 		RightChevronIcon,
 		UserRoundPlusIcon,
-		UserRoundXIcon
+		UserRoundXIcon,
+		XIcon
 	} from '$lib/components/icons';
 	import { Button, StatusBadge, Table } from '$lib/components/ui';
 	import GroupRoleBadge from '../group-role-badge.svelte';
@@ -16,11 +17,13 @@
 	type Props = {
 		group: GroupModel;
 		onjoined?: (groupId: string) => void;
+		oncancelled?: (groupId: string) => void;
 	};
 
-	let { group, onjoined }: Props = $props();
+	let { group, onjoined, oncancelled }: Props = $props();
 
 	let joining = $state(false);
+	let cancelling = $state(false);
 
 	const isMember = $derived(isGroupMember(group));
 	const isPending = $derived(group.joinRequestStatus === 'pending');
@@ -43,6 +46,24 @@
 			joining = false;
 		}
 	}
+
+	// handleCancelClick withdraws the caller's pending join request
+	async function handleCancelClick(): Promise<void> {
+		if (cancelling) {
+			return;
+		}
+
+		cancelling = true;
+
+		try {
+			await withMinLoadingDelay(cancelGroupJoinRequest(group.id));
+			oncancelled?.(group.id);
+		} catch (err) {
+			toast.error(apiErrorMessage(err, 'Failed to cancel join request'));
+		} finally {
+			cancelling = false;
+		}
+	}
 </script>
 
 {#if isMember}
@@ -60,7 +81,17 @@
 					<UserRoundPlusIcon class="size-3.5 shrink-0 stroke-2" />
 				{/snippet}
 			</StatusBadge>
-			<div class="size-5 shrink-0" aria-hidden="true"></div>
+			<Button
+				type="button"
+				variant="ghost"
+				size="inline"
+				class="text-foreground-alt-2 hover:bg-background-error hover:text-foreground h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case"
+				aria-label="Cancel join request"
+				loading={cancelling}
+				onclick={handleCancelClick}
+			>
+				<XIcon class="size-5 shrink-0 stroke-2" />
+			</Button>
 		{/snippet}
 	</Table.Row>
 {:else if isRejected}

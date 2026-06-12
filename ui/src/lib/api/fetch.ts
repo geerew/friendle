@@ -60,6 +60,7 @@ async function runFetch(input: RequestInfo, init?: RequestInit): Promise<Respons
 			(input.includes('/api/auth/login') ||
 				input.includes('/api/auth/register') ||
 				input.includes('/api/auth/signup-status') ||
+				input.includes('/api/auth/me') ||
 				input.includes('/api/auth/bootstrap/'));
 
 		if (!isAuthRoute) {

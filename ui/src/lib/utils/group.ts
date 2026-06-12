@@ -14,6 +14,15 @@ export function groupChildBreadcrumb(groupId: string, pageLabel: string): Breadc
 	];
 }
 
+// groupSettingsChildBreadcrumb builds breadcrumb items for a group settings sub-page
+export function groupSettingsChildBreadcrumb(groupId: string, pageLabel: string): BreadcrumbItem[] {
+	return [
+		{ label: 'Group', href: `/groups/${groupId}/` },
+		{ label: 'Settings', href: `/groups/${groupId}/settings/` },
+		{ label: pageLabel }
+	];
+}
+
 // isGroupMember reports whether the viewer belongs to the group
 export function isGroupMember(group: Pick<GroupModel, 'groupRole'>): boolean {
 	return group.groupRole === 'group_admin' || group.groupRole === 'group_user';

@@ -555,6 +555,38 @@ func (g *Groups) RequestJoin(ctx context.Context, userID, groupID string) (*Grou
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// CancelJoinRequest deletes userID's pending join request for a group
+func (g *Groups) CancelJoinRequest(ctx context.Context, userID, groupID string) (*GroupResponse, error) {
+	dbOpts := dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID})
+	group, err := g.dao.GetGroup(ctx, dbOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if group == nil {
+		return nil, ErrGroupNotFound
+	}
+
+	if _, err := g.getPendingJoinRequest(ctx, groupID, userID); err != nil {
+		return nil, err
+	}
+
+	dbOpts = dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
+		squirrel.Eq{models.JOIN_REQUEST_USER_ID: userID},
+		squirrel.Eq{models.JOIN_REQUEST_STATUS: types.JoinPending},
+	})
+
+	err = g.dao.DeleteGroupJoinRequests(ctx, dbOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return groupResponseBuilder(group, nil, nil), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Delete deletes a group and its associated data
 func (g *Groups) Delete(ctx context.Context, groupID string) error {
 	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))

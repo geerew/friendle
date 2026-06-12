@@ -1,4 +1,5 @@
 <script lang="ts">
+	import IconSpinner from '../icon-spinner.svelte';
 	import Spinner from '../spinner.svelte';
 	import { cn } from '$lib/utils';
 	import type { Snippet } from 'svelte';
@@ -37,6 +38,7 @@
 	}: Props = $props();
 
 	const isDisabled = $derived(disabled || loading);
+	const useIconSpinner = $derived(size === 'inline' || size === 'icon');
 
 	const base =
 		'inline-flex shrink-0 cursor-pointer items-center justify-center rounded transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50';
@@ -47,20 +49,32 @@
 		icon: 'h-9 min-h-9 w-9 min-w-9 p-0 text-sm font-semibold uppercase'
 	};
 
+	const isLink = $derived(href != null && href !== '');
+
 	const variantClasses = $derived.by(() => {
+		const brightHover = isLink ? 'hover:brightness-110' : 'enabled:hover:brightness-110';
+
 		switch (variant) {
 			case 'primary':
-				return 'bg-background-primary text-white enabled:hover:brightness-110';
+				return cn('bg-background-primary text-white', brightHover);
 			case 'secondary':
-				return 'bg-background-alt-3 text-foreground enabled:hover:brightness-110';
+				return cn('bg-background-alt-3 text-foreground', brightHover);
 			case 'ghost':
 				return 'bg-transparent text-foreground-alt-2 hover:text-foreground disabled:hover:text-foreground-alt-2';
 			case 'destructive':
 				if (size === 'inline') {
-					return 'bg-transparent text-foreground-error-alt-1 enabled:hover:bg-background-error enabled:hover:text-foreground';
+					const inlineHover = isLink
+						? 'hover:bg-background-error hover:text-foreground'
+						: 'enabled:hover:bg-background-error enabled:hover:text-foreground';
+
+					return cn('bg-transparent text-foreground-error-alt-1', inlineHover);
 				}
 
-				return 'bg-background-error text-foreground enabled:hover:bg-background-error-alt-1';
+				const solidHover = isLink
+					? 'hover:bg-background-error-alt-1'
+					: 'enabled:hover:bg-background-error-alt-1';
+
+				return cn('bg-background-error text-foreground', solidHover);
 		}
 	});
 

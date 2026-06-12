@@ -1,4 +1,4 @@
-import { array, number, object, optional, picklist, string, type InferOutput } from 'valibot';
+import { array, boolean, number, object, optional, picklist, string, type InferOutput } from 'valibot';
 import { BasePaginationSchema, type PaginationReqParams } from './pagination-model';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,6 +35,7 @@ export const GroupSchema = object({
 	name: string(),
 	createdBy: string(),
 	memberCount: number(),
+	memberThresholdMet: boolean(),
 	groupRole: optional(GroupRoleSchema),
 	joinRequestStatus: optional(JoinRequestStatusSchema),
 	adminSummary: optional(GroupAdminSummarySchema)

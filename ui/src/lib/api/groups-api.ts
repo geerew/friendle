@@ -25,6 +25,7 @@ import {
 	type ListGroupPendingJoinRequestsParams,
 	type ListGroupRejectedJoinRequestsParams
 } from '$lib/models/group-join-request-model';
+import { RoundTodaySchema, type RoundTodayModel } from '$lib/models/round_model';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -151,6 +152,29 @@ export async function requestGroupJoin(groupId: string): Promise<GroupModel> {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Cancel a pending group join request for the authenticated user
+export async function cancelGroupJoinRequest(groupId: string): Promise<GroupModel> {
+	const response = await apiFetch(`/api/groups/${groupId}/join`, {
+		method: 'DELETE'
+	});
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(GroupSchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Query group members (paginated)
 export async function listGroupMembers(
 	groupId: string,
@@ -213,6 +237,27 @@ export async function removeGroupMember(groupId: string, userId: string): Promis
 
 	if (response.ok) {
 		return;
+	}
+
+	const data = (await response.json()) as { message?: string };
+	throw new ApiError(data.message || 'Request failed', response.status);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Query today's game state for a group
+export async function getGroupRoundToday(groupId: string): Promise<RoundTodayModel> {
+	const response = await apiFetch(`/api/groups/${groupId}/round/today`);
+
+	if (response.ok) {
+		const data = await response.json();
+		const result = safeParse(RoundTodaySchema, data);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
 	}
 
 	const data = (await response.json()) as { message?: string };

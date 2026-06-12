@@ -12,7 +12,7 @@
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
-	import { groupChildBreadcrumb, isGroupAdmin } from '$lib/utils/group';
+	import { groupSettingsChildBreadcrumb, isGroupAdmin } from '$lib/utils/group';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -20,7 +20,7 @@
 	const groupPage = getContext<GroupPageContext>(GROUP_PAGE_KEY);
 	const group = $derived(groupPage.group);
 	const breadcrumb = $derived(
-		group ? groupChildBreadcrumb(group.id, 'Pending') : [{ label: 'Pending' }]
+		group ? groupSettingsChildBreadcrumb(group.id, 'Pending') : [{ label: 'Pending' }]
 	);
 
 	let requests = $state<GroupJoinRequestModel[]>([]);

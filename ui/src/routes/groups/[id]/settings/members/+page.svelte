@@ -17,7 +17,7 @@
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupMemberModel } from '$lib/models/group-member-model';
 	import { apiErrorMessage, cn, withMinLoadingDelay } from '$lib/utils';
-	import { groupChildBreadcrumb, isGroupAdmin } from '$lib/utils/group';
+	import { groupChildBreadcrumb, groupSettingsChildBreadcrumb, isGroupAdmin } from '$lib/utils/group';
 	import { Collapsible } from 'bits-ui';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -26,7 +26,11 @@
 	const groupPage = getContext<GroupPageContext>(GROUP_PAGE_KEY);
 	const group = $derived(groupPage.group);
 	const breadcrumb = $derived(
-		group ? groupChildBreadcrumb(group.id, 'Members') : [{ label: 'Members' }]
+		group
+			? viewerIsAdmin
+				? groupSettingsChildBreadcrumb(group.id, 'Members')
+				: groupChildBreadcrumb(group.id, 'Members')
+			: [{ label: 'Members' }]
 	);
 	const currentUserId = $derived(auth.user?.id ?? '');
 	const viewerIsAdmin = $derived(group ? isGroupAdmin(group) : false);

@@ -674,6 +674,81 @@ func TestGroups_RequestJoin(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestGroups_CancelJoinRequest exercises withdrawing a pending join request
+func TestGroups_CancelJoinRequest(t *testing.T) {
+	// Test successfully cancelling a pending join request
+	t.Run("200 (cancelled)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  principal.userID,
+			Status:  types.JoinPending,
+		}))
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID+"/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var resp service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &resp))
+		require.Equal(t, group.ID, resp.ID)
+		require.Nil(t, resp.JoinRequestStatus)
+
+		stored, err := router.appDao.GetGroupJoinRequest(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: group.ID},
+			squirrel.Eq{models.JOIN_REQUEST_USER_ID: principal.userID},
+		}))
+		require.NoError(t, err)
+		require.Nil(t, stored)
+	})
+
+	// Test error due to a missing pending join request
+	t.Run("404 (not found)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID+"/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(body), "Join request not found")
+	})
+
+	// Test error due to a missing group
+	t.Run("404 (group not found)", func(t *testing.T) {
+		router, _, _ := setup(t, "bob", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/groups/missing-group-id/join", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(body), "Group not found")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // TestGroups_ListMembers exercises listing group members
 func TestGroups_ListMembers(t *testing.T) {
 	// Test successfully listing members as a group admin

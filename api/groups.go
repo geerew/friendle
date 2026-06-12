@@ -27,6 +27,7 @@ func (r *Router) initGroupRoutes() {
 
 	// Join
 	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
+	groupRoutes.Delete("/:id/join", r.requireAccess(accessSiteUser), r.deleteGroupJoinRequest)
 
 	// Pending
 	groupRoutes.Get("/:id/pending", r.requireAccess(accessSiteUser), r.listGroupPendingJoinRequests)
@@ -341,6 +342,22 @@ func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(group)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// deleteGroupJoinRequest deletes the authenticated user's pending join request
+func (r *Router) deleteGroupJoinRequest(c *fiber.Ctx) error {
+	principal, ctx := principalAndCtx(c)
+
+	groupID := c.Params("id")
+
+	group, err := r.appSvc.Groups.CancelJoinRequest(ctx, principal.UserID, groupID)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.JSON(group)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

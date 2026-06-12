@@ -92,6 +92,18 @@
 			group.id === groupId ? { ...group, joinRequestStatus: 'pending' as const } : group
 		);
 	}
+
+	function markJoinCancelled(groupId: string): void {
+		groups = groups.map((group) => {
+			if (group.id !== groupId) {
+				return group;
+			}
+
+			const { joinRequestStatus: _, ...rest } = group;
+
+			return rest;
+		});
+	}
 </script>
 
 <Table.Root title="Search Groups">
@@ -137,7 +149,7 @@
 			{#snippet list()}
 				<Table.List>
 					{#each groups as group, index (group.id)}
-						<GroupSearchRow {group} onjoined={markJoinPending} />
+						<GroupSearchRow {group} onjoined={markJoinPending} oncancelled={markJoinCancelled} />
 						{#if index < groups.length - 1}
 							<Table.Separator />
 						{/if}

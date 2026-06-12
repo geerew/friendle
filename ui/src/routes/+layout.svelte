@@ -7,7 +7,7 @@
 
 	let { children } = $props();
 
-	const isAuthPath = $derived(page.url.pathname.startsWith('/auth'));
+	const isAuthPath = $derived(page.url.pathname.startsWith('/auth/'));
 
 	$effect(() => {
 		if (isAuthPath) return;
