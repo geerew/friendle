@@ -271,6 +271,7 @@
 
 			<EditableSection
 				title="Delete account"
+				titleDestructive
 				editing={deletingAccount}
 				cancelDisabled={deleting}
 				editLabel="Delete"

@@ -29,10 +29,6 @@ func errorResponse(c *fiber.Ctx, status int, message string, err error) error {
 		return writeErr
 	}
 
-	if status >= 400 {
-		return fiber.NewError(status, message)
-	}
-
 	return nil
 }
 

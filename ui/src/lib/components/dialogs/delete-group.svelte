@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { ApiError } from '$lib/api';
 	import { deleteGroup } from '$lib/api/groups-api';
 	import { DestroyDialog } from '$lib/components/ui';
 	import type { GroupModel } from '$lib/models/group-model';
-	import { withMinLoadingDelay } from '$lib/utils';
+	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 
 	type Props = {
 		open?: boolean;
@@ -32,7 +31,7 @@
 			open = false;
 			onSuccess?.();
 		} catch (err) {
-			onError?.(err instanceof ApiError ? err.message : 'Failed to delete group');
+			onError?.(apiErrorMessage(err, 'Failed to delete group'));
 		} finally {
 			isPosting = false;
 		}

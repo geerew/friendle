@@ -519,6 +519,7 @@ func TestGroups_Leave(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusBadRequest, status)
 		require.Contains(t, string(body), "Unable to remove the last group admin")
+		require.Contains(t, string(body), `"message"`)
 	})
 }
 

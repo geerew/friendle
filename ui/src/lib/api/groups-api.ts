@@ -366,6 +366,5 @@ export async function deleteGroup(groupId: string): Promise<void> {
 		return;
 	}
 
-	const data = (await response.json()) as { message?: string };
-	throw new ApiError(data.message || 'Request failed', response.status);
+	throw await apiErrorFromResponse(response);
 }

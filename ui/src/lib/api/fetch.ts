@@ -37,17 +37,23 @@ export async function apiErrorFromResponse(response: Response): Promise<ApiError
 	let message = 'Request failed';
 
 	try {
-		const text = await response.text();
+		const text = (await response.text()).trim();
 
-		if (text) {
+		if (!text) {
+			return new ApiError(message, response.status);
+		}
+
+		try {
 			const data = JSON.parse(text) as { message?: string };
 
 			if (data.message) {
 				message = data.message;
 			}
+		} catch {
+			message = text;
 		}
 	} catch {
-		// ignore parse errors
+		// ignore read errors
 	}
 
 	return new ApiError(message, response.status);
@@ -144,17 +150,23 @@ export async function parseJson<T>(response: Response): Promise<T> {
 	let message = 'Request failed';
 
 	try {
-		const text = await response.text();
+		const text = (await response.text()).trim();
 
-		if (text) {
+		if (!text) {
+			throw new ApiError(message, response.status);
+		}
+
+		try {
 			const data = JSON.parse(text) as { message?: string };
 
 			if (data.message) {
 				message = data.message;
 			}
+		} catch {
+			message = text;
 		}
 	} catch {
-		// ignore parse errors
+		// ignore read errors
 	}
 
 	throw new ApiError(message, response.status);

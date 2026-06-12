@@ -142,4 +142,8 @@
 	.section-title {
 		@apply text-foreground-alt-2 text-sm font-semibold tracking-wide uppercase;
 	}
+
+	.section-title-destructive {
+		@apply text-foreground-error-alt-1;
+	}
 }

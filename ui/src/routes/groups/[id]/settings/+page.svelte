@@ -115,7 +115,7 @@
 
 				<section class="flex flex-col gap-3">
 					<div class="flex items-center justify-between gap-3">
-						<h2 class="section-title">Delete group</h2>
+						<h2 class="section-title section-title-destructive">Delete group</h2>
 						<Button
 							type="button"
 							variant="destructive"

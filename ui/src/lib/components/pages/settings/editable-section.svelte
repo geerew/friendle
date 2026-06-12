@@ -13,6 +13,7 @@
 		editLabel?: string;
 		editVariant?: EditVariant;
 		hint?: string;
+		titleDestructive?: boolean;
 		cancelDisabled?: boolean;
 	};
 
@@ -25,13 +26,14 @@
 		editLabel = 'Edit',
 		editVariant = 'ghost',
 		hint,
+		titleDestructive = false,
 		cancelDisabled = false
 	}: Props = $props();
 </script>
 
 <section class="flex flex-col gap-3">
 	<div class="flex items-center justify-between gap-3">
-		<h2 class="section-title">{title}</h2>
+		<h2 class="section-title" class:section-title-destructive={titleDestructive}>{title}</h2>
 		{#if editing}
 			<Button
 				type="button"
