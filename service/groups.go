@@ -151,8 +151,9 @@ func (g *Groups) Create(ctx context.Context, userID string, req CreateGroupReque
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// List returns a paginated slice of groups
-func (g *Groups) List(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
+// List returns a paginated slice of groups enriched with userID's membership and join request
+// status for each group
+func (g *Groups) List(ctx context.Context, userID string, page *pagination.Pagination) ([]*GroupResponse, error) {
 	groups, err := g.dao.ListGroups(ctx, dao.NewOptions().
 		WithPagination(page).
 		WithOrderBy(defaultGroupsListOrderBy...))
@@ -164,7 +165,13 @@ func (g *Groups) List(ctx context.Context, page *pagination.Pagination) ([]*Grou
 		return []*GroupResponse{}, nil
 	}
 
-	return groupsResponsesBuilder(groups, userMemberStatus{}), nil
+	groupIDs := utils.Map(groups, func(group *models.Group) string { return group.ID })
+	status, err := g.getUserMemberStatus(ctx, userID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return groupsResponsesBuilder(groups, status), nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

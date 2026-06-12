@@ -282,7 +282,7 @@ func (r *Router) listGroups(c *fiber.Ctx) error {
 	if c.Context().QueryArgs().Has("name") {
 		groups, err = r.appSvc.Groups.Search(ctx, principal.UserID, page, c.Query("name", ""))
 	} else {
-		groups, err = r.appSvc.Groups.List(ctx, page)
+		groups, err = r.appSvc.Groups.List(ctx, principal.UserID, page)
 	}
 
 	if err != nil {

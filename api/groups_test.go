@@ -1075,6 +1075,43 @@ func TestGroups_ApproveJoinRequest(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, member, 1)
 	})
+
+	// Test error due to the join request being withdrawn before approval
+	t.Run("404 (withdrawn)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  bob.ID,
+			Status:  types.JoinPending,
+		}))
+		require.NoError(t, router.appDao.DeleteGroupJoinRequests(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: group.ID},
+			squirrel.Eq{models.JOIN_REQUEST_USER_ID: bob.ID},
+		})))
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/pending/"+bob.ID+"/approve", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(body), "Join request not found")
+	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1118,6 +1155,43 @@ func TestGroups_DeclineJoinRequest(t *testing.T) {
 		}))
 		require.NoError(t, err)
 		require.NotNil(t, stored)
+	})
+
+	// Test error due to the join request being withdrawn before decline
+	t.Run("404 (withdrawn)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  bob.ID,
+			Status:  types.JoinPending,
+		}))
+		require.NoError(t, router.appDao.DeleteGroupJoinRequests(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: group.ID},
+			squirrel.Eq{models.JOIN_REQUEST_USER_ID: bob.ID},
+		})))
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/"+group.ID+"/pending/"+bob.ID+"/decline", nil)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(body), "Join request not found")
 	})
 }
 
