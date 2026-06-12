@@ -66,7 +66,7 @@ CREATE TABLE rounds (
     UNIQUE(group_id, round_date)
 );
 
-CREATE TABLE round_entries (
+CREATE TABLE round_members (
     id              TEXT PRIMARY KEY NOT NULL,
     round_id        TEXT NOT NULL,
     user_id         TEXT NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE round_entries (
     UNIQUE(round_id, user_id)
 );
 
-CREATE TABLE guesses (
+CREATE TABLE round_member_guesses (
     id              TEXT PRIMARY KEY NOT NULL,
     round_id        TEXT NOT NULL,
     user_id         TEXT NOT NULL,
@@ -103,13 +103,13 @@ CREATE INDEX idx_group_members_user ON group_members(user_id);
 CREATE INDEX idx_join_requests_group_status ON group_join_requests(group_id, status);
 CREATE INDEX idx_rounds_group_date ON rounds(group_id, round_date);
 CREATE INDEX idx_rounds_group_status ON rounds(group_id, status);
-CREATE INDEX idx_round_entries_round ON round_entries(round_id);
-CREATE INDEX idx_guesses_round_user ON guesses(round_id, user_id);
+CREATE INDEX idx_round_members_round ON round_members(round_id);
+CREATE INDEX idx_round_member_guesses_round_user ON round_member_guesses(round_id, user_id);
 
 -- +goose Down
 
-DROP TABLE IF EXISTS guesses;
-DROP TABLE IF EXISTS round_entries;
+DROP TABLE IF EXISTS round_member_guesses;
+DROP TABLE IF EXISTS round_members;
 DROP TABLE IF EXISTS rounds;
 DROP TABLE IF EXISTS group_join_requests;
 DROP TABLE IF EXISTS group_members;
