@@ -58,7 +58,7 @@ CREATE TABLE rounds (
     round_date      TEXT NOT NULL,
     picker_user_id  TEXT NOT NULL,
     word_plain      TEXT,
-    status          TEXT NOT NULL CHECK(status IN ('awaiting_word', 'active', 'completed', 'skipped')),
+    status          TEXT NOT NULL CHECK(status IN ('awaiting_word', 'active', 'completed')),
     created_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     updated_at      TEXT NOT NULL DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
     FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,

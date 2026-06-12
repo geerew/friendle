@@ -11,7 +11,7 @@ import (
 	"github.com/geerew/friendle/dao"
 	"github.com/geerew/friendle/models"
 	"github.com/geerew/friendle/service"
-	"github.com/geerew/friendle/utils/roundday"
+	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/types"
 	"github.com/stretchr/testify/require"
 )
@@ -45,7 +45,7 @@ func TestGroups_GetRoundToday(t *testing.T) {
 			GroupRole: types.GroupRoleUser,
 		}))
 
-		today := roundday.DateString(time.Now())
+		today := utils.DateString(time.Now())
 		round, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, today)
 		require.NoError(t, err)
 
@@ -57,8 +57,7 @@ func TestGroups_GetRoundToday(t *testing.T) {
 
 		var resp service.RoundTodayResponse
 		require.NoError(t, json.Unmarshal(body, &resp))
-		require.True(t, resp.CanPlay)
-		require.Equal(t, 2, resp.MemberCount)
+		require.True(t, resp.MemberThresholdMet)
 		require.NotNil(t, resp.Round)
 		require.Equal(t, today, resp.Round.RoundDate)
 		require.Equal(t, types.RoundAwaitingWord, resp.Round.Status)
@@ -100,8 +99,8 @@ func TestGroups_GetRoundToday(t *testing.T) {
 		}))
 
 		now := time.Now()
-		yesterday := roundday.PreviousDateString(now)
-		today := roundday.DateString(now)
+		yesterday := utils.PreviousDateString(now)
+		today := utils.DateString(now)
 
 		first, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, yesterday)
 		require.NoError(t, err)
@@ -141,61 +140,106 @@ func TestGroups_GetRoundToday(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// TestGroups_EnsureDailyRounds exercises midnight rollover for awaiting rounds
-func TestGroups_EnsureDailyRounds(t *testing.T) {
-	router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+// TestRounds_CloseStaleRounds exercises closing open rounds from before today
+func TestRounds_CloseStaleRounds(t *testing.T) {
+	// Test successfully completing yesterday's awaiting-word round without creating today's
+	t.Run("awaiting word completed", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
 
-	group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
-	require.NoError(t, router.appDao.CreateGroup(ctx, group))
-	require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
-		GroupID:   group.ID,
-		UserID:    principal.userID,
-		GroupRole: types.GroupRoleAdmin,
-	}))
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
 
-	bob := &models.User{
-		Base:        models.Base{ID: "bob"},
-		Username:    "bob",
-		DisplayName: "Bob",
-		SiteRole:    types.SiteRoleUser,
-	}
-	createTestUser(t, router, ctx, bob)
-	require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
-		GroupID:   group.ID,
-		UserID:    bob.ID,
-		GroupRole: types.GroupRoleUser,
-	}))
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    bob.ID,
+			GroupRole: types.GroupRoleUser,
+		}))
 
-	now := time.Now()
-	yesterday := roundday.PreviousDateString(now)
-	today := roundday.DateString(now)
+		now := time.Now()
+		yesterday := utils.PreviousDateString(now)
+		today := utils.DateString(now)
 
-	yesterdayRound, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, yesterday)
-	require.NoError(t, err)
+		yesterdayRound, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, yesterday)
+		require.NoError(t, err)
 
-	require.NoError(t, router.appSvc.Rounds.EnsureDailyRounds(ctx))
+		require.NoError(t, router.appSvc.Rounds.CloseStaleRounds(ctx))
 
-	stored, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.And{
-		squirrel.Eq{models.ROUND_GROUP_ID: group.ID},
-		squirrel.Eq{models.ROUND_ROUND_DATE: yesterday},
-	}))
-	require.NoError(t, err)
-	require.NotNil(t, stored)
-	require.Equal(t, types.RoundSkipped, stored.Status)
+		stored, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.ROUND_GROUP_ID: group.ID},
+			squirrel.Eq{models.ROUND_ROUND_DATE: yesterday},
+		}))
+		require.NoError(t, err)
+		require.NotNil(t, stored)
+		require.Equal(t, types.RoundCompleted, stored.Status)
 
-	picker, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.And{
-		squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: group.ID},
-		squirrel.Eq{models.GROUP_MEMBER_USER_ID: yesterdayRound.PickerUserID},
-	}))
-	require.NoError(t, err)
-	require.NotNil(t, picker)
-	require.Equal(t, 1, picker.PickerSkips)
+		picker, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: group.ID},
+			squirrel.Eq{models.GROUP_MEMBER_USER_ID: yesterdayRound.PickerUserID},
+		}))
+		require.NoError(t, err)
+		require.NotNil(t, picker)
+		require.Equal(t, 1, picker.PickerSkips)
 
-	todayRound, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.And{
-		squirrel.Eq{models.ROUND_GROUP_ID: group.ID},
-		squirrel.Eq{models.ROUND_ROUND_DATE: today},
-	}))
-	require.NoError(t, err)
-	require.NotNil(t, todayRound)
-	require.Equal(t, types.RoundAwaitingWord, todayRound.Status)
+		todayRound, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.ROUND_GROUP_ID: group.ID},
+			squirrel.Eq{models.ROUND_ROUND_DATE: today},
+		}))
+		require.NoError(t, err)
+		require.Nil(t, todayRound)
+	})
+
+	// Test successfully completing yesterday's active round
+	t.Run("active completed", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    bob.ID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		yesterday := utils.PreviousDateString(time.Now())
+		round, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, yesterday)
+		require.NoError(t, err)
+
+		round.Status = types.RoundActive
+		require.NoError(t, router.appDao.UpdateRound(ctx, round))
+
+		require.NoError(t, router.appSvc.Rounds.CloseStaleRounds(ctx))
+
+		stored, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.ROUND_GROUP_ID: group.ID},
+			squirrel.Eq{models.ROUND_ROUND_DATE: yesterday},
+		}))
+		require.NoError(t, err)
+		require.NotNil(t, stored)
+		require.Equal(t, types.RoundCompleted, stored.Status)
+	})
 }
