@@ -11,15 +11,15 @@ import (
 
 // Config holds dependencies for the scheduled job runner
 type Config struct {
-	Rounds           *service.Rounds
-	DailyRoundLogger *logger.Logger
+	Rounds *service.Rounds
+	Logger *logger.Logger
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Cron manages background jobs
 type Cron struct {
-	DailyRound *dailyRound
+	CloseStaleRounds *closeStaleRounds
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,13 +27,13 @@ type Cron struct {
 // NewAndStart creates a Cron scheduler and starts registered jobs
 func NewAndStart(ctx context.Context, config *Config) *Cron {
 	c := &Cron{
-		DailyRound: &dailyRound{
+		CloseStaleRounds: &closeStaleRounds{
 			rounds: config.Rounds,
-			logger: config.DailyRoundLogger,
+			logger: config.Logger,
 		},
 	}
 
-	go c.DailyRound.start(ctx)
+	go c.CloseStaleRounds.start(ctx)
 
 	return c
 }

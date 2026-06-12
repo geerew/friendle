@@ -10,8 +10,8 @@ import (
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// dailyRound creates today's rounds and closes yesterday's at each local midnight
-type dailyRound struct {
+// closeStaleRounds finalises open rounds from before today at each local midnight
+type closeStaleRounds struct {
 	rounds *service.Rounds
 	logger *logger.Logger
 }
@@ -19,13 +19,14 @@ type dailyRound struct {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // start runs catch-up immediately and waits for each local midnight
-func (d *dailyRound) start(ctx context.Context) {
-	d.run(ctx)
+func (c *closeStaleRounds) start(ctx context.Context) {
+	c.run(ctx)
 
 	for {
 		now := time.Now()
 		next := nextLocalMidnight(now)
 		wait := time.Until(next)
+
 		if wait <= 0 {
 			wait = time.Second
 		}
@@ -37,21 +38,21 @@ func (d *dailyRound) start(ctx context.Context) {
 			timer.Stop()
 			return
 		case <-timer.C:
-			d.run(ctx)
+			c.run(ctx)
 		}
 	}
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// run creates today's rounds for all playable groups and closes yesterday's rounds
-func (d *dailyRound) run(ctx context.Context) {
-	if err := d.rounds.EnsureDailyRounds(ctx); err != nil {
-		d.logger.Error().Err(err).Msg("Failed to ensure daily rounds")
+// run closes active and awaiting-word rounds from before today
+func (c *closeStaleRounds) run(ctx context.Context) {
+	if err := c.rounds.CloseStaleRounds(ctx); err != nil {
+		c.logger.Error().Err(err).Msg("Failed to close stale rounds")
 		return
 	}
 
-	d.logger.Info().Msg("Daily rounds ensured")
+	c.logger.Info().Msg("Stale rounds closed")
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
