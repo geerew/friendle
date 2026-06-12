@@ -42,7 +42,7 @@
 	bind:open
 	title="Are you sure you want to delete this group?"
 	detail={group?.name}
-	description="All associated data will be deleted"
+	description="All associated group data will be permanently deleted"
 	confirmLabel="Delete"
 	loading={isPosting}
 	onConfirm={doDelete}

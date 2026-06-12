@@ -594,7 +594,10 @@ func (g *Groups) CancelJoinRequest(ctx context.Context, userID, groupID string) 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Delete deletes a group and its associated data
+// Delete deletes a group
+//
+// SQLite foreign keys cascade to group members, join requests, rounds, round members,
+// and round member guesses
 func (g *Groups) Delete(ctx context.Context, groupID string) error {
 	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
 	if err != nil {

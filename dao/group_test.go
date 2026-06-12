@@ -231,6 +231,137 @@ func Test_DeleteGroups(t *testing.T) {
 		require.Len(t, records, 1)
 		require.Equal(t, group.ID, records[0].ID)
 	})
+
+	// Test deleting a group cascades to related records
+	t.Run("cascade", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		adminID := testUserID(t, dao, ctx)
+
+		member := &models.User{
+			Username:     "group-member",
+			DisplayName:  "Group Member",
+			PasswordHash: "test-password",
+			SiteRole:     types.SiteRoleUser,
+		}
+		require.NoError(t, dao.CreateUser(ctx, member))
+
+		pendingUser := &models.User{
+			Username:     "pending-user",
+			DisplayName:  "Pending User",
+			PasswordHash: "test-password",
+			SiteRole:     types.SiteRoleUser,
+		}
+		require.NoError(t, dao.CreateUser(ctx, pendingUser))
+
+		rejectedUser := &models.User{
+			Username:     "rejected-user",
+			DisplayName:  "Rejected User",
+			PasswordHash: "test-password",
+			SiteRole:     types.SiteRoleUser,
+		}
+		require.NoError(t, dao.CreateUser(ctx, rejectedUser))
+
+		group := &models.Group{Name: "Cascade", CreatedBy: adminID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		require.NoError(t, dao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    adminID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, dao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    member.ID,
+			GroupRole: types.GroupRoleUser,
+		}))
+		require.NoError(t, dao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  pendingUser.ID,
+			Status:  types.JoinPending,
+		}))
+		require.NoError(t, dao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
+			GroupID: group.ID,
+			UserID:  rejectedUser.ID,
+			Status:  types.JoinRejected,
+		}))
+
+		round := &models.Round{
+			GroupID:      group.ID,
+			RoundDate:    "2026-05-28",
+			PickerUserID: adminID,
+			Status:       types.RoundActive,
+		}
+		require.NoError(t, dao.CreateRound(ctx, round))
+		require.NoError(t, dao.CreateRoundMember(ctx, &models.RoundMember{
+			RoundID: round.ID,
+			UserID:  adminID,
+		}))
+
+		guess := &models.RoundMemberGuess{
+			RoundID: round.ID,
+			UserID:  adminID,
+			Attempt: 1,
+			Word:    "hello",
+			Result:  types.TileStates{types.TileAbsent, types.TileAbsent, types.TileAbsent, types.TileAbsent, types.TileAbsent},
+			Outcome: types.GuessOutcomeIncorrect,
+		}
+		guess.RefreshId()
+		result, err := guess.Result.Value()
+		require.NoError(t, err)
+		_, err = dao.db.ExecContext(ctx, `
+			INSERT INTO round_member_guesses (id, round_id, user_id, attempt, word, result, outcome)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			guess.ID, guess.RoundID, guess.UserID, guess.Attempt, guess.Word, result, guess.Outcome,
+		)
+		require.NoError(t, err)
+
+		groupWhere := squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: group.ID}
+		memberCount, err := dao.CountGroupMembers(ctx, NewOptions().WithWhere(groupWhere))
+		require.NoError(t, err)
+		require.Equal(t, 2, memberCount)
+
+		joinCount, err := dao.CountGroupJoinRequests(ctx, NewOptions().WithWhere(squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: group.ID}))
+		require.NoError(t, err)
+		require.Equal(t, 2, joinCount)
+
+		rounds, err := dao.ListRounds(ctx, NewOptions().WithWhere(squirrel.Eq{models.ROUND_GROUP_ID: group.ID}))
+		require.NoError(t, err)
+		require.Len(t, rounds, 1)
+
+		roundMembers, err := dao.ListRoundMembers(ctx, NewOptions().WithWhere(squirrel.Eq{models.ROUND_MEMBER_ROUND_ID: round.ID}))
+		require.NoError(t, err)
+		require.Len(t, roundMembers, 1)
+
+		var guessCount int
+		require.NoError(t, dao.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM round_member_guesses WHERE round_id = ?`, round.ID).Scan(&guessCount))
+		require.Equal(t, 1, guessCount)
+
+		require.NoError(t, dao.DeleteGroups(ctx, NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID})))
+
+		deletedGroup, err := dao.GetGroup(ctx, NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID}))
+		require.NoError(t, err)
+		require.Nil(t, deletedGroup)
+
+		memberCount, err = dao.CountGroupMembers(ctx, NewOptions().WithWhere(groupWhere))
+		require.NoError(t, err)
+		require.Zero(t, memberCount)
+
+		joinCount, err = dao.CountGroupJoinRequests(ctx, NewOptions().WithWhere(squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: group.ID}))
+		require.NoError(t, err)
+		require.Zero(t, joinCount)
+
+		rounds, err = dao.ListRounds(ctx, NewOptions().WithWhere(squirrel.Eq{models.ROUND_GROUP_ID: group.ID}))
+		require.NoError(t, err)
+		require.Empty(t, rounds)
+
+		roundMembers, err = dao.ListRoundMembers(ctx, NewOptions().WithWhere(squirrel.Eq{models.ROUND_MEMBER_ROUND_ID: round.ID}))
+		require.NoError(t, err)
+		require.Empty(t, roundMembers)
+
+		require.NoError(t, dao.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM round_member_guesses WHERE round_id = ?`, round.ID).Scan(&guessCount))
+		require.Zero(t, guessCount)
+	})
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
