@@ -58,10 +58,7 @@
 	}
 </script>
 
-<Table.Root
-	title="Users"
-	breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Users' }]}
->
+<Table.Root title="Users" breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Users' }]}>
 	{#snippet header()}
 		<div class="flex flex-col gap-6">
 			<Button href="/admin/users/add/" variant="primary" class="w-auto self-start px-6"

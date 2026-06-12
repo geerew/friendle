@@ -8,10 +8,7 @@ export function groupHomeBreadcrumb(): BreadcrumbItem[] {
 
 // groupChildBreadcrumb builds breadcrumb items for a group sub-page
 export function groupChildBreadcrumb(groupId: string, pageLabel: string): BreadcrumbItem[] {
-	return [
-		{ label: 'Group', href: `/groups/${groupId}/` },
-		{ label: pageLabel }
-	];
+	return [{ label: 'Group', href: `/groups/${groupId}/` }, { label: pageLabel }];
 }
 
 // groupSettingsChildBreadcrumb builds breadcrumb items for a group settings sub-page

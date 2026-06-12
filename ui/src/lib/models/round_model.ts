@@ -3,11 +3,7 @@ import { boolean, object, picklist, string, type InferOutput } from 'valibot';
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // RoundStatusSchema represents the lifecycle state of a daily round
-export const RoundStatusSchema = picklist([
-	'awaiting_word',
-	'active',
-	'completed'
-]);
+export const RoundStatusSchema = picklist(['awaiting_word', 'active', 'completed']);
 
 export type RoundStatus = InferOutput<typeof RoundStatusSchema>;
 

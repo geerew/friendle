@@ -61,10 +61,7 @@
 	}
 </script>
 
-<Table.Root
-	title="Groups"
-	breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Groups' }]}
->
+<Table.Root title="Groups" breadcrumb={[{ label: 'Admin', href: '/admin/' }, { label: 'Groups' }]}>
 	{#snippet header()}
 		<Separator />
 	{/snippet}

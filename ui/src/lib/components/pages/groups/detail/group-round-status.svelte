@@ -45,7 +45,7 @@
 				return;
 			}
 
-			toast.error(apiErrorMessage(err, 'Failed to load today\'s round'));
+			toast.error(apiErrorMessage(err, "Failed to load today's round"));
 		} finally {
 			loading = false;
 		}
@@ -67,14 +67,14 @@
 		switch (roundToday.status) {
 			case 'awaiting_word':
 				return roundToday.isPicker
-					? 'You are the picker — choose a word to start today\'s round.'
+					? "You are the picker — choose a word to start today's round."
 					: 'Waiting for the picker';
 			case 'active':
 				return roundToday.isPicker
 					? 'Your word is live — waiting for others to play.'
-					: 'Today\'s round is in progress.';
+					: "Today's round is in progress.";
 			case 'completed':
-				return 'Today\'s round is complete.';
+				return "Today's round is complete.";
 		}
 	});
 </script>

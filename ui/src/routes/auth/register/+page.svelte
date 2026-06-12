@@ -29,12 +29,7 @@
 <div class="app-shell page-content justify-center gap-10 py-10">
 	<AuthHeader subtitle="Create your account" />
 
-	<AuthRegisterForm
-		submitLabel="Register"
-		bind:error
-		{submitting}
-		onsubmit={handleSubmit}
-	/>
+	<AuthRegisterForm submitLabel="Register" bind:error {submitting} onsubmit={handleSubmit} />
 
 	<p class="text-foreground-alt-2 text-center text-sm">
 		Already have an account?

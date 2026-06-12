@@ -148,7 +148,7 @@
 								type="button"
 								variant="ghost"
 								size="inline"
-								class="text-foreground-alt-2 hover:bg-background-primary/25 hover:text-background-primary h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case"
+								class="text-foreground-alt-2 hover:bg-background-primary/25 hover:text-background-primary h-5 min-h-5 w-5 min-w-5 shrink-0 p-0 normal-case"
 								loading={acting?.userId === request.userId && acting.action === 'approve'}
 								disabled={acting != null}
 								aria-label="Approve {request.displayName}"
@@ -160,7 +160,7 @@
 								type="button"
 								variant="ghost"
 								size="inline"
-								class="text-foreground-alt-2 hover:bg-background-error hover:text-foreground h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case"
+								class="text-foreground-alt-2 hover:bg-background-error hover:text-foreground h-5 min-h-5 w-5 min-w-5 shrink-0 p-0 normal-case"
 								loading={acting?.userId === request.userId && acting.action === 'decline'}
 								disabled={acting != null}
 								aria-label="Decline {request.displayName}"

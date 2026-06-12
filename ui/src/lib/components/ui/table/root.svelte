@@ -14,9 +14,7 @@
 
 	let { title, breadcrumb, showTitle = true, showMenu = true, header, children }: Props = $props();
 
-	const breadcrumbItems = $derived(
-		breadcrumb !== undefined ? breadcrumb : [{ label: title }]
-	);
+	const breadcrumbItems = $derived(breadcrumb !== undefined ? breadcrumb : [{ label: title }]);
 </script>
 
 <AppShell breadcrumb={breadcrumbItems} {showMenu}>

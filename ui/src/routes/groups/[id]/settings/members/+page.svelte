@@ -17,7 +17,11 @@
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupMemberModel } from '$lib/models/group-member-model';
 	import { apiErrorMessage, cn, withMinLoadingDelay } from '$lib/utils';
-	import { groupChildBreadcrumb, groupSettingsChildBreadcrumb, isGroupAdmin } from '$lib/utils/group';
+	import {
+		groupChildBreadcrumb,
+		groupSettingsChildBreadcrumb,
+		isGroupAdmin
+	} from '$lib/utils/group';
 	import { Collapsible } from 'bits-ui';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -216,10 +220,7 @@
 						<Table.Row label={member.displayName}>
 							{#snippet leading()}
 								{#if member.userId === currentUserId}
-									<span
-										class="bg-background-primary size-2 rounded-full"
-										aria-label="You"
-									></span>
+									<span class="bg-background-primary size-2 rounded-full" aria-label="You"></span>
 								{/if}
 							{/snippet}
 							{#snippet trailing()}

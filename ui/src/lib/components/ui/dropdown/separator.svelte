@@ -10,6 +10,6 @@
 </script>
 
 <DropdownMenu.Separator
-	class={cn('-mx-1.5 my-1 h-px bg-foreground-alt-4', containerClass)}
+	class={cn('bg-foreground-alt-4 -mx-1.5 my-1 h-px', containerClass)}
 	{...restProps}
 />

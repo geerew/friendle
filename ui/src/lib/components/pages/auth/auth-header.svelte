@@ -10,5 +10,5 @@
 
 <div class="flex flex-col items-center gap-2 text-center">
 	<Logo />
-	<p class="text-sm text-foreground-alt-2">{subtitle}</p>
+	<p class="text-foreground-alt-2 text-sm">{subtitle}</p>
 </div>

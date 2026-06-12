@@ -21,9 +21,7 @@
 	let previousPassword = $state('');
 	let previousConfirmPassword = $state('');
 
-	const submitDisabled = $derived(
-		username === '' || password === '' || confirmPassword === ''
-	);
+	const submitDisabled = $derived(username === '' || password === '' || confirmPassword === '');
 
 	$effect(() => {
 		if (displayName === '' || displayName === previousUsername) {
@@ -41,7 +39,10 @@
 			passwordMismatchError = false;
 		}
 
-		if (passwordTooShortError && (password !== previousPassword || confirmPassword !== previousConfirmPassword)) {
+		if (
+			passwordTooShortError &&
+			(password !== previousPassword || confirmPassword !== previousConfirmPassword)
+		) {
 			passwordTooShortError = false;
 		}
 
@@ -123,15 +124,15 @@
 		</Field>
 
 		{#if passwordTooShortError}
-			<p class="text-sm text-foreground-error">Password must be at least 8 characters</p>
+			<p class="text-foreground-error text-sm">Password must be at least 8 characters</p>
 		{/if}
 
 		{#if passwordMismatchError}
-			<p class="text-sm text-foreground-error">Passwords do not match</p>
+			<p class="text-foreground-error text-sm">Passwords do not match</p>
 		{/if}
 
 		{#if error}
-			<p class="text-sm text-foreground-error">{error}</p>
+			<p class="text-foreground-error text-sm">{error}</p>
 		{/if}
 
 		<div class="grid grid-cols-2 gap-2">

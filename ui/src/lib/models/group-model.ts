@@ -1,4 +1,13 @@
-import { array, boolean, number, object, optional, picklist, string, type InferOutput } from 'valibot';
+import {
+	array,
+	boolean,
+	number,
+	object,
+	optional,
+	picklist,
+	string,
+	type InferOutput
+} from 'valibot';
 import { BasePaginationSchema, type PaginationReqParams } from './pagination-model';
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

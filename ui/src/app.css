@@ -84,7 +84,7 @@
 
 @layer base {
 	body {
-		@apply min-h-dvh bg-background font-sans text-foreground;
+		@apply bg-background text-foreground min-h-dvh font-sans;
 	}
 
 	input,
@@ -136,10 +136,10 @@
 	}
 
 	.field {
-		@apply w-full rounded border border-foreground-alt-4 bg-background-alt-1 px-3 py-3 text-foreground outline-none focus-visible:ring-2 focus-visible:ring-background-primary;
+		@apply border-foreground-alt-4 bg-background-alt-1 text-foreground focus-visible:ring-background-primary w-full rounded border px-3 py-3 outline-none focus-visible:ring-2;
 	}
 
 	.section-title {
-		@apply text-sm font-semibold tracking-wide text-foreground-alt-2 uppercase;
+		@apply text-foreground-alt-2 text-sm font-semibold tracking-wide uppercase;
 	}
 }

@@ -59,7 +59,10 @@ function delay(ms: number): Promise<void> {
 }
 
 // minDurationMs returns the minimum wait for this request, if any
-function minDurationMs(init: RequestInit | undefined, options?: ApiFetchOptions): number | undefined {
+function minDurationMs(
+	init: RequestInit | undefined,
+	options?: ApiFetchOptions
+): number | undefined {
 	if (options?.minDurationMs === false) {
 		return undefined;
 	}
@@ -125,7 +128,10 @@ export async function apiFetch(
 
 export async function parseJson<T>(response: Response): Promise<T> {
 	if (response.ok) {
-		if (response.status === 204 || response.status === 201 && response.headers.get('content-length') === '0') {
+		if (
+			response.status === 204 ||
+			(response.status === 201 && response.headers.get('content-length') === '0')
+		) {
 			return undefined as T;
 		}
 

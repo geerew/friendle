@@ -13,7 +13,7 @@
 
 <span
 	class={cn(
-		'inline-flex w-auto flex-row items-center rounded-md border border-foreground-alt-4 bg-background-alt-1 px-2.5 py-0.5 text-xs whitespace-nowrap text-foreground-alt-2',
+		'border-foreground-alt-4 bg-background-alt-1 text-foreground-alt-2 inline-flex w-auto flex-row items-center rounded-md border px-2.5 py-0.5 text-xs whitespace-nowrap',
 		className
 	)}
 	{...restProps}

@@ -21,23 +21,24 @@
 	}: Props = $props();
 </script>
 
-<RadioGroup.Root bind:value={value as never} class={cn('flex flex-col gap-3', rootClass)} {...restProps}>
+<RadioGroup.Root
+	bind:value={value as never}
+	class={cn('flex flex-col gap-3', rootClass)}
+	{...restProps}
+>
 	{#each items as item (item.value)}
 		{@const id = useId()}
-		<div class={cn('flex select-none items-center', itemRowClass)}>
+		<div class={cn('flex items-center select-none', itemRowClass)}>
 			<RadioGroup.Item
 				{id}
 				value={item.value}
 				disabled={item.disabled}
 				class={cn(
-					'size-5 shrink-0 cursor-pointer rounded-full border border-foreground-alt-4 bg-background-alt-1 transition-colors hover:border-foreground-alt-3 data-[state=checked]:border-background-primary data-[state=checked]:border-[6px] data-disabled:cursor-not-allowed data-disabled:opacity-50',
+					'border-foreground-alt-4 bg-background-alt-1 hover:border-foreground-alt-3 data-[state=checked]:border-background-primary size-5 shrink-0 cursor-pointer rounded-full border transition-colors data-disabled:cursor-not-allowed data-disabled:opacity-50 data-[state=checked]:border-[6px]',
 					itemClass
 				)}
 			/>
-			<Label.Root
-				for={id}
-				class={cn('cursor-pointer ps-3 text-sm text-foreground', labelClass)}
-			>
+			<Label.Root for={id} class={cn('text-foreground cursor-pointer ps-3 text-sm', labelClass)}>
 				{item.label}
 			</Label.Root>
 		</div>

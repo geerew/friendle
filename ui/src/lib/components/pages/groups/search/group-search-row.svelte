@@ -106,7 +106,7 @@
 				type="button"
 				variant="ghost"
 				size="inline"
-				class="text-foreground-alt-2 hover:bg-background-error hover:text-foreground h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case"
+				class="text-foreground-alt-2 hover:bg-background-error hover:text-foreground h-5 min-h-5 w-5 min-w-5 shrink-0 p-0 normal-case"
 				aria-label="Cancel join request"
 				loading={cancelling}
 				onclick={handleCancelClick}
@@ -133,7 +133,7 @@
 				type="button"
 				variant="ghost"
 				size="inline"
-				class="text-foreground-alt-2 h-5 w-5 min-h-5 min-w-5 shrink-0 p-0 normal-case hover:bg-transparent"
+				class="text-foreground-alt-2 h-5 min-h-5 w-5 min-w-5 shrink-0 p-0 normal-case hover:bg-transparent"
 				aria-label="Request to join group"
 				loading={joining}
 				onclick={handleJoinClick}

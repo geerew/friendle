@@ -2,7 +2,6 @@ import { isApiError } from '$lib/api/fetch';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-
 // cn merges class values into a single string
 export function cn(...inputs: ClassValue[]): string {
 	return twMerge(clsx(inputs));
@@ -25,7 +24,9 @@ export async function withMinLoadingDelay<T>(
 }
 
 // buildQueryString builds a query string from a record of parameters
-export function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
+export function buildQueryString(
+	params: Record<string, string | number | boolean | undefined>
+): string {
 	const searchParams = new URLSearchParams();
 
 	for (const [key, value] of Object.entries(params)) {

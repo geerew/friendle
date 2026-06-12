@@ -60,9 +60,7 @@
 			{/if}
 		</div>
 
-		<Button type="submit" variant="primary" loading={submitting}>
-			Sign in
-		</Button>
+		<Button type="submit" variant="primary" loading={submitting}>Sign in</Button>
 	</form>
 
 	{#if signupEnabled}

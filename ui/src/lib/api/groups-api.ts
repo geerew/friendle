@@ -52,9 +52,7 @@ export async function listGroups(params?: ListGroupsParams): Promise<GroupPagina
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // Query a list of groups the authenticated user belongs to (paginated)
-export async function listSelfGroups(
-	params?: ListSelfGroupsParams
-): Promise<GroupPaginationModel> {
+export async function listSelfGroups(params?: ListSelfGroupsParams): Promise<GroupPaginationModel> {
 	const qs = params ? buildQueryString(params) : '';
 	const response = await apiFetch('/api/groups/self' + (qs ? `?${qs}` : ''));
 

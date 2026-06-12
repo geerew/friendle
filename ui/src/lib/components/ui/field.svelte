@@ -14,6 +14,6 @@
 	<span class="section-title">{label}</span>
 	{@render children()}
 	{#if error}
-		<p class="text-sm text-foreground-error">{error}</p>
+		<p class="text-foreground-error text-sm">{error}</p>
 	{/if}
 </label>

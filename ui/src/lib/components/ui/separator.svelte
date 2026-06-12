@@ -13,7 +13,7 @@
 	role="separator"
 	class={cn(
 		'shrink-0',
-		dashed ? 'border-t border-dashed border-foreground-alt-4' : 'h-px bg-foreground-alt-4',
+		dashed ? 'border-foreground-alt-4 border-t border-dashed' : 'bg-foreground-alt-4 h-px',
 		className
 	)}
 ></div>

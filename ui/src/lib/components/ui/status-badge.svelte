@@ -51,13 +51,7 @@
 		styles.root
 	)}
 >
-	<span
-		class={cn(
-			'flex items-center self-stretch border-r px-1.5',
-			styles.icon,
-			styles.divider
-		)}
-	>
+	<span class={cn('flex items-center self-stretch border-r px-1.5', styles.icon, styles.divider)}>
 		{@render icon()}
 	</span>
 	<span class={cn('flex items-center px-2', styles.label)}>

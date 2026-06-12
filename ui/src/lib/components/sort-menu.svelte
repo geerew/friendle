@@ -34,7 +34,7 @@
 
 <Dropdown.Root>
 	<Dropdown.Trigger
-		class="field inline-flex h-9 w-36 shrink-0 items-center justify-between gap-1 px-2 hover:cursor-pointer hover:border-foreground-alt-3 data-[state=open]:border-background-primary data-[state=open]:ring-2 data-[state=open]:ring-background-primary [&[data-state=open]>svg:last-child]:rotate-90"
+		class="field hover:border-foreground-alt-3 data-[state=open]:border-background-primary data-[state=open]:ring-background-primary inline-flex h-9 w-36 shrink-0 items-center justify-between gap-1 px-2 hover:cursor-pointer data-[state=open]:ring-2 [&[data-state=open]>svg:last-child]:rotate-90"
 		{disabled}
 	>
 		<div class="flex min-w-0 items-center gap-1.5">
@@ -45,7 +45,9 @@
 			{/if}
 			<span class="truncate">{selectedColumnMeta?.label ?? 'Sort'}</span>
 		</div>
-		<RightChevronIcon class="size-3.5 shrink-0 stroke-2 text-foreground-alt-2 transition-transform duration-200" />
+		<RightChevronIcon
+			class="text-foreground-alt-2 size-3.5 shrink-0 stroke-2 transition-transform duration-200"
+		/>
 	</Dropdown.Trigger>
 
 	<Dropdown.Content class="w-36 max-w-36 min-w-0" sideOffset={8}>
@@ -76,7 +78,7 @@
 						onUpdate?.();
 					}}
 				>
-					<SortAscendingIcon class="size-4 text-foreground-alt-2" />
+					<SortAscendingIcon class="text-foreground-alt-2 size-4" />
 					{selectedColumnMeta?.asc ?? 'Ascending'}
 				</Dropdown.RadioItem>
 
@@ -87,7 +89,7 @@
 						onUpdate?.();
 					}}
 				>
-					<SortDescendingIcon class="size-4 text-foreground-alt-2" />
+					<SortDescendingIcon class="text-foreground-alt-2 size-4" />
 					{selectedColumnMeta?.desc ?? 'Descending'}
 				</Dropdown.RadioItem>
 			</Dropdown.RadioGroup>

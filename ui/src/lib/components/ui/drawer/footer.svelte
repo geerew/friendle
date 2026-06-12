@@ -14,8 +14,8 @@
 <div
 	bind:this={ref}
 	data-slot="drawer-footer"
-		class={cn(
-		'flex h-16 w-full shrink-0 items-center justify-end gap-2 border-t border-foreground-alt-4 bg-background px-5 py-2.5',
+	class={cn(
+		'border-foreground-alt-4 bg-background flex h-16 w-full shrink-0 items-center justify-end gap-2 border-t px-5 py-2.5',
 		className as string
 	)}
 	{...restProps}

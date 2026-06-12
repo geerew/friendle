@@ -50,7 +50,7 @@
 	</div>
 
 	{#if hint}
-		<p class="text-sm text-foreground-alt-2">{hint}</p>
+		<p class="text-foreground-alt-2 text-sm">{hint}</p>
 	{/if}
 
 	{@render children()}

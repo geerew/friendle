@@ -31,20 +31,22 @@
 <Select.Root bind:value={value as never} {...restProps}>
 	<Select.Trigger
 		class={cn(
-			'field inline-flex shrink-0 items-center justify-between gap-1 hover:cursor-pointer hover:border-foreground-alt-3 data-[state=open]:border-background-primary data-[state=open]:ring-2 data-[state=open]:ring-background-primary [&[data-state=open]>svg]:rotate-90',
+			'field hover:border-foreground-alt-3 data-[state=open]:border-background-primary data-[state=open]:ring-background-primary inline-flex shrink-0 items-center justify-between gap-1 hover:cursor-pointer data-[state=open]:ring-2 [&[data-state=open]>svg]:rotate-90',
 			triggerClass
 		)}
 	>
 		<span class={selectedLabel ? '' : 'text-foreground-alt-2'}>
 			{selectedLabel ?? placeholder}
 		</span>
-		<RightChevronIcon class="size-3.5 shrink-0 stroke-2 text-foreground-alt-2 transition-transform duration-200" />
+		<RightChevronIcon
+			class="text-foreground-alt-2 size-3.5 shrink-0 stroke-2 transition-transform duration-200"
+		/>
 	</Select.Trigger>
 
 	<Select.Portal>
 		<Select.Content
 			class={cn(
-				'z-50 w-(--bits-select-anchor-width) min-w-(--bits-select-anchor-width) rounded-md border border-foreground-alt-4 bg-background-alt-1 py-1.5 shadow-lg outline-none select-none',
+				'border-foreground-alt-4 bg-background-alt-1 z-50 w-(--bits-select-anchor-width) min-w-(--bits-select-anchor-width) rounded-md border py-1.5 shadow-lg outline-none select-none',
 				contentClass
 			)}
 			{...contentProps}
@@ -56,14 +58,14 @@
 						{label}
 						{disabled}
 						class={cn(
-							'flex h-9 w-full cursor-pointer items-center px-2 text-sm text-foreground-alt-2 transition-colors outline-none select-none hover:bg-background-primary/25 hover:text-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50 data-highlighted:bg-background-primary/25 data-highlighted:text-foreground',
+							'text-foreground-alt-2 hover:bg-background-primary/25 hover:text-foreground data-highlighted:bg-background-primary/25 data-highlighted:text-foreground flex h-9 w-full cursor-pointer items-center px-2 text-sm transition-colors outline-none select-none data-disabled:cursor-not-allowed data-disabled:opacity-50',
 							itemClass
 						)}
 					>
 						{#snippet children({ selected })}
 							{label}
 							{#if selected}
-								<span class="ml-auto text-background-primary">✓</span>
+								<span class="text-background-primary ml-auto">✓</span>
 							{/if}
 						{/snippet}
 					</Select.Item>

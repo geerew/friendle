@@ -71,5 +71,11 @@
 		</Button>
 	</div>
 {:else}
-	<input bind:value bind:this={ref} type={inputType} class={cn('field', className)} {...restProps} />
+	<input
+		bind:value
+		bind:this={ref}
+		type={inputType}
+		class={cn('field', className)}
+		{...restProps}
+	/>
 {/if}

@@ -67,11 +67,7 @@
 </script>
 
 <div
-	class={cn(
-		'overflow-hidden',
-		transitionEnabled && 'transition-[height] ease-out',
-		className
-	)}
+	class={cn('overflow-hidden', transitionEnabled && 'transition-[height] ease-out', className)}
 	style:height={height != null ? `${height}px` : undefined}
 	style:transition-duration={transitionEnabled ? `${durationMs}ms` : undefined}
 >

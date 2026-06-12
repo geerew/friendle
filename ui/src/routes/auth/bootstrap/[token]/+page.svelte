@@ -33,10 +33,5 @@
 <div class="app-shell page-content justify-center gap-10 py-10">
 	<AuthHeader subtitle="Create the first administrator account" />
 
-	<AuthRegisterForm
-		submitLabel="Create admin"
-		bind:error
-		{submitting}
-		onsubmit={handleSubmit}
-	/>
+	<AuthRegisterForm submitLabel="Create admin" bind:error {submitting} onsubmit={handleSubmit} />
 </div>
