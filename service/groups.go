@@ -106,13 +106,8 @@ func newGroups(d deps) *Groups {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Create creates a group and sets the caller as group admin
-func (g *Groups) Create(ctx context.Context, req CreateGroupRequest) (*GroupResponse, error) {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+// Create creates a group and sets userID as group admin
+func (g *Groups) Create(ctx context.Context, userID string, req CreateGroupRequest) (*GroupResponse, error) {
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
 		return nil, ErrGroupNameRequired
@@ -124,10 +119,10 @@ func (g *Groups) Create(ctx context.Context, req CreateGroupRequest) (*GroupResp
 
 	group := &models.Group{
 		Name:      name,
-		CreatedBy: principal.UserID,
+		CreatedBy: userID,
 	}
 
-	err = g.dao.RunInTransaction(ctx, func(txCtx context.Context) error {
+	err := g.dao.RunInTransaction(ctx, func(txCtx context.Context) error {
 		if err := g.dao.CreateGroup(txCtx, group); err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 				return ErrGroupNameTaken
@@ -138,7 +133,7 @@ func (g *Groups) Create(ctx context.Context, req CreateGroupRequest) (*GroupResp
 
 		member := &models.GroupMember{
 			GroupID:   group.ID,
-			UserID:    principal.UserID,
+			UserID:    userID,
 			GroupRole: types.GroupRoleAdmin,
 		}
 
@@ -157,10 +152,6 @@ func (g *Groups) Create(ctx context.Context, req CreateGroupRequest) (*GroupResp
 
 // List returns a paginated slice of groups
 func (g *Groups) List(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
-	if _, err := principalFromContext(ctx); err != nil {
-		return nil, err
-	}
-
 	groups, err := g.dao.ListGroups(ctx, dao.NewOptions().
 		WithPagination(page).
 		WithOrderBy(defaultGroupsListOrderBy...))
@@ -177,14 +168,9 @@ func (g *Groups) List(ctx context.Context, page *pagination.Pagination) ([]*Grou
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// ListSelf returns a paginated slice of groups the authenticated user belongs to
-func (g *Groups) ListSelf(ctx context.Context, page *pagination.Pagination) ([]*GroupResponse, error) {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	where, err := dao.MemberGroupsWhere(principal.UserID)
+// ListSelf returns a paginated slice of groups userID belongs to
+func (g *Groups) ListSelf(ctx context.Context, userID string, page *pagination.Pagination) ([]*GroupResponse, error) {
+	where, err := dao.MemberGroupsWhere(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +188,7 @@ func (g *Groups) ListSelf(ctx context.Context, page *pagination.Pagination) ([]*
 	}
 
 	groupIDs := utils.Map(groups, func(group *models.Group) string { return group.ID })
-	status, err := g.getUserMemberStatus(ctx, principal.UserID, groupIDs)
+	status, err := g.getUserMemberStatus(ctx, userID, groupIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -214,15 +200,10 @@ func (g *Groups) ListSelf(ctx context.Context, page *pagination.Pagination) ([]*
 
 // Search returns a paginated slice of groups whose names contain the search term
 //
-// # The result is ordered by prefix matches first, then substring matches
+// Response is ordered by prefix matches first, then substring matches.
 //
-// Results include the caller's group role and join request status for each group
-func (g *Groups) Search(ctx context.Context, page *pagination.Pagination, name string) ([]*GroupResponse, error) {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+// Results include userID's group role and join request status for each group
+func (g *Groups) Search(ctx context.Context, userID string, page *pagination.Pagination, name string) ([]*GroupResponse, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, ErrGroupSearchQueryRequired
@@ -248,7 +229,7 @@ func (g *Groups) Search(ctx context.Context, page *pagination.Pagination, name s
 	}
 
 	groupIDs := utils.Map(groups, func(group *models.Group) string { return group.ID })
-	status, err := g.getUserMemberStatus(ctx, principal.UserID, groupIDs)
+	status, err := g.getUserMemberStatus(ctx, userID, groupIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -258,13 +239,8 @@ func (g *Groups) Search(ctx context.Context, page *pagination.Pagination, name s
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// Get returns a group by ID
-func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error) {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+// Get returns a group by ID enriched with userID's membership and join request status
+func (g *Groups) Get(ctx context.Context, groupID, userID string) (*GroupResponse, error) {
 	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
 	if err != nil {
 		return nil, err
@@ -274,7 +250,7 @@ func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error
 		return nil, ErrGroupNotFound
 	}
 
-	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
+	status, err := g.getUserMemberStatus(ctx, userID, []string{groupID})
 	if err != nil {
 		return nil, err
 	}
@@ -297,14 +273,7 @@ func (g *Groups) Get(ctx context.Context, groupID string) (*GroupResponse, error
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ListMembers returns paginated group members with display names
-//
-// Action limited to group member and admins
 func (g *Groups) ListMembers(ctx context.Context, groupID string, page *pagination.Pagination) ([]*GroupMemberResponse, error) {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
 	if err != nil {
 		return nil, err
@@ -312,16 +281,6 @@ func (g *Groups) ListMembers(ctx context.Context, groupID string, page *paginati
 
 	if group == nil {
 		return nil, ErrGroupNotFound
-	}
-
-	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
-	if err != nil {
-		return nil, err
-	}
-
-	groupRole, _ := status.forGroup(groupID)
-	if groupRole == nil || !groupRole.IsValid() {
-		return nil, ErrGroupNotMember
 	}
 
 	// List group members and order by admin first, then display name
@@ -348,23 +307,8 @@ func (g *Groups) ListMembers(ctx context.Context, groupID string, page *paginati
 
 // UpdateMemberRole updates a group member's role
 //
-// # Action limited to group admins with the additional that they cannot change their own role
-//
-// It will also ensure there is always at least one admin in the group
+// At least one group admin must remain
 func (g *Groups) UpdateMemberRole(ctx context.Context, groupID, userID string, req UpdateMemberRoleRequest) (*GroupMemberResponse, error) {
-	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
-		return nil, err
-	}
-
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if userID == principal.UserID {
-		return nil, ErrGroupMemberSelf
-	}
-
 	if !req.GroupRole.IsValid() {
 		return nil, ErrNoUpdateData
 	}
@@ -415,22 +359,8 @@ func (g *Groups) UpdateMemberRole(ctx context.Context, groupID, userID string, r
 
 // RemoveMember removes a member from a group
 //
-// Action limited to group admins. Admins cannot remove themselves. The last group admin cannot be
-// removed
+// The last group admin cannot be removed
 func (g *Groups) RemoveMember(ctx context.Context, groupID, userID string) error {
-	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
-		return err
-	}
-
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	if userID == principal.UserID {
-		return ErrGroupMemberSelf
-	}
-
 	dbOpts := dao.NewOptions().WithWhere(squirrel.And{
 		squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupID},
 		squirrel.Eq{models.GROUP_MEMBER_USER_ID: userID},
@@ -476,13 +406,7 @@ func (g *Groups) RemoveMember(ctx context.Context, groupID, userID string) error
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ListPendingJoinRequests returns paginated pending join requests
-//
-// Action limited to group admins
 func (g *Groups) ListPendingJoinRequests(ctx context.Context, groupID string, page *pagination.Pagination) ([]*GroupJoinRequestResponse, error) {
-	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
-		return nil, err
-	}
-
 	daoOpts := dao.NewOptions().
 		WithWhere(squirrel.And{
 			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
@@ -506,13 +430,7 @@ func (g *Groups) ListPendingJoinRequests(ctx context.Context, groupID string, pa
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ListRejectedJoinRequests returns paginated rejected join requests
-//
-// Action limited to group admins
 func (g *Groups) ListRejectedJoinRequests(ctx context.Context, groupID string, page *pagination.Pagination) ([]*GroupJoinRequestResponse, error) {
-	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
-		return nil, err
-	}
-
 	daoOpts := dao.NewOptions().
 		WithWhere(squirrel.And{
 			squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
@@ -536,13 +454,7 @@ func (g *Groups) ListRejectedJoinRequests(ctx context.Context, groupID string, p
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ApproveJoinRequest approves a pending join request and adds the user as a group member
-//
-// Action limited to group admins
 func (g *Groups) ApproveJoinRequest(ctx context.Context, groupID, userID string) error {
-	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
-		return err
-	}
-
 	return g.dao.RunInTransaction(ctx, func(txCtx context.Context) error {
 		request, err := g.getPendingJoinRequest(txCtx, groupID, userID)
 		if err != nil {
@@ -565,13 +477,7 @@ func (g *Groups) ApproveJoinRequest(ctx context.Context, groupID, userID string)
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // DeclineJoinRequest rejects a pending join request
-//
-// Action limited to group admins
 func (g *Groups) DeclineJoinRequest(ctx context.Context, groupID, userID string) error {
-	if err := g.requireGroupAdmin(ctx, groupID); err != nil {
-		return err
-	}
-
 	request, err := g.getPendingJoinRequest(ctx, groupID, userID)
 	if err != nil {
 		return err
@@ -584,13 +490,8 @@ func (g *Groups) DeclineJoinRequest(ctx context.Context, groupID, userID string)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// RequestJoin creates a pending join request for the authenticated user
-func (g *Groups) RequestJoin(ctx context.Context, groupID string) (*GroupResponse, error) {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+// RequestJoin creates a pending join request for userID
+func (g *Groups) RequestJoin(ctx context.Context, userID, groupID string) (*GroupResponse, error) {
 	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
 	if err != nil {
 		return nil, err
@@ -600,7 +501,7 @@ func (g *Groups) RequestJoin(ctx context.Context, groupID string) (*GroupRespons
 		return nil, ErrGroupNotFound
 	}
 
-	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
+	status, err := g.getUserMemberStatus(ctx, userID, []string{groupID})
 	if err != nil {
 		return nil, err
 	}
@@ -621,14 +522,14 @@ func (g *Groups) RequestJoin(ctx context.Context, groupID string) (*GroupRespons
 
 	err = g.dao.CreateGroupJoinRequest(ctx, &models.GroupJoinRequest{
 		GroupID: groupID,
-		UserID:  principal.UserID,
+		UserID:  userID,
 		Status:  types.JoinPending,
 	})
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 			daoOpts := dao.NewOptions().WithWhere(squirrel.And{
 				squirrel.Eq{models.JOIN_REQUEST_GROUP_ID: groupID},
-				squirrel.Eq{models.JOIN_REQUEST_USER_ID: principal.UserID},
+				squirrel.Eq{models.JOIN_REQUEST_USER_ID: userID},
 			})
 
 			existing, getErr := g.dao.GetGroupJoinRequest(ctx, daoOpts)
@@ -655,15 +556,6 @@ func (g *Groups) RequestJoin(ctx context.Context, groupID string) (*GroupRespons
 
 // Delete deletes a group and its associated data
 func (g *Groups) Delete(ctx context.Context, groupID string) error {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	if principal.SiteRole != types.SiteRoleAdmin {
-		return ErrNotSiteAdmin
-	}
-
 	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
 	if err != nil {
 		return err
@@ -674,6 +566,53 @@ func (g *Groups) Delete(ctx context.Context, groupID string) error {
 	}
 
 	return g.dao.DeleteGroups(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// MemberRole returns a user's role in a group, or nil when they are not a member
+func (g *Groups) MemberRole(ctx context.Context, groupID, userID string) (*types.GroupRole, error) {
+	dbOpts := dao.NewOptions().WithWhere(squirrel.And{
+		squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: groupID},
+		squirrel.Eq{models.GROUP_MEMBER_USER_ID: userID},
+	})
+
+	member, err := g.dao.GetGroupMember(ctx, dbOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if member == nil || !member.GroupRole.IsValid() {
+		return nil, nil
+	}
+
+	role := member.GroupRole
+
+	return &role, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsMember reports whether user is a group member
+func (g *Groups) IsMember(ctx context.Context, groupID, userID string) (bool, error) {
+	role, err := g.MemberRole(ctx, groupID, userID)
+	if err != nil {
+		return false, err
+	}
+
+	return role != nil, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsAdmin reports whether user is a group admin
+func (g *Groups) IsAdmin(ctx context.Context, groupID, userID string) (bool, error) {
+	role, err := g.MemberRole(ctx, groupID, userID)
+	if err != nil {
+		return false, err
+	}
+
+	return role != nil && *role == types.GroupRoleAdmin, nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -834,39 +773,6 @@ func (g *Groups) getAdminSummary(ctx context.Context, groupID string) (*GroupAdm
 		RejectedJoinRequestCount: rejected,
 	}, nil
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// requireGroupAdmin ensures the caller is a group admin for the given group
-func (g *Groups) requireGroupAdmin(ctx context.Context, groupID string) error {
-	principal, err := principalFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
-	if err != nil {
-		return err
-	}
-
-	if group == nil {
-		return ErrGroupNotFound
-	}
-
-	status, err := g.getUserMemberStatus(ctx, principal.UserID, []string{groupID})
-	if err != nil {
-		return err
-	}
-
-	groupRole, _ := status.forGroup(groupID)
-	if groupRole == nil || *groupRole != types.GroupRoleAdmin {
-		return ErrGroupNotAdmin
-	}
-
-	return nil
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // getPendingJoinRequest loads a pending join request for a group and user
 func (g *Groups) getPendingJoinRequest(ctx context.Context, groupID, userID string) (*models.GroupJoinRequest, error) {

@@ -37,3 +37,18 @@ func New(db database.Database) *Service {
 		Users:  newUsers(d),
 	}
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// validatePassword checks password length constraints for user writes
+func validatePassword(password string) error {
+	if len(password) < 8 {
+		return ErrPasswordTooShort
+	}
+
+	if len(password) > 128 {
+		return ErrPasswordTooLong
+	}
+
+	return nil
+}
