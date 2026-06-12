@@ -1,8 +1,6 @@
 package models
 
 import (
-	"fmt"
-
 	"github.com/geerew/friendle/utils/types"
 )
 
@@ -34,18 +32,4 @@ type GroupJoinRequest struct {
 
 	// Added via JOIN
 	DisplayName string `db:"display_name"`
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// GroupJoinRequestColumns returns the columns for use in a SELECT query
-func GroupJoinRequestColumns() []string {
-	return []string{
-		fmt.Sprintf("%s AS %s", JOIN_REQUEST_TABLE_ID, BASE_ID),
-		fmt.Sprintf("%s AS %s", JOIN_REQUEST_TABLE_CREATED_AT, BASE_CREATED_AT),
-		fmt.Sprintf("%s AS %s", JOIN_REQUEST_TABLE_UPDATED_AT, BASE_UPDATED_AT),
-		fmt.Sprintf("%s AS %s", JOIN_REQUEST_TABLE_GROUP_ID, JOIN_REQUEST_GROUP_ID),
-		fmt.Sprintf("%s AS %s", JOIN_REQUEST_TABLE_USER_ID, JOIN_REQUEST_USER_ID),
-		fmt.Sprintf("%s AS %s", JOIN_REQUEST_TABLE_STATUS, JOIN_REQUEST_STATUS),
-	}
 }

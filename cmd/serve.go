@@ -9,6 +9,8 @@ import (
 
 	"github.com/geerew/friendle/api"
 	"github.com/geerew/friendle/app"
+	"github.com/geerew/friendle/cron"
+	"github.com/geerew/friendle/service"
 	"github.com/geerew/friendle/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -21,7 +23,8 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Serve the application",
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
+		runCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		httpAddr := viper.GetString("http")
 		dataDir := viper.GetString("data-dir")
@@ -42,7 +45,7 @@ var serveCmd = &cobra.Command{
 			Debug:        debug,
 		}
 
-		application, err := app.New(ctx, appConfig)
+		application, err := app.New(runCtx, appConfig)
 		if err != nil {
 			os.Stderr.WriteString("Failed to initialize app: " + err.Error() + "\n")
 			os.Exit(1)
@@ -57,6 +60,13 @@ var serveCmd = &cobra.Command{
 
 		// Router
 		router := api.New(application, nil)
+		appSvc := service.New(application.DbManager.DataDb)
+
+		// Cron
+		cron.NewAndStart(runCtx, &cron.Config{
+			Rounds:           appSvc.Rounds,
+			DailyRoundLogger: application.Logger.WithComponent(string(app.ComponentCron)),
+		})
 
 		var wg sync.WaitGroup
 		wg.Add(2)
@@ -67,6 +77,7 @@ var serveCmd = &cobra.Command{
 			quit := make(chan os.Signal, 1)
 			signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 			<-quit
+			cancel()
 		}()
 
 		go func() {

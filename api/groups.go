@@ -22,6 +22,9 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Patch("/:id/members/:userId", r.requireAccess(accessSiteUser), r.updateGroupMemberRole)
 	groupRoutes.Delete("/:id/members/:userId", r.requireAccess(accessSiteUser), r.removeGroupMember)
 
+	// Round
+	groupRoutes.Get("/:id/round/today", r.requireAccess(accessSiteUser), r.getGroupRoundToday)
+
 	// Join
 	groupRoutes.Post("/:id/join", r.requireAccess(accessSiteUser), r.createGroupJoinRequest)
 
@@ -60,7 +63,9 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 func (r *Router) getGroup(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	group, err := r.appSvc.Groups.Get(ctx, c.Params("id"))
+	groupID := c.Params("id")
+
+	group, err := r.appSvc.Groups.Get(ctx, groupID)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -75,7 +80,9 @@ func (r *Router) listGroupMembers(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	page := paginationFromCtx(c)
-	members, err := r.appSvc.Groups.ListMembers(ctx, c.Params("id"), page)
+	groupID := c.Params("id")
+
+	members, err := r.appSvc.Groups.ListMembers(ctx, groupID, page)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -99,7 +106,10 @@ func (r *Router) updateGroupMemberRole(c *fiber.Ctx) error {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	member, err := r.appSvc.Groups.UpdateMemberRole(ctx, c.Params("id"), c.Params("userId"), *req)
+	groupID := c.Params("id")
+	userID := c.Params("userId")
+
+	member, err := r.appSvc.Groups.UpdateMemberRole(ctx, groupID, userID, *req)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -113,11 +123,30 @@ func (r *Router) updateGroupMemberRole(c *fiber.Ctx) error {
 func (r *Router) removeGroupMember(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	if err := r.appSvc.Groups.RemoveMember(ctx, c.Params("id"), c.Params("userId")); err != nil {
+	groupID := c.Params("id")
+	userID := c.Params("userId")
+
+	if err := r.appSvc.Groups.RemoveMember(ctx, groupID, userID); err != nil {
 		return serviceError(c, err)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// getGroupRoundToday returns today's round state for a group member
+func (r *Router) getGroupRoundToday(c *fiber.Ctx) error {
+	_, ctx := principalAndCtx(c)
+
+	groupID := c.Params("id")
+
+	roundToday, err := r.appSvc.Rounds.GetToday(ctx, groupID)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.JSON(roundToday)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -127,7 +156,9 @@ func (r *Router) listGroupPendingJoinRequests(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	page := paginationFromCtx(c)
-	requests, err := r.appSvc.Groups.ListPendingJoinRequests(ctx, c.Params("id"), page)
+	groupID := c.Params("id")
+
+	requests, err := r.appSvc.Groups.ListPendingJoinRequests(ctx, groupID, page)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -147,7 +178,9 @@ func (r *Router) listGroupRejectedJoinRequests(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
 	page := paginationFromCtx(c)
-	requests, err := r.appSvc.Groups.ListRejectedJoinRequests(ctx, c.Params("id"), page)
+	groupID := c.Params("id")
+
+	requests, err := r.appSvc.Groups.ListRejectedJoinRequests(ctx, groupID, page)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -166,7 +199,10 @@ func (r *Router) listGroupRejectedJoinRequests(c *fiber.Ctx) error {
 func (r *Router) approveGroupJoinRequest(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	if err := r.appSvc.Groups.ApproveJoinRequest(ctx, c.Params("id"), c.Params("userId")); err != nil {
+	groupID := c.Params("id")
+	userID := c.Params("userId")
+
+	if err := r.appSvc.Groups.ApproveJoinRequest(ctx, groupID, userID); err != nil {
 		return serviceError(c, err)
 	}
 
@@ -179,7 +215,10 @@ func (r *Router) approveGroupJoinRequest(c *fiber.Ctx) error {
 func (r *Router) declineGroupJoinRequest(c *fiber.Ctx) error {
 	_, ctx := principalAndCtx(c)
 
-	if err := r.appSvc.Groups.DeclineJoinRequest(ctx, c.Params("id"), c.Params("userId")); err != nil {
+	groupID := c.Params("id")
+	userID := c.Params("userId")
+
+	if err := r.appSvc.Groups.DeclineJoinRequest(ctx, groupID, userID); err != nil {
 		return serviceError(c, err)
 	}
 

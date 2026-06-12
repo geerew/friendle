@@ -204,7 +204,7 @@ func TestAuth_Login(t *testing.T) {
 			Username:     "test",
 			DisplayName:  "Test",
 			PasswordHash: passwordHash,
-			SiteRole:         types.SiteRoleAdmin,
+			SiteRole:     types.SiteRoleAdmin,
 		}
 		require.NoError(t, router.appDao.CreateUser(ctx, user))
 
@@ -282,7 +282,7 @@ func TestAuth_Login(t *testing.T) {
 			Username:     "test",
 			DisplayName:  "Test",
 			PasswordHash: passwordHash,
-			SiteRole:         types.SiteRoleAdmin,
+			SiteRole:     types.SiteRoleAdmin,
 		}
 		require.NoError(t, router.appDao.CreateUser(ctx, user))
 
@@ -305,7 +305,7 @@ func TestAuth_Login(t *testing.T) {
 			Username:     "test",
 			DisplayName:  "Test",
 			PasswordHash: passwordHash,
-			SiteRole:         types.SiteRoleAdmin,
+			SiteRole:     types.SiteRoleAdmin,
 		}
 		require.NoError(t, router.appDao.CreateUser(ctx, user))
 

@@ -30,7 +30,6 @@ coverage-all.out
 /ui/.svelte-kit/
 /ui/build/
 /ui/.output/
-/ui/.vercel/
 /ui/vite.config.js.timestamp-*
 /ui/vite.config.ts.timestamp-*
 
@@ -39,3 +38,6 @@ coverage-all.out
 
 # Distribution
 /dist/
+
+# Other
+docs

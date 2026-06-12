@@ -12,7 +12,7 @@ var (
 	ErrApiQueryParse = errors.New("list query parse error")
 
 	// DB
-	ErrWhere           = errors.New("where clause cannot be empty")
+	ErrWhere     = errors.New("where clause cannot be empty")
 	ErrPrincipal = errors.New("principal not found in context")
 
 	// Model
@@ -22,4 +22,6 @@ var (
 	ErrUserId       = errors.New("user id cannot be empty")
 	ErrGroupName    = errors.New("group name cannot be empty")
 	ErrGroupId      = errors.New("group id cannot be empty")
+	ErrRoundDate    = errors.New("game date cannot be empty")
+	ErrRoundStatus  = errors.New("invalid game status")
 )

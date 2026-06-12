@@ -13,9 +13,9 @@ import (
 	"github.com/geerew/friendle/utils"
 	"github.com/geerew/friendle/utils/filesystem"
 	"github.com/geerew/friendle/utils/types"
+	fs "github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
-	fs "github.com/gofiber/fiber/v2/middleware/session"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,7 +25,7 @@ func setup(tb testing.TB) (database.Database, context.Context) {
 
 	dbManager, err := database.NewSQLite(&database.SQLiteConfig{
 		DataDir: "./oc_data",
-		FS:   filesystem.New(afero.NewMemMapFs()),
+		FS:      filesystem.New(afero.NewMemMapFs()),
 		Testing: true,
 	})
 

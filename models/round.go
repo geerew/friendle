@@ -1,8 +1,6 @@
 package models
 
 import (
-	"fmt"
-
 	"github.com/geerew/friendle/utils/types"
 )
 
@@ -37,20 +35,4 @@ type Round struct {
 	PickerUserID string            `db:"picker_user_id"` // Immutable
 	WordPlain    *string           `db:"word_plain"`     // Mutable
 	Status       types.RoundStatus `db:"status"`         // Mutable
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// RoundColumns returns the columns for use in a SELECT query
-func RoundColumns() []string {
-	return []string{
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_ID, BASE_ID),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_CREATED_AT, BASE_CREATED_AT),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_UPDATED_AT, BASE_UPDATED_AT),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_GROUP_ID, ROUND_GROUP_ID),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_ROUND_DATE, ROUND_ROUND_DATE),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_PICKER_USER_ID, ROUND_PICKER_USER_ID),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_WORD_PLAIN, ROUND_WORD_PLAIN),
-		fmt.Sprintf("%s AS %s", ROUND_TABLE_STATUS, ROUND_STATUS),
-	}
 }
