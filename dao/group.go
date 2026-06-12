@@ -85,6 +85,20 @@ func (dao *DAO) CreateGroup(ctx context.Context, group *models.Group) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// GetGroup returns a group record with a member count
+func (dao *DAO) GetGroup(ctx context.Context, dbOpts *Options) (*models.Group, error) {
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithColumns(groupColumns...).
+		WithJoins(groupJoins...).
+		WithGroupBy(groupColumnsGroupBy...).
+		SetDbOpts(dbOpts).
+		WithLimit(1)
+
+	return getGeneric[models.Group](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // ListGroups returns group records with member counts
 func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Group, error) {
 	builderOpts := newBuilderOptions(models.GROUP_TABLE).
@@ -98,16 +112,15 @@ func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Grou
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// GetGroup returns a group record with a member count
-func (dao *DAO) GetGroup(ctx context.Context, dbOpts *Options) (*models.Group, error) {
+// ListPlayableGroups returns groups with at least minMembers members
+func (dao *DAO) ListPlayableGroups(ctx context.Context, minMembers int) ([]*models.Group, error) {
 	builderOpts := newBuilderOptions(models.GROUP_TABLE).
 		WithColumns(groupColumns...).
 		WithJoins(groupJoins...).
 		WithGroupBy(groupColumnsGroupBy...).
-		SetDbOpts(dbOpts).
-		WithLimit(1)
+		WithHaving(squirrel.GtOrEq{fmt.Sprintf("COUNT(%s)", models.GROUP_MEMBER_TABLE_ID): minMembers})
 
-	return getGeneric[models.Group](ctx, dao, *builderOpts)
+	return listGeneric[models.Group](ctx, dao, *builderOpts)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
