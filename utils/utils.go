@@ -1,6 +1,9 @@
 package utils
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -57,4 +60,38 @@ func ToSet(words []string) map[string]struct{} {
 	}
 
 	return m
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const dateLayout = "2006-01-02"
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DateString formats t as a calendar date in local time
+func DateString(t time.Time) string {
+	return t.In(time.Local).Format(dateLayout)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ParseDateString parses a calendar date in local time at midnight
+func ParseDateString(value string) (time.Time, error) {
+	return time.ParseInLocation(dateLayout, value, time.Local)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NextMidnight returns the next local midnight strictly after t
+func NextMidnight(t time.Time) time.Time {
+	local := t.In(time.Local)
+
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.Local).AddDate(0, 0, 1)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// PreviousDateString returns the calendar date before t in local time
+func PreviousDateString(t time.Time) string {
+	return DateString(t.In(time.Local).AddDate(0, 0, -1))
 }

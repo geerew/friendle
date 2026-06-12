@@ -13,10 +13,14 @@ import (
 type RoundStatus string
 
 const (
+	// RoundAwaitingWord means the picker has not submitted a word yet
 	RoundAwaitingWord RoundStatus = "awaiting_word"
-	RoundActive       RoundStatus = "active"
-	RoundCompleted    RoundStatus = "completed"
-	RoundSkipped      RoundStatus = "skipped"
+
+	// RoundActive means the picker submitted a word and members are still guessing
+	RoundActive RoundStatus = "active"
+
+	// RoundCompleted means every member finished guessing or the calendar day ended
+	RoundCompleted RoundStatus = "completed"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -24,7 +28,7 @@ const (
 // IsValid reports whether the round status is a known value
 func (s RoundStatus) IsValid() bool {
 	switch s {
-	case RoundAwaitingWord, RoundActive, RoundCompleted, RoundSkipped:
+	case RoundAwaitingWord, RoundActive, RoundCompleted:
 		return true
 	}
 
@@ -35,7 +39,7 @@ func (s RoundStatus) IsValid() bool {
 
 // IsRevealed reports whether the round word and guess details may be shown
 func (s RoundStatus) IsRevealed() bool {
-	return s == RoundCompleted || s == RoundSkipped
+	return s == RoundCompleted
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
