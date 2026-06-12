@@ -406,8 +406,8 @@ func TestGroups_Delete(t *testing.T) {
 		require.Contains(t, string(body), "Group not found")
 	})
 
-	// Test error due to non-admin caller
-	t.Run("403 (forbidden)", func(t *testing.T) {
+	// Test successfully deleting a group as the group admin
+	t.Run("204 (group admin)", func(t *testing.T) {
 		router, ctx, _ := setup(t, "alice", types.SiteRoleUser)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Friends"}`))
@@ -420,14 +420,105 @@ func TestGroups_Delete(t *testing.T) {
 		var created service.GroupResponse
 		require.NoError(t, json.Unmarshal(body, &created))
 
-		status, body, err = requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/"+created.ID, nil))
+		status, _, err = requestHelper(t, router, httptest.NewRequest(http.MethodDelete, "/api/groups/"+created.ID, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, status)
+
+		deleted, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: created.ID}))
+		require.NoError(t, err)
+		require.Nil(t, deleted)
+	})
+
+	// Test error due to a non-admin member
+	t.Run("403 (member)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    "bob",
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID, nil)
+		status, body, err := requestHelper(t, router, req)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusForbidden, status)
 		require.Contains(t, string(body), "Forbidden")
+	})
+}
 
-		stillThere, err := router.appDao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: created.ID}))
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// TestGroups_Leave exercises leaving a group
+func TestGroups_Leave(t *testing.T) {
+	// Test successfully leaving a group as a member
+	t.Run("204 (leave)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID+"/leave", nil)
+		status, _, err := requestHelper(t, router, req)
 		require.NoError(t, err)
-		require.NotNil(t, stillThere)
+		require.Equal(t, http.StatusNoContent, status)
+
+		member, err := router.appDao.GetGroupMember(ctx, dao.NewOptions().WithWhere(squirrel.And{
+			squirrel.Eq{models.GROUP_MEMBER_GROUP_ID: group.ID},
+			squirrel.Eq{models.GROUP_MEMBER_USER_ID: principal.userID},
+		}))
+		require.NoError(t, err)
+		require.Nil(t, member)
+	})
+
+	// Test error due to the last group admin leaving
+	t.Run("400 (last admin)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Solo", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/groups/"+group.ID+"/leave", nil)
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Unable to remove the last group admin")
 	})
 }
 

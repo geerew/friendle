@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/geerew/friendle/service"
+	"github.com/geerew/friendle/utils/types"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,12 +16,13 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Get("/", r.requireAccess(accessSiteUser), r.listGroups)
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
-	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup)
+	groupRoutes.Delete("/:id", r.requireAccess(accessSiteUser), r.deleteGroup)
 
 	// Members
 	groupRoutes.Get("/:id/members", r.requireAccess(accessSiteUser), r.listGroupMembers)
 	groupRoutes.Patch("/:id/members/:userId", r.requireAccess(accessSiteUser), r.updateGroupMemberRole)
 	groupRoutes.Delete("/:id/members/:userId", r.requireAccess(accessSiteUser), r.removeGroupMember)
+	groupRoutes.Delete("/:id/leave", r.requireAccess(accessSiteUser), r.leaveGroup)
 
 	// Round
 	groupRoutes.Get("/:id/round/today", r.requireAccess(accessSiteUser), r.getGroupRoundToday)
@@ -319,11 +321,45 @@ func (r *Router) listSelfGroups(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// deleteGroup deletes a group
+// deleteGroup deletes a group for a site admin or group admin
 func (r *Router) deleteGroup(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
+	groupID := c.Params("id")
+	principal, ctx := principalAndCtx(c)
 
-	if err := r.appSvc.Groups.Delete(ctx, c.Params("id")); err != nil {
+	canDelete := principal.SiteRole == types.SiteRoleAdmin
+	if !canDelete {
+		isAdmin, err := r.appSvc.Groups.IsAdmin(ctx, groupID, principal.UserID)
+		if err != nil {
+			return serviceError(c, err)
+		}
+
+		canDelete = isAdmin
+	}
+
+	if !canDelete {
+		return errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
+	}
+
+	if err := r.appSvc.Groups.Delete(ctx, groupID); err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// leaveGroup removes the authenticated user from a group
+func (r *Router) leaveGroup(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+
+	if !r.isGroupMember(c, groupID) {
+		return nil
+	}
+
+	principal, ctx := principalAndCtx(c)
+
+	if err := r.appSvc.Groups.RemoveMember(ctx, groupID, principal.UserID); err != nil {
 		return serviceError(c, err)
 	}
 
