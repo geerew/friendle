@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import { Button, Separator } from '$lib/components/ui';
-	import GroupStatLink from './detail/group-stat-link.svelte';
 	import { getContext } from 'svelte';
 
 	type Props = {
-		aside?: 'settings' | 'members';
+		showSettings?: boolean;
 	};
 
-	let { aside }: Props = $props();
+	let { showSettings = false }: Props = $props();
 
 	const groupPage = getContext<GroupPageContext>(GROUP_PAGE_KEY);
 	const group = $derived(groupPage.group);
@@ -20,7 +19,7 @@
 			<h2 class="section-title">Group name</h2>
 			<p class="text-background-primary text-2xl">{group.name}</p>
 		</div>
-		{#if aside === 'settings'}
+		{#if showSettings}
 			<Button
 				href="/groups/{group.id}/settings/"
 				variant="secondary"
@@ -29,14 +28,6 @@
 			>
 				Settings
 			</Button>
-		{:else if aside === 'members'}
-			<GroupStatLink
-				label="Members"
-				count={group.memberCount}
-				href="/groups/{group.id}/settings/members"
-				ariaLabel="View members"
-				align="end"
-			/>
 		{/if}
 	</section>
 

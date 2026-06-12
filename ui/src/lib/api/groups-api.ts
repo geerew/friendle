@@ -345,6 +345,21 @@ export async function declineGroupJoinRequest(groupId: string, userId: string): 
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// Leave the authenticated user's group membership
+export async function leaveGroup(groupId: string): Promise<void> {
+	const response = await apiFetch(`/api/groups/${groupId}/leave`, {
+		method: 'DELETE'
+	});
+
+	if (response.ok || response.status === 204) {
+		return;
+	}
+
+	throw await apiErrorFromResponse(response);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // Delete a group
 export async function deleteGroup(groupId: string): Promise<void> {
 	const response = await apiFetch(`/api/groups/${groupId}`, { method: 'DELETE' });

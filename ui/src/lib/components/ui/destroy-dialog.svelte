@@ -9,6 +9,7 @@
 		description?: string;
 		detail?: string;
 		cancelLabel?: string;
+		confirmLabel?: string;
 		disabled?: boolean;
 		loading?: boolean;
 		onConfirm: () => void | Promise<void>;
@@ -21,6 +22,7 @@
 		description,
 		detail,
 		cancelLabel = 'Cancel',
+		confirmLabel = 'Confirm',
 		disabled = false,
 		loading = false,
 		onConfirm,
@@ -59,7 +61,7 @@
 				{loading}
 				onclick={handleConfirm}
 			>
-				Confirm
+				{confirmLabel}
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
