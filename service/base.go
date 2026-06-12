@@ -11,6 +11,7 @@ import (
 type Service struct {
 	Auth   *Auth
 	Groups *Groups
+	Rounds *Rounds
 	Users  *Users
 }
 
@@ -32,6 +33,7 @@ func New(db database.Database) *Service {
 	return &Service{
 		Auth:   newAuth(d),
 		Groups: newGroups(d),
+		Rounds: newRounds(d),
 		Users:  newUsers(d),
 	}
 }
