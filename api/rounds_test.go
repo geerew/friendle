@@ -46,7 +46,7 @@ func TestGroups_GetRoundToday(t *testing.T) {
 		}))
 
 		today := utils.DateString(time.Now())
-		round, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, today)
+		round, err := router.appSvc.Rounds.Create(ctx, group.ID, today)
 		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/round/today", nil)
@@ -60,8 +60,7 @@ func TestGroups_GetRoundToday(t *testing.T) {
 		require.Equal(t, today, resp.RoundDate)
 		require.Equal(t, types.RoundAwaitingWord, resp.Status)
 		require.Equal(t, round.PickerUserID == principal.userID, resp.IsPicker)
-		require.NotEmpty(t, resp.ServerNow)
-		require.NotEmpty(t, resp.NextRoundAt)
+		require.NotEmpty(t, resp.RoundEndsAt)
 
 		var raw map[string]any
 		require.NoError(t, json.Unmarshal(body, &raw))
@@ -155,10 +154,10 @@ func TestGroups_GetRoundToday(t *testing.T) {
 		yesterday := utils.PreviousDateString(now)
 		today := utils.DateString(now)
 
-		first, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, yesterday)
+		first, err := router.appSvc.Rounds.Create(ctx, group.ID, yesterday)
 		require.NoError(t, err)
 
-		second, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, today)
+		second, err := router.appSvc.Rounds.Create(ctx, group.ID, today)
 		require.NoError(t, err)
 		require.NotEqual(t, first.PickerUserID, second.PickerUserID)
 	})
@@ -224,7 +223,7 @@ func TestRounds_CloseStaleRounds(t *testing.T) {
 		yesterday := utils.PreviousDateString(now)
 		today := utils.DateString(now)
 
-		yesterdayRound, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, yesterday)
+		yesterdayRound, err := router.appSvc.Rounds.Create(ctx, group.ID, yesterday)
 		require.NoError(t, err)
 
 		require.NoError(t, router.appSvc.Rounds.CloseStaleRounds(ctx))
@@ -279,7 +278,7 @@ func TestRounds_CloseStaleRounds(t *testing.T) {
 		}))
 
 		yesterday := utils.PreviousDateString(time.Now())
-		round, err := router.appSvc.Rounds.CreateDailyRound(ctx, group.ID, yesterday)
+		round, err := router.appSvc.Rounds.Create(ctx, group.ID, yesterday)
 		require.NoError(t, err)
 
 		round.Status = types.RoundActive

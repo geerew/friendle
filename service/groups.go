@@ -32,15 +32,16 @@ type CreateGroupRequest struct {
 
 // GroupResponse represents a group response
 type GroupResponse struct {
-	ID                string                   `json:"id"`
-	CreatedAt         types.DateTime           `json:"createdAt"`
-	UpdatedAt         types.DateTime           `json:"updatedAt"`
-	Name              string                   `json:"name"`
-	CreatedBy         string                   `json:"createdBy,omitempty"`
-	MemberCount       int                      `json:"memberCount"`
-	GroupRole         *types.GroupRole         `json:"groupRole,omitempty"`
-	JoinRequestStatus *types.JoinRequestStatus `json:"joinRequestStatus,omitempty"`
-	AdminSummary      *GroupAdminSummary       `json:"adminSummary,omitempty"`
+	ID                 string                   `json:"id"`
+	CreatedAt          types.DateTime           `json:"createdAt"`
+	UpdatedAt          types.DateTime           `json:"updatedAt"`
+	Name               string                   `json:"name"`
+	CreatedBy          string                   `json:"createdBy,omitempty"`
+	MemberCount        int                      `json:"memberCount"`
+	MemberThresholdMet bool                     `json:"memberThresholdMet"`
+	GroupRole          *types.GroupRole         `json:"groupRole,omitempty"`
+	JoinRequestStatus  *types.JoinRequestStatus `json:"joinRequestStatus,omitempty"`
+	AdminSummary       *GroupAdminSummary       `json:"adminSummary,omitempty"`
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -695,14 +696,15 @@ func groupsResponsesBuilder(groups []*models.Group, status userMemberStatus) []*
 // groupResponseBuilder builds a GroupResponse from a group model
 func groupResponseBuilder(group *models.Group, groupRole *types.GroupRole, joinRequestStatus *types.JoinRequestStatus) *GroupResponse {
 	return &GroupResponse{
-		ID:                group.ID,
-		CreatedAt:         group.CreatedAt,
-		UpdatedAt:         group.UpdatedAt,
-		Name:              group.Name,
-		CreatedBy:         group.CreatedBy,
-		MemberCount:       group.MemberCount,
-		GroupRole:         groupRole,
-		JoinRequestStatus: joinRequestStatus,
+		ID:                 group.ID,
+		CreatedAt:          group.CreatedAt,
+		UpdatedAt:          group.UpdatedAt,
+		Name:               group.Name,
+		CreatedBy:          group.CreatedBy,
+		MemberCount:        group.MemberCount,
+		MemberThresholdMet: group.MemberCount >= minPlayableMembers,
+		GroupRole:          groupRole,
+		JoinRequestStatus:  joinRequestStatus,
 	}
 }
 

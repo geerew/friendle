@@ -31,4 +31,5 @@ var (
 	ErrGroupMemberSelf          = errors.New("cannot modify your own group membership")
 	ErrGroupLastAdmin           = errors.New("unable to remove the last group admin")
 	ErrGroupTooFewMembers       = errors.New("group does not have enough members to play")
+	ErrRoundNotFound            = errors.New("round not found")
 )

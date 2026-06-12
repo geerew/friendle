@@ -141,7 +141,7 @@ func (r *Router) getGroupRoundToday(c *fiber.Ctx) error {
 
 	groupID := c.Params("id")
 
-	roundToday, err := r.appSvc.Rounds.GetToday(ctx, groupID)
+	roundToday, err := r.appSvc.Rounds.Today(ctx, groupID)
 	if err != nil {
 		return serviceError(c, err)
 	}
