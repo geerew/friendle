@@ -28,7 +28,6 @@ var (
 	ErrGroupJoinRequestRejected = errors.New("join request was rejected")
 	ErrGroupJoinRequestNotFound = errors.New("join request not found")
 	ErrGroupMemberNotFound      = errors.New("group member not found")
-	ErrGroupMemberSelf          = errors.New("cannot modify your own group membership")
 	ErrGroupLastAdmin           = errors.New("unable to remove the last group admin")
 	ErrGroupTooFewMembers       = errors.New("group does not have enough members to play")
 	ErrRoundNotFound            = errors.New("round not found")
