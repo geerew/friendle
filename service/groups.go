@@ -20,6 +20,7 @@ var defaultGroupsListOrderBy = []string{models.GROUP_TABLE_NAME + " asc"}
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const maxGroupNameLength = 64
+const minPlayableMembers = 2
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
