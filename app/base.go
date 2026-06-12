@@ -42,11 +42,12 @@ type Config struct {
 
 // App wires shared runtime dependencies for the API and CLI
 type App struct {
-	Logger       *logger.Logger
-	FS           *filesystem.FS
-	DbManager    *database.DatabaseManager
-	Config       *Config
-	bootstrapped atomic.Int32
+	Logger        *logger.Logger
+	FS            *filesystem.FS
+	DbManager     *database.DatabaseManager
+	Config        *Config
+	bootstrapPath string
+	bootstrapped  atomic.Int32
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -119,7 +120,15 @@ func (a *App) IsBootstrapped() bool {
 
 // SetBootstrapped marks the application as bootstrapped after the first admin is created
 func (a *App) SetBootstrapped() {
+	a.bootstrapPath = ""
 	a.bootstrapped.Store(1)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// BootstrapPath returns the UI path for first-run setup, or empty when bootstrapped
+func (a *App) BootstrapPath() string {
+	return a.bootstrapPath
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -157,7 +166,8 @@ func (a *App) bootstrap() error {
 			return fmt.Errorf("failed to generate bootstrap token: %w", err)
 		}
 
-		bootstrapURL := fmt.Sprintf("http://%s/auth/bootstrap/%s", a.Config.HttpAddr, bootstrapToken.Token)
+		a.bootstrapPath = fmt.Sprintf("/auth/bootstrap/%s/", bootstrapToken.Token)
+		bootstrapURL := fmt.Sprintf("http://%s%s", a.Config.HttpAddr, a.bootstrapPath)
 		a.Logger.WithComponent(string(ComponentApp)).Info().
 			Str("bootstrap_url", bootstrapURL).
 			Str("expires_in", "5 minutes").
