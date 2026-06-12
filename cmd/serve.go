@@ -64,8 +64,8 @@ var serveCmd = &cobra.Command{
 
 		// Cron
 		cron.NewAndStart(runCtx, &cron.Config{
-			Rounds:           appSvc.Rounds,
-			DailyRoundLogger: application.Logger.WithComponent(string(app.ComponentCron)),
+			Rounds: appSvc.Rounds,
+			Logger: application.Logger.WithComponent(string(app.ComponentCron)),
 		})
 
 		var wg sync.WaitGroup

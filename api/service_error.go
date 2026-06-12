@@ -49,6 +49,8 @@ var serviceErrorMappings = []serviceErrorMapping{
 	{err: service.ErrGroupMemberNotFound, status: fiber.StatusNotFound, message: "Group member not found"},
 	{err: service.ErrGroupMemberSelf, status: fiber.StatusBadRequest, message: "Cannot modify your own group membership"},
 	{err: service.ErrGroupLastAdmin, status: fiber.StatusBadRequest, message: "Unable to remove the last group admin"},
+	{err: service.ErrGroupTooFewMembers, status: fiber.StatusBadRequest, message: "Group does not have enough members to play"},
+	{err: service.ErrRoundNotFound, status: fiber.StatusNotFound, message: "Round not found"},
 
 	{err: utils.ErrApiQueryParse, status: fiber.StatusBadRequest, message: "Invalid query"},
 }

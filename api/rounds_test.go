@@ -57,20 +57,73 @@ func TestGroups_GetRoundToday(t *testing.T) {
 
 		var resp service.RoundTodayResponse
 		require.NoError(t, json.Unmarshal(body, &resp))
-		require.True(t, resp.MemberThresholdMet)
-		require.NotNil(t, resp.Round)
-		require.Equal(t, today, resp.Round.RoundDate)
-		require.Equal(t, types.RoundAwaitingWord, resp.Round.Status)
-		require.Equal(t, round.PickerUserID == principal.userID, resp.Round.IsPicker)
+		require.Equal(t, today, resp.RoundDate)
+		require.Equal(t, types.RoundAwaitingWord, resp.Status)
+		require.Equal(t, round.PickerUserID == principal.userID, resp.IsPicker)
+		require.NotEmpty(t, resp.ServerNow)
+		require.NotEmpty(t, resp.NextRoundAt)
 
 		var raw map[string]any
 		require.NoError(t, json.Unmarshal(body, &raw))
-		roundBody, ok := raw["round"].(map[string]any)
-		require.True(t, ok)
-		_, hasPickerID := roundBody["pickerUserId"]
-		_, hasPickerName := roundBody["pickerDisplayName"]
+		_, hasNestedRound := raw["round"]
+		_, hasPickerID := raw["pickerUserId"]
+		_, hasPickerName := raw["pickerDisplayName"]
+		require.False(t, hasNestedRound)
 		require.False(t, hasPickerID)
 		require.False(t, hasPickerName)
+	})
+
+	// Test error due to too few members requesting today's round
+	t.Run("400 (too few members)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Solo", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/round/today", nil)
+
+		status, respBody, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(respBody), "enough members")
+	})
+
+	// Test error due to no round existing for today
+	t.Run("404 (no round)", func(t *testing.T) {
+		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
+
+		group := &models.Group{Name: "Friends", CreatedBy: principal.userID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    principal.userID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+
+		bob := &models.User{
+			Base:        models.Base{ID: "bob"},
+			Username:    "bob",
+			DisplayName: "Bob",
+			SiteRole:    types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, bob)
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    bob.ID,
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/round/today", nil)
+
+		status, respBody, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, status)
+		require.Contains(t, string(respBody), "Round not found")
 	})
 
 	// Test successfully avoiding back-to-back picker assignment

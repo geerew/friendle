@@ -37,6 +37,7 @@ func TestGroups_Create(t *testing.T) {
 		require.Equal(t, "Friends", resp.Name)
 		require.Equal(t, "alice", resp.CreatedBy)
 		require.Equal(t, 1, resp.MemberCount)
+		require.False(t, resp.MemberThresholdMet)
 		require.NotEmpty(t, resp.ID)
 	})
 
@@ -222,6 +223,7 @@ func TestGroups_Get(t *testing.T) {
 		require.Equal(t, created.ID, resp.ID)
 		require.Equal(t, "Friends", resp.Name)
 		require.Equal(t, 1, resp.MemberCount)
+		require.False(t, resp.MemberThresholdMet)
 		require.Equal(t, "alice", resp.CreatedBy)
 		require.Equal(t, types.GroupRoleAdmin, *resp.GroupRole)
 		require.NotNil(t, resp.AdminSummary)
@@ -263,6 +265,7 @@ func TestGroups_Get(t *testing.T) {
 		require.NoError(t, json.Unmarshal(body, &resp))
 		require.Equal(t, types.GroupRoleUser, *resp.GroupRole)
 		require.Equal(t, 2, resp.MemberCount)
+		require.True(t, resp.MemberThresholdMet)
 		require.Nil(t, resp.AdminSummary)
 	})
 
