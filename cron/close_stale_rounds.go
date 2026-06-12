@@ -47,7 +47,7 @@ func (c *closeStaleRounds) start(ctx context.Context) {
 
 // run closes active and awaiting-word rounds from before today
 func (c *closeStaleRounds) run(ctx context.Context) {
-	if err := c.rounds.CloseStaleRounds(ctx); err != nil {
+	if err := c.rounds.Close(ctx); err != nil {
 		c.logger.Error().Err(err).Msg("Failed to close stale rounds")
 		return
 	}

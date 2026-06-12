@@ -8,8 +8,8 @@ import (
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // initAdminUserRoutes registers site-admin user routes on the admin API group
-func (r *Router) initAdminUserRoutes(a fiber.Router) {
-	userRoutes := r.apiGroup("users")
+func (r *Router) initAdminUserRoutes(adminGroup fiber.Router) {
+	userRoutes := adminGroup.Group("/users")
 
 	userRoutes.Post("/", r.requireAccess(accessSiteAdmin), r.createUser)
 	userRoutes.Get("/", r.requireAccess(accessSiteAdmin), r.listUsers)

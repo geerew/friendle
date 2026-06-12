@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +16,14 @@ import (
 	"github.com/geerew/friendle/utils/types"
 	"github.com/stretchr/testify/require"
 )
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// createTestRound inserts a round record for tests
+func createTestRound(t *testing.T, appDao *dao.DAO, ctx context.Context, round *models.Round) {
+	t.Helper()
+	require.NoError(t, appDao.CreateRound(ctx, round))
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -46,7 +55,7 @@ func TestGroups_GetRoundToday(t *testing.T) {
 		}))
 
 		today := utils.DateString(time.Now())
-		round, err := router.appSvc.Rounds.Create(ctx, group.ID, today)
+		round, err := router.appSvc.Rounds.Create(ctx, group.ID)
 		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/groups/"+group.ID+"/round/today", nil)
@@ -152,14 +161,17 @@ func TestGroups_GetRoundToday(t *testing.T) {
 
 		now := time.Now()
 		yesterday := utils.PreviousDateString(now)
-		today := utils.DateString(now)
 
-		first, err := router.appSvc.Rounds.Create(ctx, group.ID, yesterday)
-		require.NoError(t, err)
+		createTestRound(t, router.appDao, ctx, &models.Round{
+			GroupID:      group.ID,
+			RoundDate:    yesterday,
+			PickerUserID: principal.userID,
+			Status:       types.RoundAwaitingWord,
+		})
 
-		second, err := router.appSvc.Rounds.Create(ctx, group.ID, today)
+		second, err := router.appSvc.Rounds.Create(ctx, group.ID)
 		require.NoError(t, err)
-		require.NotEqual(t, first.PickerUserID, second.PickerUserID)
+		require.NotEqual(t, principal.userID, second.PickerUserID)
 	})
 
 	// Test error due to a non-member requesting today's round
@@ -192,8 +204,8 @@ func TestGroups_GetRoundToday(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// TestRounds_CloseStaleRounds exercises closing open rounds from before today
-func TestRounds_CloseStaleRounds(t *testing.T) {
+// TestRounds_Close exercises closing open rounds from before today
+func TestRounds_Close(t *testing.T) {
 	// Test successfully completing yesterday's awaiting-word round without creating today's
 	t.Run("awaiting word completed", func(t *testing.T) {
 		router, ctx, principal := setup(t, "alice", types.SiteRoleUser)
@@ -223,10 +235,15 @@ func TestRounds_CloseStaleRounds(t *testing.T) {
 		yesterday := utils.PreviousDateString(now)
 		today := utils.DateString(now)
 
-		yesterdayRound, err := router.appSvc.Rounds.Create(ctx, group.ID, yesterday)
-		require.NoError(t, err)
+		yesterdayRound := &models.Round{
+			GroupID:      group.ID,
+			RoundDate:    yesterday,
+			PickerUserID: principal.userID,
+			Status:       types.RoundAwaitingWord,
+		}
+		createTestRound(t, router.appDao, ctx, yesterdayRound)
 
-		require.NoError(t, router.appSvc.Rounds.CloseStaleRounds(ctx))
+		require.NoError(t, router.appSvc.Rounds.Close(ctx))
 
 		stored, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.And{
 			squirrel.Eq{models.ROUND_GROUP_ID: group.ID},
@@ -278,13 +295,15 @@ func TestRounds_CloseStaleRounds(t *testing.T) {
 		}))
 
 		yesterday := utils.PreviousDateString(time.Now())
-		round, err := router.appSvc.Rounds.Create(ctx, group.ID, yesterday)
-		require.NoError(t, err)
+		round := &models.Round{
+			GroupID:      group.ID,
+			RoundDate:    yesterday,
+			PickerUserID: principal.userID,
+			Status:       types.RoundActive,
+		}
+		createTestRound(t, router.appDao, ctx, round)
 
-		round.Status = types.RoundActive
-		require.NoError(t, router.appDao.UpdateRound(ctx, round))
-
-		require.NoError(t, router.appSvc.Rounds.CloseStaleRounds(ctx))
+		require.NoError(t, router.appSvc.Rounds.Close(ctx))
 
 		stored, err := router.appDao.GetRound(ctx, dao.NewOptions().WithWhere(squirrel.And{
 			squirrel.Eq{models.ROUND_GROUP_ID: group.ID},

@@ -15,7 +15,7 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Get("/", r.requireAccess(accessSiteUser), r.listGroups)
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
-	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup) // TODO: support group admin
+	groupRoutes.Delete("/:id", r.requireAccess(accessSiteAdmin), r.deleteGroup)
 
 	// Members
 	groupRoutes.Get("/:id/members", r.requireAccess(accessSiteUser), r.listGroupMembers)
@@ -42,14 +42,14 @@ func (r *Router) initGroupRoutes() {
 
 // createGroup creates a friend group for the authenticated user
 func (r *Router) createGroup(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
+	principal, ctx := principalAndCtx(c)
 
 	req := &service.CreateGroupRequest{}
 	if err := c.BodyParser(req); err != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	group, err := r.appSvc.Groups.Create(ctx, *req)
+	group, err := r.appSvc.Groups.Create(ctx, principal.UserID, *req)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -61,11 +61,11 @@ func (r *Router) createGroup(c *fiber.Ctx) error {
 
 // getGroup returns a group by ID
 func (r *Router) getGroup(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
+	principal, ctx := principalAndCtx(c)
 
 	groupID := c.Params("id")
 
-	group, err := r.appSvc.Groups.Get(ctx, groupID)
+	group, err := r.appSvc.Groups.Get(ctx, groupID, principal.UserID)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -75,12 +75,16 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// listGroupMembers returns paginated group members for authenticated group members
+// listGroupMembers returns paginated group members for group members
 func (r *Router) listGroupMembers(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
-	page := paginationFromCtx(c)
 	groupID := c.Params("id")
+
+	if !r.isGroupMember(c, groupID) {
+		return nil
+	}
+
+	_, ctx := principalAndCtx(c)
+	page := paginationFromCtx(c)
 
 	members, err := r.appSvc.Groups.ListMembers(ctx, groupID, page)
 	if err != nil {
@@ -99,15 +103,24 @@ func (r *Router) listGroupMembers(c *fiber.Ctx) error {
 
 // updateGroupMemberRole updates a group member role for group admins
 func (r *Router) updateGroupMemberRole(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
+	groupID := c.Params("id")
+
+	if !r.isGroupAdmin(c, groupID) {
+		return nil
+	}
+
+	principal, ctx := principalAndCtx(c)
 
 	req := &service.UpdateMemberRoleRequest{}
 	if err := c.BodyParser(req); err != nil {
 		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
 	}
 
-	groupID := c.Params("id")
 	userID := c.Params("userId")
+
+	if userID == principal.UserID {
+		return errorResponse(c, fiber.StatusBadRequest, "Cannot modify your own group membership", nil)
+	}
 
 	member, err := r.appSvc.Groups.UpdateMemberRole(ctx, groupID, userID, *req)
 	if err != nil {
@@ -121,10 +134,18 @@ func (r *Router) updateGroupMemberRole(c *fiber.Ctx) error {
 
 // removeGroupMember removes a group member for group admins
 func (r *Router) removeGroupMember(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
 	groupID := c.Params("id")
+
+	if !r.isGroupAdmin(c, groupID) {
+		return nil
+	}
+
+	principal, ctx := principalAndCtx(c)
 	userID := c.Params("userId")
+
+	if userID == principal.UserID {
+		return errorResponse(c, fiber.StatusBadRequest, "Cannot modify your own group membership", nil)
+	}
 
 	if err := r.appSvc.Groups.RemoveMember(ctx, groupID, userID); err != nil {
 		return serviceError(c, err)
@@ -137,11 +158,15 @@ func (r *Router) removeGroupMember(c *fiber.Ctx) error {
 
 // getGroupRoundToday returns today's round state for a group member
 func (r *Router) getGroupRoundToday(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
 	groupID := c.Params("id")
 
-	roundToday, err := r.appSvc.Rounds.Today(ctx, groupID)
+	if !r.isGroupMember(c, groupID) {
+		return nil
+	}
+
+	principal, ctx := principalAndCtx(c)
+
+	roundToday, err := r.appSvc.Rounds.Today(ctx, groupID, principal.UserID)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -153,10 +178,14 @@ func (r *Router) getGroupRoundToday(c *fiber.Ctx) error {
 
 // listGroupPendingJoinRequests returns paginated pending join requests for group admins
 func (r *Router) listGroupPendingJoinRequests(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
-	page := paginationFromCtx(c)
 	groupID := c.Params("id")
+
+	if !r.isGroupAdmin(c, groupID) {
+		return nil
+	}
+
+	_, ctx := principalAndCtx(c)
+	page := paginationFromCtx(c)
 
 	requests, err := r.appSvc.Groups.ListPendingJoinRequests(ctx, groupID, page)
 	if err != nil {
@@ -175,10 +204,14 @@ func (r *Router) listGroupPendingJoinRequests(c *fiber.Ctx) error {
 
 // listGroupRejectedJoinRequests returns paginated rejected join requests for group admins
 func (r *Router) listGroupRejectedJoinRequests(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
-	page := paginationFromCtx(c)
 	groupID := c.Params("id")
+
+	if !r.isGroupAdmin(c, groupID) {
+		return nil
+	}
+
+	_, ctx := principalAndCtx(c)
+	page := paginationFromCtx(c)
 
 	requests, err := r.appSvc.Groups.ListRejectedJoinRequests(ctx, groupID, page)
 	if err != nil {
@@ -197,9 +230,13 @@ func (r *Router) listGroupRejectedJoinRequests(c *fiber.Ctx) error {
 
 // approveGroupJoinRequest approves a pending join request for a group admin
 func (r *Router) approveGroupJoinRequest(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
 	groupID := c.Params("id")
+
+	if !r.isGroupAdmin(c, groupID) {
+		return nil
+	}
+
+	_, ctx := principalAndCtx(c)
 	userID := c.Params("userId")
 
 	if err := r.appSvc.Groups.ApproveJoinRequest(ctx, groupID, userID); err != nil {
@@ -213,9 +250,13 @@ func (r *Router) approveGroupJoinRequest(c *fiber.Ctx) error {
 
 // declineGroupJoinRequest rejects a pending join request for a group admin
 func (r *Router) declineGroupJoinRequest(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
 	groupID := c.Params("id")
+
+	if !r.isGroupAdmin(c, groupID) {
+		return nil
+	}
+
+	_, ctx := principalAndCtx(c)
 	userID := c.Params("userId")
 
 	if err := r.appSvc.Groups.DeclineJoinRequest(ctx, groupID, userID); err != nil {
@@ -229,8 +270,7 @@ func (r *Router) declineGroupJoinRequest(c *fiber.Ctx) error {
 
 // listGroups returns paginated groups, optionally filtered by name
 func (r *Router) listGroups(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
-
+	principal, ctx := principalAndCtx(c)
 	page := paginationFromCtx(c)
 
 	var (
@@ -239,7 +279,7 @@ func (r *Router) listGroups(c *fiber.Ctx) error {
 	)
 
 	if c.Context().QueryArgs().Has("name") {
-		groups, err = r.appSvc.Groups.Search(ctx, page, c.Query("name", ""))
+		groups, err = r.appSvc.Groups.Search(ctx, principal.UserID, page, c.Query("name", ""))
 	} else {
 		groups, err = r.appSvc.Groups.List(ctx, page)
 	}
@@ -260,10 +300,10 @@ func (r *Router) listGroups(c *fiber.Ctx) error {
 
 // listSelfGroups returns paginated groups the authenticated user belongs to
 func (r *Router) listSelfGroups(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
+	principal, ctx := principalAndCtx(c)
 
 	page := paginationFromCtx(c)
-	groups, err := r.appSvc.Groups.ListSelf(ctx, page)
+	groups, err := r.appSvc.Groups.ListSelf(ctx, principal.UserID, page)
 	if err != nil {
 		return serviceError(c, err)
 	}
@@ -293,12 +333,54 @@ func (r *Router) deleteGroup(c *fiber.Ctx) error {
 
 // createGroupJoinRequest creates a pending join request for the authenticated user
 func (r *Router) createGroupJoinRequest(c *fiber.Ctx) error {
-	_, ctx := principalAndCtx(c)
+	principal, ctx := principalAndCtx(c)
 
-	group, err := r.appSvc.Groups.RequestJoin(ctx, c.Params("id"))
+	group, err := r.appSvc.Groups.RequestJoin(ctx, principal.UserID, c.Params("id"))
 	if err != nil {
 		return serviceError(c, err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(group)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// isGroupMember writes an error response and returns false when the caller is not a group
+// member
+func (r *Router) isGroupMember(c *fiber.Ctx, groupID string) bool {
+	principal, ctx := principalAndCtx(c)
+
+	isMember, err := r.appSvc.Groups.IsMember(ctx, groupID, principal.UserID)
+	if err != nil {
+		_ = serviceError(c, err)
+		return false
+	}
+
+	if !isMember {
+		_ = errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
+		return false
+	}
+
+	return true
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// isGroupAdmin writes an error response and returns false when the caller is not a group
+// admin
+func (r *Router) isGroupAdmin(c *fiber.Ctx, groupID string) bool {
+	principal, ctx := principalAndCtx(c)
+
+	isAdmin, err := r.appSvc.Groups.IsAdmin(ctx, groupID, principal.UserID)
+	if err != nil {
+		_ = serviceError(c, err)
+		return false
+	}
+
+	if !isAdmin {
+		_ = errorResponse(c, fiber.StatusForbidden, "Forbidden", nil)
+		return false
+	}
+
+	return true
 }

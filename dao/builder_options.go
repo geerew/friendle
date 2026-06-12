@@ -146,7 +146,7 @@ func (o *builderOptions) WithGroupBy(fields ...string) *builderOptions {
 
 // WithHaving sets the HAVING clause using a squirrel.Sqlizer
 //
-// # WithHaving should be used in conjunction with WithGroupBy
+// It should be used in conjunction with WithGroupBy.
 //
 // Use once per builderOptions instance
 func (o *builderOptions) WithHaving(pred squirrel.Sqlizer) *builderOptions {
