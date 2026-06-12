@@ -5,9 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/database"
-	"github.com/geerew/friendle/models"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -156,25 +154,3 @@ func pluck[T any](ctx context.Context, dao *DAO, builderOpts builderOptions) ([]
 
 	return out, nil
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// UsersByIDs returns users keyed by ID for the given user IDs
-func (dao *DAO) UsersByIDs(ctx context.Context, userIDs []string) (map[string]*models.User, error) {
-	if len(userIDs) == 0 {
-		return map[string]*models.User{}, nil
-	}
-
-	users, err := dao.ListUsers(ctx, NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: userIDs}))
-	if err != nil {
-		return nil, err
-	}
-
-	userMap := make(map[string]*models.User, len(users))
-	for _, u := range users {
-		userMap[u.ID] = u
-	}
-
-	return userMap, nil
-}
-

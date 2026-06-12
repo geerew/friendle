@@ -84,4 +84,3 @@ func (o *Options) WithPagination(p *pagination.Pagination) *Options {
 	o.Pagination = p
 	return o
 }
-

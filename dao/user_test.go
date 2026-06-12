@@ -113,7 +113,7 @@ func Test_ListUsers(t *testing.T) {
 				Username:     fmt.Sprintf("user%d", i),
 				DisplayName:  fmt.Sprintf("User %d", i),
 				PasswordHash: "password",
-				SiteRole:         types.SiteRoleUser,
+				SiteRole:     types.SiteRoleUser,
 			}
 			users = append(users, user)
 			require.NoError(t, dao.CreateUser(ctx, user))
@@ -157,7 +157,7 @@ func Test_ListUsers(t *testing.T) {
 				Username:     fmt.Sprintf("user%d", i),
 				DisplayName:  fmt.Sprintf("User %d", i),
 				PasswordHash: "password",
-				SiteRole:         types.SiteRoleUser,
+				SiteRole:     types.SiteRoleUser,
 			}
 			users = append(users, user)
 			require.NoError(t, dao.CreateUser(ctx, user))
@@ -199,7 +199,7 @@ func Test_ListUsers(t *testing.T) {
 			Username:     "test-user",
 			DisplayName:  "Test User",
 			PasswordHash: "password",
-			SiteRole:         types.SiteRoleUser,
+			SiteRole:     types.SiteRoleUser,
 		}
 		require.NoError(t, dao.CreateUser(ctx, user))
 
@@ -224,7 +224,7 @@ func Test_ListUsers(t *testing.T) {
 				Username:     fmt.Sprintf("user%d", i),
 				DisplayName:  fmt.Sprintf("User %d", i),
 				PasswordHash: "password",
-				SiteRole:         types.SiteRoleUser,
+				SiteRole:     types.SiteRoleUser,
 			}
 			users = append(users, user)
 			require.NoError(t, dao.CreateUser(ctx, user))
@@ -275,7 +275,7 @@ func Test_UpdateUser(t *testing.T) {
 			Base:         OriginalUser.Base,
 			Username:     "nimda",            // Immutable
 			DisplayName:  "Bob",              // Mutable
-			SiteRole:         types.SiteRoleUser, // Mutable
+			SiteRole:     types.SiteRoleUser, // Mutable
 			PasswordHash: "new password",     // Mutable
 		}
 		require.NoError(t, dao.UpdateUser(ctx, updatedUser))
@@ -283,11 +283,11 @@ func Test_UpdateUser(t *testing.T) {
 		dbOpts = NewOptions().WithWhere(squirrel.Eq{models.USER_TABLE_ID: OriginalUser.ID})
 		record, err := dao.GetUser(ctx, dbOpts)
 		require.Nil(t, err)
-		require.Equal(t, OriginalUser.ID, record.ID)                     // No change
-		require.Equal(t, OriginalUser.Username, record.Username)         // No change
-		require.True(t, record.CreatedAt.Equal(OriginalUser.CreatedAt))  // No change
-		require.Equal(t, updatedUser.DisplayName, record.DisplayName)    // Changed
-		require.Equal(t, updatedUser.PasswordHash, record.PasswordHash)  // Changed
+		require.Equal(t, OriginalUser.ID, record.ID)                    // No change
+		require.Equal(t, OriginalUser.Username, record.Username)        // No change
+		require.True(t, record.CreatedAt.Equal(OriginalUser.CreatedAt)) // No change
+		require.Equal(t, updatedUser.DisplayName, record.DisplayName)   // Changed
+		require.Equal(t, updatedUser.PasswordHash, record.PasswordHash) // Changed
 		require.Equal(t, updatedUser.SiteRole, record.SiteRole)
 		require.False(t, record.UpdatedAt.Equal(OriginalUser.UpdatedAt)) // Changed
 	})

@@ -114,7 +114,7 @@ func (dao *DAO) ListGroupMembers(ctx context.Context, dbOpts *Options) ([]*model
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// UpdateGroupMember updates a group membership record
+// UpdateGroupMember updates mutable fields on a group membership record
 func (dao *DAO) UpdateGroupMember(ctx context.Context, member *models.GroupMember) error {
 	if member == nil {
 		return utils.ErrNilPtr
@@ -131,8 +131,10 @@ func (dao *DAO) UpdateGroupMember(ctx context.Context, member *models.GroupMembe
 	builderOpts := newBuilderOptions(models.GROUP_MEMBER_TABLE).
 		WithData(
 			map[string]interface{}{
-				models.GROUP_MEMBER_GROUP_ROLE: member.GroupRole,
-				models.BASE_UPDATED_AT:         member.UpdatedAt,
+				models.GROUP_MEMBER_GROUP_ROLE:   member.GroupRole,
+				models.GROUP_MEMBER_TIMES_PICKED: member.TimesPicked,
+				models.GROUP_MEMBER_PICKER_SKIPS: member.PickerSkips,
+				models.BASE_UPDATED_AT:           member.UpdatedAt,
 			},
 		).
 		SetDbOpts(dbOpts)
