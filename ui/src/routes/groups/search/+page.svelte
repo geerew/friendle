@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { searchGroups } from '$lib/api/groups-api';
+	import { listGroups, searchGroups } from '$lib/api/groups-api';
 	import { Spinner } from '$lib/components';
 	import { XIcon } from '$lib/components/icons';
 	import GroupSearchRow from '$lib/components/pages/groups/search/group-search-row.svelte';
@@ -14,12 +14,12 @@
 	let searchQuery = $state('');
 	let groups = $state<GroupModel[]>([]);
 
-	const perPage = 7;
 	let page = $state(1);
+	let perPage = $state(10);
 	let totalItems = $state(0);
 
 	let loading = $state(false);
-	let searchRequestId = 0;
+	let loadRequestId = 0;
 
 	$effect(() => {
 		const term = query;
@@ -38,46 +38,39 @@
 	$effect(() => {
 		searchQuery;
 		page;
-		void runSearch();
+		perPage;
+		void loadGroups();
 	});
 
-	async function runSearch(): Promise<void> {
-		if (!searchQuery) {
-			groups = [];
-			totalItems = 0;
-			loading = false;
-
-			return;
-		}
-
-		const requestId = ++searchRequestId;
+	async function loadGroups(): Promise<void> {
+		const requestId = ++loadRequestId;
 		loading = true;
 
 		try {
 			const data = await withMinLoadingDelay(
-				searchGroups({
-					name: searchQuery,
-					page,
-					perPage
-				})
+				searchQuery
+					? searchGroups({ name: searchQuery, page, perPage })
+					: listGroups({ page, perPage })
 			);
 
-			if (requestId !== searchRequestId) {
+			if (requestId !== loadRequestId) {
 				return;
 			}
 
 			groups = data.items;
 			totalItems = data.totalItems;
 		} catch (err) {
-			if (requestId !== searchRequestId) {
+			if (requestId !== loadRequestId) {
 				return;
 			}
 
 			groups = [];
 			totalItems = 0;
-			toast.error(apiErrorMessage(err, 'Failed to search groups'));
+			toast.error(
+				apiErrorMessage(err, searchQuery ? 'Failed to search groups' : 'Failed to load groups')
+			);
 		} finally {
-			if (requestId === searchRequestId) {
+			if (requestId === loadRequestId) {
 				loading = false;
 			}
 		}
@@ -87,22 +80,8 @@
 		query = '';
 	}
 
-	function markJoinPending(groupId: string): void {
-		groups = groups.map((group) =>
-			group.id === groupId ? { ...group, joinRequestStatus: 'pending' as const } : group
-		);
-	}
-
-	function markJoinCancelled(groupId: string): void {
-		groups = groups.map((group) => {
-			if (group.id !== groupId) {
-				return group;
-			}
-
-			const { joinRequestStatus: _, ...rest } = group;
-
-			return rest;
-		});
+	function updateSearchGroup(updated: GroupModel): void {
+		groups = groups.map((group) => (group.id === updated.id ? updated : group));
 	}
 </script>
 
@@ -137,25 +116,27 @@
 		</div>
 	</div>
 
-	{#if searchQuery}
-		<Table.PaginatedBody
-			itemCount={groups.length}
-			{totalItems}
-			bind:page
-			perPage={7}
-			{loading}
-			emptyMessage="No groups found"
-		>
-			{#snippet list()}
-				<Table.List>
-					{#each groups as group, index (group.id)}
-						<GroupSearchRow {group} onjoined={markJoinPending} oncancelled={markJoinCancelled} />
-						{#if index < groups.length - 1}
-							<Table.Separator />
-						{/if}
-					{/each}
-				</Table.List>
-			{/snippet}
-		</Table.PaginatedBody>
-	{/if}
+	<Table.PaginatedBody
+		itemCount={groups.length}
+		{totalItems}
+		bind:page
+		bind:perPage
+		{loading}
+		emptyMessage={searchQuery ? 'No groups found' : 'No groups'}
+		minimal={false}
+		showPerPageSelect
+		alwaysShowPagination
+		selectTriggerClass="h-9 px-2 py-0"
+	>
+		{#snippet list()}
+			<Table.List>
+				{#each groups as group, index (group.id)}
+					<GroupSearchRow {group} onGroupChange={updateSearchGroup} />
+					{#if index < groups.length - 1}
+						<Table.Separator />
+					{/if}
+				{/each}
+			</Table.List>
+		{/snippet}
+	</Table.PaginatedBody>
 </Table.Root>

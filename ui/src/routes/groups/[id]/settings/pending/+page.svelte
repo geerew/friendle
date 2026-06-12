@@ -11,7 +11,7 @@
 	import { Button, Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
-	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
+	import { apiErrorMessage, isJoinRequestNotFound, withMinLoadingDelay } from '$lib/utils';
 	import { groupSettingsChildBreadcrumb, isGroupAdmin } from '$lib/utils/group';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -72,6 +72,13 @@
 		void groupPage.reloadGroup({ silent: true });
 	}
 
+	// removePendingRequest drops a row from the local list and refreshes group stats
+	function removePendingRequest(userId: string): void {
+		requests = requests.filter((request) => request.userId !== userId);
+		totalItems = Math.max(0, totalItems - 1);
+		void groupPage.reloadGroup({ silent: true });
+	}
+
 	// handleApprove approves a pending join request
 	async function handleApprove(userId: string): Promise<void> {
 		if (acting) {
@@ -84,7 +91,12 @@
 			await withMinLoadingDelay(approveGroupJoinRequest(groupId, userId));
 			handlePendingChange();
 		} catch (err) {
-			toast.error(apiErrorMessage(err, 'Failed to approve request'));
+			if (isJoinRequestNotFound(err)) {
+				removePendingRequest(userId);
+				toast.error('Join request is no longer pending');
+			} else {
+				toast.error(apiErrorMessage(err, 'Failed to approve request'));
+			}
 		} finally {
 			acting = null;
 		}
@@ -102,7 +114,12 @@
 			await withMinLoadingDelay(declineGroupJoinRequest(groupId, userId));
 			handlePendingChange();
 		} catch (err) {
-			toast.error(apiErrorMessage(err, 'Failed to decline request'));
+			if (isJoinRequestNotFound(err)) {
+				removePendingRequest(userId);
+				toast.error('Join request is no longer pending');
+			} else {
+				toast.error(apiErrorMessage(err, 'Failed to decline request'));
+			}
 		} finally {
 			acting = null;
 		}

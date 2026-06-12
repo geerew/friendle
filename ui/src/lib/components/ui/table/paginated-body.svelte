@@ -30,7 +30,9 @@
 		alwaysShowPagination = false
 	}: Props = $props();
 
-	const showPagination = $derived(alwaysShowPagination || totalItems > perPage);
+	const showPagination = $derived(
+		alwaysShowPagination || totalItems > perPage || (minimal && totalItems > 0)
+	);
 </script>
 
 <div class="flex flex-col gap-6">
@@ -53,7 +55,7 @@
 			<Pagination
 				count={totalItems}
 				bind:page
-				{perPage}
+				bind:perPage
 				{minimal}
 				{showPerPageSelect}
 				{selectTriggerClass}

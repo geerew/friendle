@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cancelGroupJoinRequest, requestGroupJoin } from '$lib/api/groups-api';
+	import { cancelGroupJoinRequest, getGroup, requestGroupJoin } from '$lib/api/groups-api';
 	import {
 		PlusIcon,
 		RightChevronIcon,
@@ -10,17 +10,16 @@
 	import { Button, StatusBadge, Table } from '$lib/components/ui';
 	import GroupRoleBadge from '../group-role-badge.svelte';
 	import type { GroupModel } from '$lib/models/group-model';
-	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
-	import { isGroupMember } from '$lib/utils/group';
+	import { apiErrorMessage, isJoinRequestNotFound, withMinLoadingDelay } from '$lib/utils';
+	import { isGroupMember, joinRequestResolvedNotice } from '$lib/utils/group';
 	import { toast } from 'svelte-sonner';
 
 	type Props = {
 		group: GroupModel;
-		onjoined?: (groupId: string) => void;
-		oncancelled?: (groupId: string) => void;
+		onGroupChange?: (group: GroupModel) => void;
 	};
 
-	let { group, onjoined, oncancelled }: Props = $props();
+	let { group, onGroupChange }: Props = $props();
 
 	let joining = $state(false);
 	let cancelling = $state(false);
@@ -28,6 +27,19 @@
 	const isMember = $derived(isGroupMember(group));
 	const isPending = $derived(group.joinRequestStatus === 'pending');
 	const isRejected = $derived(group.joinRequestStatus === 'rejected');
+
+	// showJoinRequestResolvedNotice toasts and applies the viewer's current group status
+	function showJoinRequestResolvedNotice(updated: GroupModel): void {
+		onGroupChange?.(updated);
+
+		const notice = joinRequestResolvedNotice(updated);
+
+		if (notice.variant === 'success') {
+			toast.success(notice.message);
+		} else {
+			toast.error(notice.message);
+		}
+	}
 
 	// handleJoinClick submits a join request for the group
 	async function handleJoinClick(): Promise<void> {
@@ -38,8 +50,8 @@
 		joining = true;
 
 		try {
-			await withMinLoadingDelay(requestGroupJoin(group.id));
-			onjoined?.(group.id);
+			const updated = await withMinLoadingDelay(requestGroupJoin(group.id));
+			onGroupChange?.(updated);
 		} catch (err) {
 			toast.error(apiErrorMessage(err, 'Failed to request join'));
 		} finally {
@@ -56,10 +68,19 @@
 		cancelling = true;
 
 		try {
-			await withMinLoadingDelay(cancelGroupJoinRequest(group.id));
-			oncancelled?.(group.id);
+			const updated = await withMinLoadingDelay(cancelGroupJoinRequest(group.id));
+			onGroupChange?.(updated);
 		} catch (err) {
-			toast.error(apiErrorMessage(err, 'Failed to cancel join request'));
+			if (isJoinRequestNotFound(err)) {
+				try {
+					const updated = await getGroup(group.id);
+					showJoinRequestResolvedNotice(updated);
+				} catch {
+					toast.error('Join request is no longer pending');
+				}
+			} else {
+				toast.error(apiErrorMessage(err, 'Failed to cancel join request'));
+			}
 		} finally {
 			cancelling = false;
 		}

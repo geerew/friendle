@@ -86,12 +86,20 @@
 		return 'size-2 bg-white/70';
 	});
 
+	const iconSpinnerClass = $derived(
+		cn(size === 'inline' ? 'size-5' : 'size-4', variant === 'ghost' && 'text-foreground-alt-2')
+	);
+
 	const classes = $derived(cn(base, sizes[size], variantClasses, className));
 </script>
 
 {#snippet buttonContents()}
 	{#if loading}
-		<Spinner class={spinnerClass} />
+		{#if useIconSpinner}
+			<IconSpinner class={iconSpinnerClass} />
+		{:else}
+			<Spinner class={spinnerClass} />
+		{/if}
 	{:else}
 		{@render children()}
 	{/if}

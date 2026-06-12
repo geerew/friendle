@@ -1,4 +1,4 @@
-import { ApiError, apiFetch, parseJson } from './fetch';
+import { ApiError, apiErrorFromResponse, apiFetch, parseJson } from './fetch';
 import { buildQueryString } from '$lib/utils';
 import { safeParse } from 'valibot';
 import {
@@ -169,8 +169,7 @@ export async function cancelGroupJoinRequest(groupId: string): Promise<GroupMode
 		return result.output;
 	}
 
-	const data = (await response.json()) as { message?: string };
-	throw new ApiError(data.message || 'Request failed', response.status);
+	throw await apiErrorFromResponse(response);
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -326,8 +325,7 @@ export async function approveGroupJoinRequest(groupId: string, userId: string): 
 		return;
 	}
 
-	const data = (await response.json()) as { message?: string };
-	throw new ApiError(data.message || 'Request failed', response.status);
+	throw await apiErrorFromResponse(response);
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -342,8 +340,7 @@ export async function declineGroupJoinRequest(groupId: string, userId: string): 
 		return;
 	}
 
-	const data = (await response.json()) as { message?: string };
-	throw new ApiError(data.message || 'Request failed', response.status);
+	throw await apiErrorFromResponse(response);
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

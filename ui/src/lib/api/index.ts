@@ -1,3 +1,11 @@
 export * from './auth-api';
 export * from './admin-api';
-export { apiFetch, ApiError, MIN_LOADING_MS, parseJson, type ApiFetchOptions } from './fetch';
+export {
+	apiFetch,
+	apiErrorFromResponse,
+	ApiError,
+	isApiError,
+	MIN_LOADING_MS,
+	parseJson,
+	type ApiFetchOptions
+} from './fetch';

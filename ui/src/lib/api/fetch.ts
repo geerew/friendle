@@ -20,6 +20,39 @@ export class ApiError extends Error {
 	}
 }
 
+// isApiError reports whether err is an ApiError, including across duplicate module instances
+export function isApiError(err: unknown): err is ApiError {
+	return (
+		err instanceof ApiError ||
+		(typeof err === 'object' &&
+			err !== null &&
+			(err as ApiError).name === 'ApiError' &&
+			typeof (err as ApiError).status === 'number' &&
+			typeof (err as ApiError).message === 'string')
+	);
+}
+
+// apiErrorFromResponse builds an ApiError from a non-OK fetch response body
+export async function apiErrorFromResponse(response: Response): Promise<ApiError> {
+	let message = 'Request failed';
+
+	try {
+		const text = await response.text();
+
+		if (text) {
+			const data = JSON.parse(text) as { message?: string };
+
+			if (data.message) {
+				message = data.message;
+			}
+		}
+	} catch {
+		// ignore parse errors
+	}
+
+	return new ApiError(message, response.status);
+}
+
 // delay resolves after at least ms milliseconds
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -105,8 +138,15 @@ export async function parseJson<T>(response: Response): Promise<T> {
 	let message = 'Request failed';
 
 	try {
-		const data = (await response.json()) as { message?: string };
-		if (data.message) message = data.message;
+		const text = await response.text();
+
+		if (text) {
+			const data = JSON.parse(text) as { message?: string };
+
+			if (data.message) {
+				message = data.message;
+			}
+		}
 	} catch {
 		// ignore parse errors
 	}

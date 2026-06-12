@@ -1,4 +1,4 @@
-import { ApiError } from '$lib/api/fetch';
+import { isApiError } from '$lib/api/fetch';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -39,7 +39,13 @@ export function buildQueryString(params: Record<string, string | number | boolea
 
 // apiErrorMessage formats an API error message
 export function apiErrorMessage(err: unknown, fallback: string): string {
-	return err instanceof ApiError ? err.message : fallback;
+	return isApiError(err) ? err.message : fallback;
+}
+
+// isJoinRequestNotFound reports whether approve/decline failed because the pending request
+// is no longer valid. Those endpoints only return 404 in that scenario
+export function isJoinRequestNotFound(err: unknown): boolean {
+	return isApiError(err) && err.status === 404;
 }
 
 // isPasswordFieldError reports whether an error message is related to password fields

@@ -106,6 +106,12 @@
 						{range.start} - {range.end} / {count}
 					</p>
 				</div>
+			{:else if count > 0}
+				<p
+					class="text-foreground-alt-2 flex min-w-0 items-center justify-center text-center text-sm whitespace-nowrap"
+				>
+					{range.start} - {range.end} / {count}
+				</p>
 			{/if}
 		</div>
 	{/snippet}

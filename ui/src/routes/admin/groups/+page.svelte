@@ -8,7 +8,7 @@
 
 	let groups = $state<GroupModel[]>([]);
 	let page = $state(1);
-	let perPage = $state(25);
+	let perPage = $state(10);
 	let totalItems = $state(0);
 	let loading = $state(true);
 	let deleteOpen = $state(false);

@@ -32,3 +32,18 @@ export function isGroupMember(group: Pick<GroupModel, 'groupRole'>): boolean {
 export function isGroupAdmin(group: Pick<GroupModel, 'groupRole'>): boolean {
 	return group.groupRole === 'group_admin';
 }
+
+// joinRequestResolvedNotice returns toast content when a pending join request was already resolved
+export function joinRequestResolvedNotice(
+	group: Pick<GroupModel, 'groupRole' | 'joinRequestStatus'>
+): { variant: 'success' | 'error'; message: string } {
+	if (isGroupMember(group)) {
+		return { variant: 'success', message: 'You were added to the group' };
+	}
+
+	if (group.joinRequestStatus === 'rejected') {
+		return { variant: 'error', message: 'Join request was declined' };
+	}
+
+	return { variant: 'error', message: 'Join request is no longer pending' };
+}

@@ -25,6 +25,8 @@
 	const groupId = $derived(page.params.id ?? '');
 	const groupPage = getContext<GroupPageContext>(GROUP_PAGE_KEY);
 	const group = $derived(groupPage.group);
+	const currentUserId = $derived(auth.user?.id ?? '');
+	const viewerIsAdmin = $derived(group ? isGroupAdmin(group) : false);
 	const breadcrumb = $derived(
 		group
 			? viewerIsAdmin
@@ -32,8 +34,6 @@
 				: groupChildBreadcrumb(group.id, 'Members')
 			: [{ label: 'Members' }]
 	);
-	const currentUserId = $derived(auth.user?.id ?? '');
-	const viewerIsAdmin = $derived(group ? isGroupAdmin(group) : false);
 
 	let members = $state<GroupMemberModel[]>([]);
 	let pageNum = $state(1);
