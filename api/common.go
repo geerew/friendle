@@ -25,7 +25,15 @@ func errorResponse(c *fiber.Ctx, status int, message string, err error) error {
 		}
 	}
 
-	return c.Status(status).JSON(resp)
+	if writeErr := c.Status(status).JSON(resp); writeErr != nil {
+		return writeErr
+	}
+
+	if status >= 400 {
+		return fiber.NewError(status, message)
+	}
+
+	return nil
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -177,17 +177,15 @@ func requestPathMiddleware(r *Router) fiber.Handler {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// bootstrapMiddleware checks if the app is bootstrapped. If not, it redirects
-// to /auth/bootstrap
-//
-// Bootstrapping is the process of setting up the app for the first time. It involves
-// the creation of 1 admin user, which the /auth/bootstrap endpoint handles
+// bootstrapMiddleware checks if the app is bootstrapped. When not, only the exact
+// bootstrap UI path from startup and POST /api/auth/bootstrap/:token are reachable
 func bootstrapMiddleware(r *Router) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		path := c.Path()
 		pathInfo := requestPath(c)
+		bootstrapPath := r.app.BootstrapPath()
 
-		// If not bootstrapped, force everything through /auth/bootstrap and /api/auth/bootstrap
+		// If not bootstrapped, only the bootstrap UI path and bootstrap API are reachable
 		if !r.app.IsBootstrapped() {
 			if pathInfo.uiAsset {
 				return c.Next()
@@ -203,13 +201,17 @@ func bootstrapMiddleware(r *Router) fiber.Handler {
 				return errorResponse(c, fiber.StatusForbidden, "app is not bootstrapped", nil)
 			}
 
-			// UI check
-			if strings.HasPrefix(path, "/auth/bootstrap") {
+			// UI check — exact path only; never redirect to the bootstrap token
+			if bootstrapPath != "" && path == bootstrapPath {
 				c.Locals("bootstrapping", true)
 				return c.Next()
 			}
 
-			return c.Redirect("/auth/bootstrap")
+			if strings.HasPrefix(path, "/auth/bootstrap") {
+				return errorResponse(c, fiber.StatusNotFound, "Not found", nil)
+			}
+
+			return errorResponse(c, fiber.StatusForbidden, "app is not bootstrapped", nil)
 		}
 
 		// If bootstrapped and someone accesses bootstrap URL, redirect appropriately
