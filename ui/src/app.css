@@ -1,0 +1,149 @@
+@import 'tailwindcss';
+
+@layer base {
+	@font-face {
+		font-family: 'Inter Variable';
+		src:
+			local('Inter Variable'),
+			local('Inter-Variable'),
+			local('inter variable'),
+			local('inter-variable'),
+			url('/fonts/InterVariable.woff2') format('woff2');
+		font-weight: normal;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Inter Variable';
+		src:
+			local('Inter Variable'),
+			local('Inter-Variable'),
+			local('inter variable'),
+			local('inter-variable'),
+			url('/fonts/InterVariable-Italic.woff2') format('woff2');
+		font-weight: normal;
+		font-style: italic;
+		font-display: swap;
+	}
+
+	@font-face {
+		font-family: 'Anton';
+		src:
+			local('Anton'),
+			local('Anton Regular'),
+			url('/fonts/Anton.woff2') format('woff2');
+		font-weight: normal;
+		font-style: normal;
+		font-display: swap;
+	}
+}
+
+@theme inline {
+	--font-sans: 'Inter Variable', 'sans-serif';
+	--font-sans--font-feature-settings: 'cv11';
+	--font-anton: 'Anton', 'sans-serif';
+}
+
+@theme {
+	--color-background: hsl(240, 3%, 7%);
+	--color-background-alt-1: hsl(240, 2%, 10%);
+	--color-background-alt-2: hsl(240, 2%, 23%);
+	--color-background-alt-3: hsl(210, 1%, 34%);
+	--color-background-primary: hsl(115, 29%, 43%);
+	--color-background-primary-alt-1: hsl(115, 29%, 36%);
+	--color-background-primary-alt-2: hsl(115, 29%, 29%);
+	--color-background-error: hsl(5, 100%, 21%);
+	--color-background-error-alt-1: hsl(5, 100%, 25%);
+
+	--color-foreground: hsl(210, 2%, 82%);
+	--color-foreground-alt-1: hsl(205, 2%, 67%);
+	--color-foreground-alt-2: hsl(200, 1%, 51%);
+	--color-foreground-alt-3: hsl(210, 1%, 38%);
+	--color-foreground-alt-4: hsl(240, 2%, 23%);
+	--color-foreground-alt-5: hsl(240, 2%, 16%);
+	--color-foreground-error: hsl(0, 100%, 63%);
+	--color-foreground-error-alt-1: hsl(5, 70%, 45%);
+
+	--header-height: 4rem;
+
+	--animate-bounce-dot: bounce-dot 0.55s ease-in-out infinite;
+	--animate-collapsible-down: collapsible-down 0.2s ease-out;
+	--animate-collapsible-up: collapsible-up 0.2s ease-out;
+
+	@keyframes bounce-dot {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-75%);
+		}
+	}
+}
+
+@layer base {
+	body {
+		@apply bg-background text-foreground min-h-dvh font-sans;
+	}
+
+	input,
+	button,
+	textarea {
+		font: inherit;
+	}
+
+	button:not(:disabled) {
+		cursor: pointer;
+	}
+
+	button:disabled {
+		cursor: not-allowed;
+	}
+}
+
+@keyframes collapsible-down {
+	from {
+		height: 0;
+	}
+
+	to {
+		height: var(--bits-collapsible-content-height);
+	}
+}
+
+@keyframes collapsible-up {
+	from {
+		height: var(--bits-collapsible-content-height);
+	}
+
+	to {
+		height: 0;
+	}
+}
+
+@layer components {
+	.app-shell {
+		@apply mx-auto flex min-h-dvh w-full max-w-md flex-col;
+	}
+
+	.app-header {
+		height: var(--header-height);
+	}
+
+	.page-content {
+		@apply flex flex-1 flex-col gap-4 px-4 py-4;
+	}
+
+	.field {
+		@apply border-foreground-alt-4 bg-background-alt-1 text-foreground focus-visible:ring-background-primary w-full rounded border px-3 py-3 outline-none focus-visible:ring-2;
+	}
+
+	.section-title {
+		@apply text-foreground-alt-2 text-sm font-semibold tracking-wide uppercase;
+	}
+
+	.section-title-destructive {
+		@apply text-foreground-error-alt-1;
+	}
+}

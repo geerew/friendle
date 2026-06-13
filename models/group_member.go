@@ -1,0 +1,39 @@
+package models
+
+import "github.com/geerew/friendle/utils/types"
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+const (
+	GROUP_MEMBER_TABLE = "group_members"
+
+	GROUP_MEMBER_GROUP_ID     = "group_id"
+	GROUP_MEMBER_USER_ID      = "user_id"
+	GROUP_MEMBER_GROUP_ROLE   = "group_role"
+	GROUP_MEMBER_TIMES_PICKED = "times_picked"
+	GROUP_MEMBER_PICKER_SKIPS = "picker_skips"
+
+	GROUP_MEMBER_TABLE_ID           = GROUP_MEMBER_TABLE + "." + BASE_ID
+	GROUP_MEMBER_TABLE_CREATED_AT   = GROUP_MEMBER_TABLE + "." + BASE_CREATED_AT
+	GROUP_MEMBER_TABLE_UPDATED_AT   = GROUP_MEMBER_TABLE + "." + BASE_UPDATED_AT
+	GROUP_MEMBER_TABLE_GROUP_ID     = GROUP_MEMBER_TABLE + "." + GROUP_MEMBER_GROUP_ID
+	GROUP_MEMBER_TABLE_USER_ID      = GROUP_MEMBER_TABLE + "." + GROUP_MEMBER_USER_ID
+	GROUP_MEMBER_TABLE_GROUP_ROLE   = GROUP_MEMBER_TABLE + "." + GROUP_MEMBER_GROUP_ROLE
+	GROUP_MEMBER_TABLE_TIMES_PICKED = GROUP_MEMBER_TABLE + "." + GROUP_MEMBER_TIMES_PICKED
+	GROUP_MEMBER_TABLE_PICKER_SKIPS = GROUP_MEMBER_TABLE + "." + GROUP_MEMBER_PICKER_SKIPS
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GroupMember defines the model for a group membership row
+type GroupMember struct {
+	Base
+	GroupID     string          `json:"groupId" db:"group_id"`     // Immutable
+	UserID      string          `json:"userId" db:"user_id"`       // Immutable
+	GroupRole   types.GroupRole `json:"groupRole" db:"group_role"` // Mutable
+	TimesPicked int             `db:"times_picked"`                // Mutable
+	PickerSkips int             `db:"picker_skips"`                // Mutable
+
+	// Added via JOIN
+	DisplayName string `json:"displayName" db:"display_name"`
+}

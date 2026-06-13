@@ -1,0 +1,14 @@
+services:
+  friendle:
+    image: friendle:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - friendle_data:/friendle_data
+    restart: unless-stopped
+
+volumes:
+  friendle_data:

@@ -1,0 +1,106 @@
+package types
+
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
+	"fmt"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// RoundStatus is the lifecycle state of a daily group round
+type RoundStatus string
+
+const (
+	// RoundAwaitingWord means the picker has not submitted a word yet
+	RoundAwaitingWord RoundStatus = "awaiting_word"
+
+	// RoundActive means the picker submitted a word and members are still guessing
+	RoundActive RoundStatus = "active"
+
+	// RoundCompleted means every member finished guessing or the calendar day ended
+	RoundCompleted RoundStatus = "completed"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsValid reports whether the round status is a known value
+func (s RoundStatus) IsValid() bool {
+	switch s {
+	case RoundAwaitingWord, RoundActive, RoundCompleted:
+		return true
+	}
+
+	return false
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// IsRevealed reports whether the round word and guess details may be shown
+func (s RoundStatus) IsRevealed() bool {
+	return s == RoundCompleted
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// String returns the round status as a string
+func (s RoundStatus) String() string {
+	return string(s)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// MarshalJSON implements the json.Marshaler interface
+func (s RoundStatus) MarshalJSON() ([]byte, error) {
+	if !s.IsValid() {
+		return nil, fmt.Errorf("invalid round status: %s", s)
+	}
+
+	return json.Marshal(string(s))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+func (s *RoundStatus) UnmarshalJSON(data []byte) error {
+	var status string
+	if err := json.Unmarshal(data, &status); err != nil {
+		return err
+	}
+
+	*s = RoundStatus(status)
+	if !s.IsValid() {
+		return fmt.Errorf("invalid round status: %s", status)
+	}
+
+	return nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Value implements the driver.Valuer interface
+func (s RoundStatus) Value() (driver.Value, error) {
+	if !s.IsValid() {
+		return nil, fmt.Errorf("invalid round status: %s", s)
+	}
+
+	return string(s), nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Scan implements the sql.Scanner interface
+func (s *RoundStatus) Scan(value interface{}) error {
+	status, ok := value.(string)
+	if !ok {
+		return errors.New("invalid data type for RoundStatus")
+	}
+
+	*s = RoundStatus(status)
+	if !s.IsValid() {
+		return fmt.Errorf("invalid round status: %s", status)
+	}
+
+	return nil
+}

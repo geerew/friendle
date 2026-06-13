@@ -1,0 +1,193 @@
+package dao
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/Masterminds/squirrel"
+	"github.com/geerew/friendle/models"
+	"github.com/geerew/friendle/utils"
+)
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupColumns defines the columns to select
+var groupColumns = []string{
+	fmt.Sprintf("%s AS %s", models.GROUP_TABLE_ID, models.BASE_ID),
+	fmt.Sprintf("%s AS %s", models.GROUP_TABLE_CREATED_AT, models.BASE_CREATED_AT),
+	fmt.Sprintf("%s AS %s", models.GROUP_TABLE_UPDATED_AT, models.BASE_UPDATED_AT),
+	fmt.Sprintf("%s AS %s", models.GROUP_TABLE_NAME, models.GROUP_NAME),
+	fmt.Sprintf("%s AS %s", models.GROUP_TABLE_CREATED_BY, models.GROUP_CREATED_BY),
+	// Added via LEFT JOIN
+	fmt.Sprintf("COUNT(%s) AS %s", models.GROUP_MEMBER_TABLE_ID, models.GROUP_MEMBER_COUNT),
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupJoins defines the joins to use during SELECT queries
+var groupJoins = []join{
+	{
+		Type:      joinTypeLeft,
+		Table:     models.GROUP_MEMBER_TABLE,
+		Condition: models.GROUP_MEMBER_TABLE_GROUP_ID + " = " + models.GROUP_TABLE_ID,
+	},
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// groupColumnsGroupBy defines the columns to group by
+//
+//	This is required because we are doing a LEFT JOIN to include the group member count
+var groupColumnsGroupBy = []string{
+	models.GROUP_TABLE_ID,
+	models.GROUP_TABLE_CREATED_AT,
+	models.GROUP_TABLE_UPDATED_AT,
+	models.GROUP_TABLE_NAME,
+	models.GROUP_TABLE_CREATED_BY,
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// CreateGroup inserts a group record
+func (dao *DAO) CreateGroup(ctx context.Context, group *models.Group) error {
+	if group == nil {
+		return utils.ErrNilPtr
+	}
+
+	if group.Name == "" {
+		return utils.ErrGroupName
+	}
+
+	if group.CreatedBy == "" {
+		return utils.ErrUserId
+	}
+
+	if group.ID == "" {
+		group.RefreshId()
+	}
+
+	group.RefreshCreatedAt()
+	group.RefreshUpdatedAt()
+
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithData(
+			map[string]interface{}{
+				models.BASE_ID:          group.ID,
+				models.GROUP_NAME:       group.Name,
+				models.GROUP_CREATED_BY: group.CreatedBy,
+				models.BASE_CREATED_AT:  group.CreatedAt,
+				models.BASE_UPDATED_AT:  group.UpdatedAt,
+			},
+		)
+
+	return createGeneric(ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// GetGroup returns a group record with a member count
+func (dao *DAO) GetGroup(ctx context.Context, dbOpts *Options) (*models.Group, error) {
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithColumns(groupColumns...).
+		WithJoins(groupJoins...).
+		WithGroupBy(groupColumnsGroupBy...).
+		SetDbOpts(dbOpts).
+		WithLimit(1)
+
+	return getGeneric[models.Group](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ListGroups returns group records with member counts
+func (dao *DAO) ListGroups(ctx context.Context, dbOpts *Options) ([]*models.Group, error) {
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithColumns(groupColumns...).
+		WithJoins(groupJoins...).
+		WithGroupBy(groupColumnsGroupBy...).
+		SetDbOpts(dbOpts)
+
+	return listGeneric[models.Group](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// ListPlayableGroups returns groups with at least minMembers members
+func (dao *DAO) ListPlayableGroups(ctx context.Context, minMembers int) ([]*models.Group, error) {
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithColumns(groupColumns...).
+		WithJoins(groupJoins...).
+		WithGroupBy(groupColumnsGroupBy...).
+		WithHaving(squirrel.GtOrEq{fmt.Sprintf("COUNT(%s)", models.GROUP_MEMBER_TABLE_ID): minMembers})
+
+	return listGeneric[models.Group](ctx, dao, *builderOpts)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// UpdateGroup updates mutable group fields for group admins
+func (dao *DAO) UpdateGroup(ctx context.Context, group *models.Group) error {
+	if group == nil {
+		return utils.ErrNilPtr
+	}
+
+	if group.ID == "" {
+		return utils.ErrId
+	}
+
+	if group.Name == "" {
+		return utils.ErrGroupName
+	}
+
+	group.RefreshUpdatedAt()
+
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: group.ID})
+
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithData(
+			map[string]interface{}{
+				models.GROUP_NAME:      group.Name,
+				models.BASE_UPDATED_AT: group.UpdatedAt,
+			},
+		).
+		SetDbOpts(dbOpts)
+
+	_, err := updateGeneric(ctx, dao, *builderOpts)
+
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// DeleteGroups deletes group records
+//
+// Errors when a where clause is not provided
+func (dao *DAO) DeleteGroups(ctx context.Context, dbOpts *Options) error {
+	if dbOpts == nil || dbOpts.Where == nil {
+		return utils.ErrWhere
+	}
+
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).SetDbOpts(dbOpts)
+	sqlStr, args, _ := deleteBuilder(*builderOpts)
+
+	_, err := dao.db.ExecContext(ctx, sqlStr, args...)
+
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// MemberGroupsWhere builds a WHERE clause for groups the user belongs to
+func MemberGroupsWhere(userID string) (squirrel.Sqlizer, error) {
+	subSQL, subArgs, err := squirrel.Select(models.GROUP_MEMBER_GROUP_ID).
+		From(models.GROUP_MEMBER_TABLE).
+		Where(squirrel.Eq{models.GROUP_MEMBER_USER_ID: userID}).
+		PlaceholderFormat(squirrel.Question).
+		ToSql()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return squirrel.Expr(models.GROUP_TABLE_ID+" IN ("+subSQL+")", subArgs...), nil
+}
