@@ -9,7 +9,8 @@ import {
 	type GroupPaginationModel,
 	type ListGroupsParams,
 	type ListSelfGroupsParams,
-	type SearchGroupsParams
+	type SearchGroupsParams,
+	type UpdateGroupRequest
 } from '$lib/models/group-model';
 import {
 	GroupMemberPaginationSchema,
@@ -123,6 +124,29 @@ export async function createGroup(data: CreateGroupRequest): Promise<GroupModel>
 		body: JSON.stringify(data)
 	});
 	return parseJson(response);
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Update a group
+export async function updateGroup(groupId: string, data: UpdateGroupRequest): Promise<GroupModel> {
+	const response = await apiFetch(`/api/groups/${groupId}`, {
+		method: 'PATCH',
+		body: JSON.stringify(data)
+	});
+
+	if (response.ok) {
+		const body = await response.json();
+		const result = safeParse(GroupSchema, body);
+
+		if (!result.success) {
+			throw new ApiError('Invalid response from the server', response.status);
+		}
+
+		return result.output;
+	}
+
+	throw await apiErrorFromResponse(response);
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -8,7 +8,7 @@
 	} from '$lib/api/groups-api';
 	import { TickIcon, XIcon } from '$lib/components/icons';
 	import { GroupNameSection } from '$lib/components/pages';
-	import { Button, Table } from '$lib/components/ui';
+	import { Button, Separator, Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
 	import { apiErrorMessage, isJoinRequestNotFound, withMinLoadingDelay } from '$lib/utils';
@@ -128,7 +128,10 @@
 
 <Table.Root title="Pending Requests" {breadcrumb}>
 	{#snippet header()}
-		<GroupNameSection />
+		<div class="flex flex-col">
+			<GroupNameSection />
+			<Separator />
+		</div>
 	{/snippet}
 
 	<Table.PaginatedBody

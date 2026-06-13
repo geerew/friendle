@@ -197,7 +197,10 @@
 
 <Table.Root title="Members" {breadcrumb}>
 	{#snippet header()}
-		<GroupNameSection />
+		<div class="flex flex-col">
+			<GroupNameSection />
+			<Separator />
+		</div>
 	{/snippet}
 
 	<Table.PaginatedBody

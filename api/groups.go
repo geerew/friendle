@@ -16,6 +16,7 @@ func (r *Router) initGroupRoutes() {
 	groupRoutes.Get("/self", r.requireAccess(accessSiteUser), r.listSelfGroups)
 	groupRoutes.Get("/", r.requireAccess(accessSiteUser), r.listGroups)
 	groupRoutes.Get("/:id", r.requireAccess(accessSiteUser), r.getGroup)
+	groupRoutes.Patch("/:id", r.requireAccess(accessSiteUser), r.updateGroup)
 	groupRoutes.Delete("/:id", r.requireAccess(accessSiteUser), r.deleteGroup)
 
 	// Members
@@ -69,6 +70,31 @@ func (r *Router) getGroup(c *fiber.Ctx) error {
 	groupID := c.Params("id")
 
 	group, err := r.appSvc.Groups.Get(ctx, groupID, principal.UserID)
+	if err != nil {
+		return serviceError(c, err)
+	}
+
+	return c.JSON(group)
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// updateGroup updates a group for group admins
+func (r *Router) updateGroup(c *fiber.Ctx) error {
+	groupID := c.Params("id")
+
+	if !r.isGroupAdmin(c, groupID) {
+		return nil
+	}
+
+	principal, ctx := principalAndCtx(c)
+
+	req := &service.UpdateGroupRequest{}
+	if err := c.BodyParser(req); err != nil {
+		return errorResponse(c, fiber.StatusBadRequest, "Error parsing data", err)
+	}
+
+	group, err := r.appSvc.Groups.Update(ctx, groupID, principal.UserID, *req)
 	if err != nil {
 		return serviceError(c, err)
 	}

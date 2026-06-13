@@ -2,10 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { createGroup } from '$lib/api/groups-api';
 	import { Button, Input, Table } from '$lib/components/ui';
+	import { MAX_GROUP_NAME_LENGTH } from '$lib/models/group-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
-
-	const maxGroupNameLength = 64;
 
 	let name = $state('');
 	let submitting = $state(false);
@@ -21,8 +20,8 @@
 			return;
 		}
 
-		if (trimmed.length > maxGroupNameLength) {
-			toast.error(`Group name must be no more than ${maxGroupNameLength} characters`);
+		if ([...trimmed].length > MAX_GROUP_NAME_LENGTH) {
+			toast.error(`Group name must be no more than ${MAX_GROUP_NAME_LENGTH} characters`);
 			return;
 		}
 

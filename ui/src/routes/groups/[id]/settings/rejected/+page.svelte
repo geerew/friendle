@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { listGroupRejectedJoinRequests } from '$lib/api/groups-api';
 	import { GroupNameSection } from '$lib/components/pages';
-	import { Table } from '$lib/components/ui';
+	import { Separator, Table } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import type { GroupJoinRequestModel } from '$lib/models/group-join-request-model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
@@ -63,7 +63,10 @@
 
 <Table.Root title="Rejected Requests" {breadcrumb}>
 	{#snippet header()}
-		<GroupNameSection />
+		<div class="flex flex-col">
+			<GroupNameSection />
+			<Separator />
+		</div>
 	{/snippet}
 
 	<Table.PaginatedBody

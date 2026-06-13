@@ -125,6 +125,40 @@ func (dao *DAO) ListPlayableGroups(ctx context.Context, minMembers int) ([]*mode
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// UpdateGroup updates mutable group fields for group admins
+func (dao *DAO) UpdateGroup(ctx context.Context, group *models.Group) error {
+	if group == nil {
+		return utils.ErrNilPtr
+	}
+
+	if group.ID == "" {
+		return utils.ErrId
+	}
+
+	if group.Name == "" {
+		return utils.ErrGroupName
+	}
+
+	group.RefreshUpdatedAt()
+
+	dbOpts := NewOptions().WithWhere(squirrel.Eq{models.BASE_ID: group.ID})
+
+	builderOpts := newBuilderOptions(models.GROUP_TABLE).
+		WithData(
+			map[string]interface{}{
+				models.GROUP_NAME:      group.Name,
+				models.BASE_UPDATED_AT: group.UpdatedAt,
+			},
+		).
+		SetDbOpts(dbOpts)
+
+	_, err := updateGeneric(ctx, dao, *builderOpts)
+
+	return err
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // DeleteGroups deletes group records
 //
 // Errors when a where clause is not provided

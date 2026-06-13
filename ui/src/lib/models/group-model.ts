@@ -69,6 +69,14 @@ export type CreateGroupRequest = {
 	name: string;
 };
 
+// UpdateGroupRequest represents a request to update a group
+export type UpdateGroupRequest = {
+	name: string;
+};
+
+// MAX_GROUP_NAME_LENGTH matches the server-side group name limit
+export const MAX_GROUP_NAME_LENGTH = 64;
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // ListGroupsParams represents the parameters for listing groups

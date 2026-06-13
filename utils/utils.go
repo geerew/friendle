@@ -3,6 +3,7 @@ package utils
 import (
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,4 +95,20 @@ func NextMidnight(t time.Time) time.Time {
 // PreviousDateString returns the calendar date before t in local time
 func PreviousDateString(t time.Time) string {
 	return DateString(t.In(time.Local).AddDate(0, 0, -1))
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// NormalizeGroupName trims and validates a group name against maxLength runes
+func NormalizeGroupName(name string, maxLength int) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", ErrGroupName
+	}
+
+	if utf8.RuneCountInString(name) > maxLength {
+		return "", ErrGroupNameTooLong
+	}
+
+	return name, nil
 }

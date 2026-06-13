@@ -52,7 +52,9 @@
 {#if group}
 	<Table.Root title="Settings" {breadcrumb} showTitle={false}>
 		<div class="flex flex-col gap-5">
-			<GroupNameSection />
+			<GroupNameSection editable={isAdmin} />
+
+			<Separator />
 
 			{#if isAdmin && group.adminSummary}
 				<section class="flex items-stretch justify-between gap-3">

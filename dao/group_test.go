@@ -366,6 +366,41 @@ func Test_DeleteGroups(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+func Test_UpdateGroup(t *testing.T) {
+	// Test successfully updating a group name
+	t.Run("success", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		group := &models.Group{Name: "Friends", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		group.Name = "Best Friends"
+		require.NoError(t, dao.UpdateGroup(ctx, group))
+
+		updated, err := dao.GetGroup(ctx, NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: group.ID}))
+		require.NoError(t, err)
+		require.Equal(t, "Best Friends", updated.Name)
+	})
+
+	// Test error due to duplicate group name
+	t.Run("duplicate name", func(t *testing.T) {
+		dao, ctx := setup(t)
+
+		userID := testUserID(t, dao, ctx)
+		require.NoError(t, dao.CreateGroup(ctx, &models.Group{Name: "Friends", CreatedBy: userID}))
+
+		group := &models.Group{Name: "Work", CreatedBy: userID}
+		require.NoError(t, dao.CreateGroup(ctx, group))
+
+		group.Name = "Friends"
+		err := dao.UpdateGroup(ctx, group)
+		require.ErrorContains(t, err, "UNIQUE constraint failed")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // testUserID returns the seeded test user's id
 func testUserID(t *testing.T, dao *DAO, ctx context.Context) string {
 	t.Helper()

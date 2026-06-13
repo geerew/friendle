@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,5 +28,29 @@ func TestFilterMap(t *testing.T) {
 		})
 
 		require.Empty(t, out)
+	})
+}
+
+// Test successfully normalizing and validating a group name
+func TestNormalizeGroupName(t *testing.T) {
+	const maxLength = 64
+
+	// Test successfully trimming and accepting a valid name
+	t.Run("success", func(t *testing.T) {
+		name, err := NormalizeGroupName("  Friends  ", maxLength)
+		require.NoError(t, err)
+		require.Equal(t, "Friends", name)
+	})
+
+	// Test error due to an empty name
+	t.Run("empty", func(t *testing.T) {
+		_, err := NormalizeGroupName("   ", maxLength)
+		require.ErrorIs(t, err, ErrGroupName)
+	})
+
+	// Test error due to a name that is too long
+	t.Run("too long", func(t *testing.T) {
+		_, err := NormalizeGroupName(strings.Repeat("a", maxLength+1), maxLength)
+		require.ErrorIs(t, err, ErrGroupNameTooLong)
 	})
 }

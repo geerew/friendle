@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { GroupNameSection, GroupRoundStatus } from '$lib/components/pages';
-	import { Table } from '$lib/components/ui';
+	import { Table, Separator } from '$lib/components/ui';
 	import { GROUP_PAGE_KEY, type GroupPageContext } from '$lib/context/group-page';
 	import { groupHomeBreadcrumb } from '$lib/utils/group';
 	import { getContext } from 'svelte';
@@ -13,8 +13,12 @@
 
 {#if group}
 	<Table.Root title="Group" {breadcrumb} showTitle={false}>
-		<GroupNameSection showSettings />
+		<div class="flex flex-col gap-5">
+			<GroupNameSection showSettings />
 
-		<GroupRoundStatus groupId={group.id} memberThresholdMet={group.memberThresholdMet} />
+			<Separator />
+
+			<GroupRoundStatus groupId={group.id} memberThresholdMet={group.memberThresholdMet} />
+		</div>
 	</Table.Root>
 {/if}

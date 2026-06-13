@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/geerew/friendle/dao"
@@ -26,6 +26,11 @@ const minPlayableMembers = 2
 
 // CreateGroupRequest represents a group create request
 type CreateGroupRequest struct {
+	Name string `json:"name"`
+}
+
+// UpdateGroupRequest represents a group update request
+type UpdateGroupRequest struct {
 	Name string `json:"name"`
 }
 
@@ -109,13 +114,9 @@ func newGroups(d deps) *Groups {
 
 // Create creates a group and sets userID as group admin
 func (g *Groups) Create(ctx context.Context, userID string, req CreateGroupRequest) (*GroupResponse, error) {
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		return nil, ErrGroupNameRequired
-	}
-
-	if utf8.RuneCountInString(name) > maxGroupNameLength {
-		return nil, ErrGroupNameTooLong
+	name, err := validatedGroupName(req.Name)
+	if err != nil {
+		return nil, err
 	}
 
 	group := &models.Group{
@@ -123,7 +124,7 @@ func (g *Groups) Create(ctx context.Context, userID string, req CreateGroupReque
 		CreatedBy: userID,
 	}
 
-	err := g.dao.RunInTransaction(ctx, func(txCtx context.Context) error {
+	err = g.dao.RunInTransaction(ctx, func(txCtx context.Context) error {
 		if err := g.dao.CreateGroup(txCtx, group); err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
 				return ErrGroupNameTaken
@@ -276,6 +277,40 @@ func (g *Groups) Get(ctx context.Context, groupID, userID string) (*GroupRespons
 	}
 
 	return resp, nil
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// Update renames a group for group admins
+func (g *Groups) Update(ctx context.Context, groupID, userID string, req UpdateGroupRequest) (*GroupResponse, error) {
+	name, err := validatedGroupName(req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	group, err := g.dao.GetGroup(ctx, dao.NewOptions().WithWhere(squirrel.Eq{models.GROUP_TABLE_ID: groupID}))
+	if err != nil {
+		return nil, err
+	}
+
+	if group == nil {
+		return nil, ErrGroupNotFound
+	}
+
+	if strings.EqualFold(group.Name, name) {
+		return g.Get(ctx, groupID, userID)
+	}
+
+	group.Name = name
+	if err := g.dao.UpdateGroup(ctx, group); err != nil {
+		if strings.HasPrefix(err.Error(), "UNIQUE constraint failed") {
+			return nil, ErrGroupNameTaken
+		}
+
+		return nil, err
+	}
+
+	return g.Get(ctx, groupID, userID)
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -833,4 +868,22 @@ func (g *Groups) getPendingJoinRequest(ctx context.Context, groupID, userID stri
 	}
 
 	return request, nil
+}
+
+// validatedGroupName normalizes a group name and maps utils validation errors for the service layer
+func validatedGroupName(name string) (string, error) {
+	normalized, err := utils.NormalizeGroupName(name, maxGroupNameLength)
+	if err == nil {
+		return normalized, nil
+	}
+
+	if errors.Is(err, utils.ErrGroupName) {
+		return "", ErrGroupNameRequired
+	}
+
+	if errors.Is(err, utils.ErrGroupNameTooLong) {
+		return "", ErrGroupNameTooLong
+	}
+
+	return "", err
 }

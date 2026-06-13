@@ -196,6 +196,148 @@ func TestGroups_Create(t *testing.T) {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+// TestGroups_Update exercises group name updates
+func TestGroups_Update(t *testing.T) {
+	// Test successfully updating a group name as the group admin
+	t.Run("200 (updated)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var created service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &created))
+
+		req = httptest.NewRequest(http.MethodPatch, "/api/groups/"+created.ID, strings.NewReader(`{"name":"Best Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err = requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, status)
+
+		var updated service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &updated))
+		require.Equal(t, "Best Friends", updated.Name)
+		require.Equal(t, created.ID, updated.ID)
+	})
+
+	// Test error due to missing name
+	t.Run("400 (missing name)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var created service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &created))
+
+		req = httptest.NewRequest(http.MethodPatch, "/api/groups/"+created.ID, strings.NewReader(`{"name":"   "}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err = requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Group name is required")
+	})
+
+	// Test error due to name too long
+	t.Run("400 (name too long)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var created service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &created))
+
+		longName := strings.Repeat("a", 65)
+		req = httptest.NewRequest(http.MethodPatch, "/api/groups/"+created.ID, bytes.NewReader([]byte(`{"name":"`+longName+`"}`)))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err = requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Group name is too long")
+	})
+
+	// Test error due to duplicate name
+	t.Run("400 (duplicate name)", func(t *testing.T) {
+		router, _, _ := setup(t, "alice", types.SiteRoleUser)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, _, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		req = httptest.NewRequest(http.MethodPost, "/api/groups/", strings.NewReader(`{"name":"Work"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusCreated, status)
+
+		var work service.GroupResponse
+		require.NoError(t, json.Unmarshal(body, &work))
+
+		req = httptest.NewRequest(http.MethodPatch, "/api/groups/"+work.ID, strings.NewReader(`{"name":"Friends"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err = requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, status)
+		require.Contains(t, string(body), "Group name already exists")
+	})
+
+	// Test error due to a non-admin member
+	t.Run("403 (member)", func(t *testing.T) {
+		router, ctx, _ := setup(t, "bob", types.SiteRoleUser)
+
+		alice := &models.User{
+			Base:     models.Base{ID: "alice"},
+			Username: "alice",
+			SiteRole: types.SiteRoleUser,
+		}
+		createTestUser(t, router, ctx, alice)
+
+		group := &models.Group{Name: "Friends", CreatedBy: alice.ID}
+		require.NoError(t, router.appDao.CreateGroup(ctx, group))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    alice.ID,
+			GroupRole: types.GroupRoleAdmin,
+		}))
+		require.NoError(t, router.appDao.CreateGroupMember(ctx, &models.GroupMember{
+			GroupID:   group.ID,
+			UserID:    "bob",
+			GroupRole: types.GroupRoleUser,
+		}))
+
+		req := httptest.NewRequest(http.MethodPatch, "/api/groups/"+group.ID, strings.NewReader(`{"name":"Renamed"}`))
+		req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+		status, body, err := requestHelper(t, router, req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusForbidden, status)
+		require.Contains(t, string(body), "Forbidden")
+	})
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 // TestGroups_Get exercises fetching a single group
 func TestGroups_Get(t *testing.T) {
 	// Test successfully fetching a group the caller belongs to

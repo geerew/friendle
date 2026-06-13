@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { ApiError } from '$lib/api/fetch';
 	import { getGroupRoundToday } from '$lib/api/groups-api';
-	import { Separator } from '$lib/components/ui';
-	import GroupRoundCountdown from './group-round-countdown.svelte';
 	import type { RoundTodayModel } from '$lib/models/round_model';
 	import { apiErrorMessage, withMinLoadingDelay } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
@@ -53,7 +51,7 @@
 
 	const statusLine = $derived.by(() => {
 		if (!memberThresholdMet) {
-			return 'Not enough members. Consider inviting someone to join.';
+			return 'Not enough members';
 		}
 
 		if (noRoundToday) {
@@ -79,28 +77,12 @@
 	});
 </script>
 
-<section class="flex items-stretch justify-between gap-3 py-3">
-	<div class="flex min-w-0 flex-1 flex-col gap-3">
-		<h2 class="section-title">Today&apos;s round</h2>
+<section class="flex flex-col gap-3">
+	<h2 class="section-title">Today&apos;s round</h2>
 
-		{#if loading}
-			<p class="text-foreground-alt-2 text-sm">Loading…</p>
-		{:else}
-			<p class="text-foreground-alt-1 text-base">{statusLine}</p>
-		{/if}
-	</div>
-
-	<Separator class="h-auto w-px shrink-0 self-stretch" />
-
-	<div class="flex min-w-0 flex-1 flex-col items-end gap-3 text-right">
-		<h2 class="section-title">Time left</h2>
-
-		{#if loading}
-			<p class="text-foreground-alt-2 text-sm">Loading…</p>
-		{:else if roundToday && roundToday.status !== 'completed'}
-			<GroupRoundCountdown roundEndsAt={roundToday.roundEndsAt} />
-		{:else if roundToday?.status === 'completed'}
-			<p class="text-foreground-alt-2 text-sm">Round complete</p>
-		{/if}
-	</div>
+	{#if loading}
+		<p class="text-foreground-alt-2 text-sm">Loading…</p>
+	{:else}
+		<p class="text-foreground-alt-1 text-base">{statusLine}</p>
+	{/if}
 </section>
